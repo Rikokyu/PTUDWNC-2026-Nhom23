@@ -17,10 +17,14 @@
 |2312622     |FR-AUTH                  |Xác thực & Quản lý Người dùng                           |7 chức năng   |
 
 
-##Nhiệm vụ cho tuần từ ngày 16 - 22/9/2026
+## Nhiệm vụ cho tuần từ ngày 16 - 22/9/2026
+
 2312610	Tạo giao diện, database mẫu cho công thức nấu ăn (FR-RCP)
+
 2312569 Tạo giao diện, database mẫu cho danh mục phía admin (FR-CAT)
+
 2312789 Tạo giao diện, database mẫu cho tìm kiếm, phân trang (FR-SRCH)
+
 2312622 Tạo giao diện, database dăng nhập/đăng ký/Xem hồ sơ cá nhân (FR-AUTH)
 
 # Culinary Blog — Blog Ẩm thực và Nấu ăn

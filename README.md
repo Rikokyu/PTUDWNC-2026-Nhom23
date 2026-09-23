@@ -1,7 +1,7 @@
 ## Thông tin sinh viên
 
 |MSSV      |Họ tên sinh viên        |Mail cá nhân           |Github cá nhân                  |Số điện thoại   |
-|----------|------------------------|-----------------------|--------------------------------|----------------|
+|---|---|---|---|---|
 |2312610   |Nguyễn Trung Hiệp       |2312610@dlu.edu.vn     |https://github.com/Rikokyu      |0358756475      |
 |2312569   |Lê Thị Mai Anh          |2312569@dlu.edu.vn     |https://github.com/maianhtl     |0941617043      |
 |2312789   |K'Nguyễn Quang Trường   |2312789@dlu.edu.vn     |https://github.com/2312789-rgb  |0365630966      |
@@ -10,12 +10,50 @@
 ## Phân công công việc
 
 |MSSV        |Mã module                |Tên module                                              |Ghi chú       |
-|------------|-------------------------|--------------------------------------------------------|--------------|
+|---|---|---|---|
 |2312610     |FR-RCP                   |Quản lý Công thức Nấu ăn                                |10 chức năng  |
 |2312569     |FR-JOB/FR-CAT            |Background Jobs/Quản lý Danh mục                        |9 chức năng   |
 |2312789     |FR-SRCH/FR-FILE/FR-OBS   |Tìm kiếm & Phân trang/Quản lý Tệp tin/Quan sát Hệ thống |9 chức năng   |
 |2312622     |FR-AUTH                  |Xác thực & Quản lý Người dùng                           |7 chức năng   |
 
+## Chi tiết phân công
+
+|MSSV        |Chi tiết công việc       |Tuần thực hiện         |Tiến độ                                             |Kết quả (Hoàn thành || Không hoàn thành)       |
+|---|---|---|---|
+|2312610     |Xem Danh sách Công thức
+<br> Xem Chi tiết Công thức
+<br> Tạo Công thức Nấu ăn Mới
+<br> Cập nhật Công thức
+<br> Xuất bản / Hủy Xuất bản Công thức
+<br> Lưu trữ Công thức (Archive)
+<br> Xóa Công thức
+<br> Quản lý Ảnh Công thức
+<br> Quản lý Nguyên liệu (CRUD)
+<br> Quản lý Các bước Thực hiện (CRUD)          |          |                      |  |
+|2312569     |Welcome Email Job
+<br>Image Resize / Thumbnail Job
+<br>Sitemap Generation Job
+<br>Xem Danh sách Danh mục
+<br>Xem Chi tiết Danh mục & Công thức
+<br>Tạo Danh mục Mới [Admin]
+<br>Cập nhật Danh mục [Admin]
+<br>Xóa Danh mục [Admin]            |               |         |   |
+|2312789     |Tìm kiếm Toàn văn bản (FTS)
+<br>Bộ lọc Công thức nâng cao
+<br>Sắp xếp Kết quả
+<br>Phân trang Offset-based
+<br>Upload File lên MinIO
+<br>Xóa File khỏi MinIO
+<br>Health Check Endpoints
+<br>Structured Logging
+<br>Distributed Tracing & Metrics   | |   |  |
+|2312622     |Đăng ký Tài khoản
+<br>Đăng nhập Email/Mật khẩu
+<br>Đăng nhập Google OAuth 2.0
+<br>Làm mới Access Token
+<br>Đăng xuất
+<br>Xem Hồ sơ Cá nhân
+<br>Cập nhật Hồ sơ Cá nhân  |                          |   |   |
 
 ## Nhiệm vụ cho tuần từ ngày 16 - 22/9/2026
 

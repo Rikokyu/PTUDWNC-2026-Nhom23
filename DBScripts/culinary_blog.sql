@@ -1,724 +1,938 @@
--- ============================================================
--- CULINARY BLOG - POSTGRESQL DATABASE FOR LAB 2
--- Mục tiêu:
---   1) Tạo đầy đủ schema chính của Culinary Blog
---   2) Có ít nhất 20 categories
---   3) Có ít nhất 100 recipes
---   4) Mỗi recipe có ít nhất 10 nguyên liệu
---   5) Mỗi recipe có ít nhất 5 bước chế biến
+-- ============================================================================
+-- CULINARY BLOG - Lược đồ cơ sở dữ liệu PostgreSQL 16 + Dữ liệu mẫu phục vụ phát triển
+-- Công nghệ áp dụng: PostgreSQL 16 + .NET 10 / EF Core 10
 --
---   - Tạo database mới, ví dụ: culinary_blog
+-- CÁC QUY ƯỚC QUAN TRỌNG CỦA DỰ ÁN ĐƯỢC ÁP DỤNG
+-- 1) Recipes và Categories sử dụng xóa mềm thông qua cột "IsDeleted".
+-- 2) Việc sắp xếp thuộc tầng API/truy vấn: sortBy=<tên trường>&sortOrder=asc|desc.
+-- 3) RecipeNutrition được lưu trực tiếp trong bảng "Recipes" bằng các cột Nutrition_*.
+-- 4) RecipeStep."StepNumber" được backend/database tự gán; phía client không
+--    cần gửi giá trị này.
+-- 5) RecipeIngredient."Quantity" là số thập phân và "Unit" là chuỗi.
 --
--- LƯU Ý:
---   File này có DROP TABLE IF EXISTS ở đầu nên có thể chạy lại
---   trong môi trường development mà không bị lỗi "relation already exists".
--- ============================================================
+-- Script này phù hợp để khởi tạo cơ sở dữ liệu trong môi trường PHÁT TRIỂN CỤC BỘ.
+-- Trong ứng dụng thực tế, việc thay đổi lược đồ cơ sở dữ liệu vẫn nên được quản lý bằng
+-- EF Core Code-First Migrations theo đúng yêu cầu của SRS.
+-- ============================================================================
 
 BEGIN;
 
--- ============================================================
--- 0. XÓA CÁC BẢNG CŨ THEO THỨ TỰ PHỤ THUỘC
--- ============================================================
+-- ----------------------------------------------------------------------------
+-- 0. CÁC EXTENSION CẦN THIẾT
+-- ----------------------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-DROP TABLE IF EXISTS favorites CASCADE;
-DROP TABLE IF EXISTS ratings CASCADE;
-DROP TABLE IF EXISTS comments CASCADE;
-DROP TABLE IF EXISTS recipe_nutritions CASCADE;
-DROP TABLE IF EXISTS recipe_steps CASCADE;
-DROP TABLE IF EXISTS recipe_ingredients CASCADE;
-DROP TABLE IF EXISTS ingredients CASCADE;
-DROP TABLE IF EXISTS recipe_categories CASCADE;
-DROP TABLE IF EXISTS categories CASCADE;
-DROP TABLE IF EXISTS recipes CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
+-- ----------------------------------------------------------------------------
+-- 1. XÓA CÁC ĐỐI TƯỢNG CŨ (DÙNG KHI RESET MÔI TRƯỜNG DEV)
+-- ----------------------------------------------------------------------------
+DROP TABLE IF EXISTS "RefreshTokens" CASCADE;
+DROP TABLE IF EXISTS "AspNetUserTokens" CASCADE;
+DROP TABLE IF EXISTS "AspNetUserLogins" CASCADE;
+DROP TABLE IF EXISTS "AspNetUserClaims" CASCADE;
+DROP TABLE IF EXISTS "AspNetRoleClaims" CASCADE;
+DROP TABLE IF EXISTS "AspNetUserRoles" CASCADE;
+DROP TABLE IF EXISTS "AspNetRoles" CASCADE;
+DROP TABLE IF EXISTS "RecipeImages" CASCADE;
+DROP TABLE IF EXISTS "RecipeIngredients" CASCADE;
+DROP TABLE IF EXISTS "RecipeSteps" CASCADE;
+DROP TABLE IF EXISTS "Recipes" CASCADE;
+DROP TABLE IF EXISTS "Categories" CASCADE;
+DROP TABLE IF EXISTS "AspNetUsers" CASCADE;
 
--- ============================================================
--- 1. USERS
--- ============================================================
+DROP FUNCTION IF EXISTS culinary_set_audit_fields() CASCADE;
+DROP FUNCTION IF EXISTS culinary_refresh_row_version() CASCADE;
+DROP FUNCTION IF EXISTS culinary_update_recipe_search_vector() CASCADE;
+DROP FUNCTION IF EXISTS culinary_assign_step_number() CASCADE;
+DROP FUNCTION IF EXISTS culinary_renumber_recipe_steps() CASCADE;
+DROP FUNCTION IF EXISTS culinary_enforce_single_primary_image() CASCADE;
 
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(150) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    full_name VARCHAR(100),
-    avatar_url TEXT,
-    bio TEXT,
+-- ----------------------------------------------------------------------------
+-- 2. ASP.NET CORE IDENTITY - NGƯỜI DÙNG
+--    ApplicationUser kế thừa IdentityUser<string>.
+-- ----------------------------------------------------------------------------
+CREATE TABLE "AspNetUsers" (
+    "Id"                    varchar(450) PRIMARY KEY,
+    "UserName"              varchar(256),
+    "NormalizedUserName"    varchar(256),
+    "Email"                 varchar(256),
+    "NormalizedEmail"       varchar(256),
+    "EmailConfirmed"        boolean NOT NULL DEFAULT false,
+    "PasswordHash"          text,
+    "SecurityStamp"         text,
+    "ConcurrencyStamp"      text,
+    "PhoneNumber"           text,
+    "PhoneNumberConfirmed"  boolean NOT NULL DEFAULT false,
+    "TwoFactorEnabled"      boolean NOT NULL DEFAULT false,
+    "LockoutEnd"            timestamptz,
+    "LockoutEnabled"        boolean NOT NULL DEFAULT true,
+    "AccessFailedCount"     integer NOT NULL DEFAULT 0,
 
-    role VARCHAR(20) NOT NULL DEFAULT 'USER'
-        CHECK (role IN ('USER', 'ADMIN')),
-
-    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
-        CHECK (status IN ('ACTIVE', 'BLOCKED')),
-
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    -- ApplicationUser custom columns from SRS Chapter 7.7
+    "DisplayName"            varchar(100) NOT NULL,
+    "AvatarUrl"              varchar(500),
+    "Bio"                    text,
+    "IsActive"               boolean NOT NULL DEFAULT true,
+    "CreatedAt"              timestamptz NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- 2. CATEGORIES
--- Xóa mềm bằng is_deleted
--- ============================================================
+CREATE UNIQUE INDEX "UserNameIndex"
+    ON "AspNetUsers" ("NormalizedUserName")
+    WHERE "NormalizedUserName" IS NOT NULL;
 
-CREATE TABLE categories (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    slug VARCHAR(120) NOT NULL,
-    description TEXT,
-    image_url TEXT,
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE INDEX "EmailIndex"
+    ON "AspNetUsers" ("NormalizedEmail");
+
+-- ----------------------------------------------------------------------------
+-- 3. ASP.NET CORE IDENTITY - VAI TRÒ / CÁC BẢNG QUAN HỆ
+-- ----------------------------------------------------------------------------
+CREATE TABLE "AspNetRoles" (
+    "Id"                varchar(450) PRIMARY KEY,
+    "Name"              varchar(256),
+    "NormalizedName"    varchar(256),
+    "ConcurrencyStamp"  text
 );
 
-CREATE UNIQUE INDEX uq_categories_name_active
-ON categories (LOWER(name))
-WHERE is_deleted = FALSE;
+CREATE UNIQUE INDEX "RoleNameIndex"
+    ON "AspNetRoles" ("NormalizedName")
+    WHERE "NormalizedName" IS NOT NULL;
 
-CREATE UNIQUE INDEX uq_categories_slug_active
-ON categories (LOWER(slug))
-WHERE is_deleted = FALSE;
+CREATE TABLE "AspNetUserRoles" (
+    "UserId" varchar(450) NOT NULL,
+    "RoleId" varchar(450) NOT NULL,
+    PRIMARY KEY ("UserId", "RoleId"),
+    CONSTRAINT "FK_AspNetUserRoles_Users"
+        FOREIGN KEY ("UserId") REFERENCES "AspNetUsers"("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_AspNetUserRoles_Roles"
+        FOREIGN KEY ("RoleId") REFERENCES "AspNetRoles"("Id") ON DELETE CASCADE
+);
 
--- ============================================================
--- 3. RECIPES
--- Xóa mềm bằng is_deleted
--- ============================================================
+CREATE INDEX "IX_AspNetUserRoles_RoleId"
+    ON "AspNetUserRoles" ("RoleId");
 
-CREATE TABLE recipes (
-    id BIGSERIAL PRIMARY KEY,
+CREATE TABLE "AspNetUserClaims" (
+    "Id"        integer GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    "UserId"    varchar(450) NOT NULL,
+    "ClaimType" text,
+    "ClaimValue" text,
+    CONSTRAINT "FK_AspNetUserClaims_Users"
+        FOREIGN KEY ("UserId") REFERENCES "AspNetUsers"("Id") ON DELETE CASCADE
+);
 
-    author_id BIGINT NOT NULL,
+CREATE INDEX "IX_AspNetUserClaims_UserId"
+    ON "AspNetUserClaims" ("UserId");
 
-    title VARCHAR(200) NOT NULL,
-    slug VARCHAR(220) NOT NULL,
-    description TEXT,
-    thumbnail_url TEXT,
+CREATE TABLE "AspNetRoleClaims" (
+    "Id"        integer GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    "RoleId"    varchar(450) NOT NULL,
+    "ClaimType" text,
+    "ClaimValue" text,
+    CONSTRAINT "FK_AspNetRoleClaims_Roles"
+        FOREIGN KEY ("RoleId") REFERENCES "AspNetRoles"("Id") ON DELETE CASCADE
+);
 
-    prep_time_minutes INTEGER
-        CHECK (prep_time_minutes IS NULL OR prep_time_minutes >= 0),
+CREATE INDEX "IX_AspNetRoleClaims_RoleId"
+    ON "AspNetRoleClaims" ("RoleId");
 
-    cook_time_minutes INTEGER
-        CHECK (cook_time_minutes IS NULL OR cook_time_minutes >= 0),
+CREATE TABLE "AspNetUserLogins" (
+    "LoginProvider"       varchar(128) NOT NULL,
+    "ProviderKey"         varchar(128) NOT NULL,
+    "ProviderDisplayName" text,
+    "UserId"              varchar(450) NOT NULL,
+    PRIMARY KEY ("LoginProvider", "ProviderKey"),
+    CONSTRAINT "FK_AspNetUserLogins_Users"
+        FOREIGN KEY ("UserId") REFERENCES "AspNetUsers"("Id") ON DELETE CASCADE
+);
 
-    servings INTEGER
-        CHECK (servings IS NULL OR servings > 0),
+CREATE INDEX "IX_AspNetUserLogins_UserId"
+    ON "AspNetUserLogins" ("UserId");
 
-    difficulty VARCHAR(20)
+CREATE TABLE "AspNetUserTokens" (
+    "UserId"        varchar(450) NOT NULL,
+    "LoginProvider" varchar(128) NOT NULL,
+    "Name"          varchar(128) NOT NULL,
+    "Value"         text,
+    PRIMARY KEY ("UserId", "LoginProvider", "Name"),
+    CONSTRAINT "FK_AspNetUserTokens_Users"
+        FOREIGN KEY ("UserId") REFERENCES "AspNetUsers"("Id") ON DELETE CASCADE
+);
+
+-- ----------------------------------------------------------------------------
+-- 4. DANH MỤC
+--    Sử dụng xóa mềm theo quy ước đã thống nhất.
+-- ----------------------------------------------------------------------------
+CREATE TABLE "Categories" (
+    "Id"          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "Name"        varchar(100) NOT NULL,
+    "Slug"        varchar(120) NOT NULL,
+    "Description" text,
+    "ImageUrl"    varchar(500),
+    "OrderIndex"  integer NOT NULL DEFAULT 0 CHECK ("OrderIndex" >= 0),
+
+    -- Các trường kế thừa từ BaseEntity
+    "CreatedAt"   timestamptz NOT NULL DEFAULT NOW(),
+    "UpdatedAt"   timestamptz,
+    "IsDeleted"   boolean NOT NULL DEFAULT false,
+    "RowVersion"  bytea NOT NULL DEFAULT gen_random_bytes(8)
+);
+
+-- Chỉ kiểm tra duy nhất trên các bản ghi chưa xóa mềm để có thể tái sử dụng slug/tên sau khi xóa.
+CREATE UNIQUE INDEX "UX_Categories_Name_Active"
+    ON "Categories" ("Name")
+    WHERE "IsDeleted" = false;
+
+CREATE UNIQUE INDEX "UX_Categories_Slug_Active"
+    ON "Categories" ("Slug")
+    WHERE "IsDeleted" = false;
+
+CREATE INDEX "IX_Categories_OrderIndex"
+    ON "Categories" ("OrderIndex")
+    WHERE "IsDeleted" = false;
+
+-- ----------------------------------------------------------------------------
+-- 5. CÔNG THỨC
+--    RecipeNutrition là owned entity và được lưu bằng các cột Nutrition_* trong bảng Recipes.
+-- ----------------------------------------------------------------------------
+CREATE TABLE "Recipes" (
+    "Id"          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    "Title"       varchar(200) NOT NULL,
+    "Slug"        varchar(220) NOT NULL,
+    "Description" text NOT NULL CHECK (char_length("Description") <= 2000),
+    "Instructions" text NOT NULL DEFAULT '',
+
+    "PrepTime"    integer NOT NULL CHECK ("PrepTime" > 0),
+    "CookTime"    integer NOT NULL CHECK ("CookTime" >= 0),
+    "Servings"    integer NOT NULL CHECK ("Servings" > 0),
+
+    -- 1=Easy, 2=Medium, 3=Hard, 4=Expert
+    "Difficulty"  smallint NOT NULL DEFAULT 1
+                  CHECK ("Difficulty" BETWEEN 1 AND 4),
+
+    -- 0=Draft, 1=Published, 2=Archived
+    "Status"      smallint NOT NULL DEFAULT 0
+                  CHECK ("Status" BETWEEN 0 AND 2),
+
+    "CategoryId"  uuid NOT NULL,
+    "AuthorId"    varchar(450) NOT NULL,
+
+    "SearchVector" tsvector,
+    "PublishedAt" timestamptz,
+
+    -- RecipeNutrition - owned entity
+    "Nutrition_Calories"      numeric(8,2) CHECK ("Nutrition_Calories" >= 0),
+    "Nutrition_Protein"       numeric(8,2) CHECK ("Nutrition_Protein" >= 0),
+    "Nutrition_Carbohydrates" numeric(8,2) CHECK ("Nutrition_Carbohydrates" >= 0),
+    "Nutrition_Fat"           numeric(8,2) CHECK ("Nutrition_Fat" >= 0),
+    "Nutrition_Fiber"         numeric(8,2) CHECK ("Nutrition_Fiber" >= 0),
+    "Nutrition_Sodium"        numeric(8,2) CHECK ("Nutrition_Sodium" >= 0),
+
+    -- Các trường kế thừa từ BaseEntity
+    "CreatedAt"   timestamptz NOT NULL DEFAULT NOW(),
+    "UpdatedAt"   timestamptz,
+    "IsDeleted"   boolean NOT NULL DEFAULT false,
+    "RowVersion"  bytea NOT NULL DEFAULT gen_random_bytes(8),
+
+    CONSTRAINT "FK_Recipes_Categories"
+        FOREIGN KEY ("CategoryId")
+        REFERENCES "Categories"("Id")
+        ON DELETE RESTRICT,
+
+    CONSTRAINT "FK_Recipes_Authors"
+        FOREIGN KEY ("AuthorId")
+        REFERENCES "AspNetUsers"("Id")
+        ON DELETE RESTRICT,
+
+    CONSTRAINT "CK_Recipes_PublishedAt"
         CHECK (
-            difficulty IS NULL
-            OR difficulty IN ('EASY', 'MEDIUM', 'HARD')
-        ),
-
-    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT'
-        CHECK (
-            status IN ('DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED')
-        ),
-
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-
-    view_count BIGINT NOT NULL DEFAULT 0
-        CHECK (view_count >= 0),
-
-    published_at TIMESTAMPTZ,
-
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_recipes_author
-        FOREIGN KEY (author_id)
-        REFERENCES users(id)
+            ("Status" = 1 AND "PublishedAt" IS NOT NULL)
+            OR
+            ("Status" <> 1)
+        )
 );
 
-CREATE UNIQUE INDEX uq_recipes_slug_active
-ON recipes (LOWER(slug))
-WHERE is_deleted = FALSE;
+-- Slug của các công thức chưa bị xóa mềm phải là duy nhất.
+CREATE UNIQUE INDEX "UX_Recipes_Slug_Active"
+    ON "Recipes" ("Slug")
+    WHERE "IsDeleted" = false;
 
--- ============================================================
--- 4. RECIPE_CATEGORIES
--- Quan hệ N-N giữa recipes và categories
--- ============================================================
+CREATE INDEX "IX_Recipes_CategoryId"
+    ON "Recipes" ("CategoryId")
+    WHERE "IsDeleted" = false;
 
-CREATE TABLE recipe_categories (
-    recipe_id BIGINT NOT NULL,
-    category_id BIGINT NOT NULL,
+CREATE INDEX "IX_Recipes_AuthorId"
+    ON "Recipes" ("AuthorId")
+    WHERE "IsDeleted" = false;
 
-    PRIMARY KEY (recipe_id, category_id),
+CREATE INDEX "IX_Recipes_Difficulty"
+    ON "Recipes" ("Difficulty")
+    WHERE "IsDeleted" = false;
 
-    CONSTRAINT fk_recipe_categories_recipe
-        FOREIGN KEY (recipe_id)
-        REFERENCES recipes(id)
-        ON DELETE CASCADE,
+CREATE INDEX "IX_Recipes_Status"
+    ON "Recipes" ("Status")
+    WHERE "IsDeleted" = false;
 
-    CONSTRAINT fk_recipe_categories_category
-        FOREIGN KEY (category_id)
-        REFERENCES categories(id)
-);
+CREATE INDEX "IX_Recipes_PublishedAt"
+    ON "Recipes" ("PublishedAt" DESC)
+    WHERE "IsDeleted" = false AND "Status" = 1;
 
--- ============================================================
--- 5. INGREDIENTS
--- ============================================================
+CREATE INDEX "IX_Recipes_CreatedAt"
+    ON "Recipes" ("CreatedAt" DESC)
+    WHERE "IsDeleted" = false;
 
-CREATE TABLE ingredients (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(150) NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+CREATE INDEX "IX_Recipes_Title_Trgm"
+    ON "Recipes" USING GIN ("Title" gin_trgm_ops)
+    WHERE "IsDeleted" = false;
 
--- ============================================================
--- 6. RECIPE_INGREDIENTS
--- quantity là số thập phân, unit là chuỗi
--- ============================================================
+CREATE INDEX "IX_Recipes_SearchVector"
+    ON "Recipes" USING GIN ("SearchVector")
+    WHERE "IsDeleted" = false;
 
-CREATE TABLE recipe_ingredients (
-    id BIGSERIAL PRIMARY KEY,
+-- ----------------------------------------------------------------------------
+-- 6. CÁC BƯỚC CHẾ BIẾN
+--    StepNumber được tự động gán. Phía client không nên tự điều khiển giá trị này.
+-- ----------------------------------------------------------------------------
+CREATE TABLE "RecipeSteps" (
+    "Id"           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "RecipeId"     uuid NOT NULL,
+    "StepNumber"   integer NOT NULL CHECK ("StepNumber" > 0),
+    "Title"        varchar(200) NOT NULL,
+    "Description"  text NOT NULL CHECK (char_length("Description") <= 2000),
+    "TimerMinutes" integer CHECK ("TimerMinutes" >= 0),
+    "ImageUrl"     varchar(500),
 
-    recipe_id BIGINT NOT NULL,
-    ingredient_id BIGINT NOT NULL,
+    -- Các trường kế thừa từ BaseEntity
+    "CreatedAt"    timestamptz NOT NULL DEFAULT NOW(),
+    "UpdatedAt"    timestamptz,
+    "IsDeleted"    boolean NOT NULL DEFAULT false,
+    "RowVersion"   bytea NOT NULL DEFAULT gen_random_bytes(8),
 
-    quantity NUMERIC(10,3)
-        CHECK (quantity IS NULL OR quantity >= 0),
-
-    unit VARCHAR(50),
-    note VARCHAR(255),
-
-    sort_order INTEGER NOT NULL DEFAULT 0
-        CHECK (sort_order >= 0),
-
-    CONSTRAINT fk_recipe_ingredients_recipe
-        FOREIGN KEY (recipe_id)
-        REFERENCES recipes(id)
-        ON DELETE CASCADE,
-
-    CONSTRAINT fk_recipe_ingredients_ingredient
-        FOREIGN KEY (ingredient_id)
-        REFERENCES ingredients(id),
-
-    CONSTRAINT uq_recipe_ingredient
-        UNIQUE (recipe_id, ingredient_id)
-);
-
--- ============================================================
--- 7. RECIPE_STEPS
--- step_number do backend tự gán trong ứng dụng thật
--- ============================================================
-
-CREATE TABLE recipe_steps (
-    id BIGSERIAL PRIMARY KEY,
-
-    recipe_id BIGINT NOT NULL,
-
-    step_number INTEGER NOT NULL
-        CHECK (step_number > 0),
-
-    instruction TEXT NOT NULL,
-    image_url TEXT,
-
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_recipe_steps_recipe
-        FOREIGN KEY (recipe_id)
-        REFERENCES recipes(id)
-        ON DELETE CASCADE,
-
-    CONSTRAINT uq_recipe_step_number
-        UNIQUE (recipe_id, step_number)
-);
-
--- ============================================================
--- 8. RECIPE_NUTRITIONS
--- Quan hệ 1-1 với recipes
--- ============================================================
-
-CREATE TABLE recipe_nutritions (
-    recipe_id BIGINT PRIMARY KEY,
-
-    calories NUMERIC(10,2)
-        CHECK (calories IS NULL OR calories >= 0),
-
-    protein NUMERIC(10,2)
-        CHECK (protein IS NULL OR protein >= 0),
-
-    carbohydrates NUMERIC(10,2)
-        CHECK (carbohydrates IS NULL OR carbohydrates >= 0),
-
-    fat NUMERIC(10,2)
-        CHECK (fat IS NULL OR fat >= 0),
-
-    fiber NUMERIC(10,2)
-        CHECK (fiber IS NULL OR fiber >= 0),
-
-    sugar NUMERIC(10,2)
-        CHECK (sugar IS NULL OR sugar >= 0),
-
-    sodium NUMERIC(10,2)
-        CHECK (sodium IS NULL OR sodium >= 0),
-
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_nutrition_recipe
-        FOREIGN KEY (recipe_id)
-        REFERENCES recipes(id)
+    CONSTRAINT "FK_RecipeSteps_Recipes"
+        FOREIGN KEY ("RecipeId")
+        REFERENCES "Recipes"("Id")
         ON DELETE CASCADE
 );
 
--- ============================================================
--- 9. COMMENTS
--- ============================================================
+CREATE UNIQUE INDEX "UX_RecipeSteps_Recipe_Step_Active"
+    ON "RecipeSteps" ("RecipeId", "StepNumber")
+    WHERE "IsDeleted" = false;
 
-CREATE TABLE comments (
-    id BIGSERIAL PRIMARY KEY,
+CREATE INDEX "IX_RecipeSteps_RecipeId"
+    ON "RecipeSteps" ("RecipeId")
+    WHERE "IsDeleted" = false;
 
-    user_id BIGINT NOT NULL,
-    recipe_id BIGINT NOT NULL,
-    parent_id BIGINT,
+-- ----------------------------------------------------------------------------
+-- 7. NGUYÊN LIỆU CỦA CÔNG THỨC
+--    Quy ước dự án: Quantity = số thập phân, Unit = chuỗi.
+-- ----------------------------------------------------------------------------
+CREATE TABLE "RecipeIngredients" (
+    "Id"         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "RecipeId"   uuid NOT NULL,
+    "Name"       varchar(200) NOT NULL,
+    "Quantity"   numeric(10,3) NOT NULL CHECK ("Quantity" > 0),
+    "Unit"       varchar(50) NOT NULL CHECK (btrim("Unit") <> ''),
+    "Notes"      varchar(500),
+    "OrderIndex" integer NOT NULL DEFAULT 0 CHECK ("OrderIndex" >= 0),
 
-    content TEXT NOT NULL,
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Các trường kế thừa từ BaseEntity
+    "CreatedAt"  timestamptz NOT NULL DEFAULT NOW(),
+    "UpdatedAt"  timestamptz,
+    "IsDeleted"  boolean NOT NULL DEFAULT false,
+    "RowVersion" bytea NOT NULL DEFAULT gen_random_bytes(8),
 
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "FK_RecipeIngredients_Recipes"
+        FOREIGN KEY ("RecipeId")
+        REFERENCES "Recipes"("Id")
+        ON DELETE CASCADE
+);
 
-    CONSTRAINT fk_comments_user
-        FOREIGN KEY (user_id)
-        REFERENCES users(id),
+CREATE INDEX "IX_RecipeIngredients_RecipeId_OrderIndex"
+    ON "RecipeIngredients" ("RecipeId", "OrderIndex")
+    WHERE "IsDeleted" = false;
 
-    CONSTRAINT fk_comments_recipe
-        FOREIGN KEY (recipe_id)
-        REFERENCES recipes(id)
+-- ----------------------------------------------------------------------------
+-- 8. ẢNH CỦA CÔNG THỨC
+-- ----------------------------------------------------------------------------
+CREATE TABLE "RecipeImages" (
+    "Id"           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "RecipeId"     uuid NOT NULL,
+    "OriginalUrl"  varchar(500) NOT NULL,
+    "MediumUrl"    varchar(500),
+    "ThumbnailUrl" varchar(500),
+    "AltText"      varchar(200),
+    "IsPrimary"    boolean NOT NULL DEFAULT false,
+    "OrderIndex"   integer NOT NULL DEFAULT 0 CHECK ("OrderIndex" >= 0),
+
+    -- Các trường kế thừa từ BaseEntity
+    "CreatedAt"    timestamptz NOT NULL DEFAULT NOW(),
+    "UpdatedAt"    timestamptz,
+    "IsDeleted"    boolean NOT NULL DEFAULT false,
+    "RowVersion"   bytea NOT NULL DEFAULT gen_random_bytes(8),
+
+    CONSTRAINT "FK_RecipeImages_Recipes"
+        FOREIGN KEY ("RecipeId")
+        REFERENCES "Recipes"("Id")
+        ON DELETE CASCADE
+);
+
+CREATE INDEX "IX_RecipeImages_RecipeId_OrderIndex"
+    ON "RecipeImages" ("RecipeId", "OrderIndex")
+    WHERE "IsDeleted" = false;
+
+-- Mỗi công thức chỉ được có tối đa một ảnh chính đang hoạt động.
+CREATE UNIQUE INDEX "UX_RecipeImages_OnePrimaryPerRecipe"
+    ON "RecipeImages" ("RecipeId")
+    WHERE "IsDeleted" = false AND "IsPrimary" = true;
+
+-- ----------------------------------------------------------------------------
+-- 9. REFRESH TOKEN
+-- ----------------------------------------------------------------------------
+CREATE TABLE "RefreshTokens" (
+    "Id"                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "UserId"              varchar(450) NOT NULL,
+    "TokenHash"           varchar(64) NOT NULL,
+    "ExpiresAt"           timestamptz NOT NULL,
+    "RevokedAt"           timestamptz,
+    "ReplacedByTokenHash" varchar(64),
+    "CreatedAt"           timestamptz NOT NULL DEFAULT NOW(),
+    "CreatedByIp"         varchar(45),
+
+    CONSTRAINT "FK_RefreshTokens_Users"
+        FOREIGN KEY ("UserId")
+        REFERENCES "AspNetUsers"("Id")
         ON DELETE CASCADE,
 
-    CONSTRAINT fk_comments_parent
-        FOREIGN KEY (parent_id)
-        REFERENCES comments(id)
-        ON DELETE CASCADE
+    CONSTRAINT "CK_RefreshTokens_Expiry"
+        CHECK ("ExpiresAt" > "CreatedAt")
 );
 
--- ============================================================
--- 10. RATINGS
--- ============================================================
+CREATE UNIQUE INDEX "UX_RefreshTokens_TokenHash"
+    ON "RefreshTokens" ("TokenHash");
 
-CREATE TABLE ratings (
-    id BIGSERIAL PRIMARY KEY,
+CREATE INDEX "IX_RefreshTokens_UserId"
+    ON "RefreshTokens" ("UserId");
 
-    user_id BIGINT NOT NULL,
-    recipe_id BIGINT NOT NULL,
+CREATE INDEX "IX_RefreshTokens_Active"
+    ON "RefreshTokens" ("UserId", "ExpiresAt")
+    WHERE "RevokedAt" IS NULL;
 
-    rating SMALLINT NOT NULL
-        CHECK (rating BETWEEN 1 AND 5),
+-- ============================================================================
+-- 10. TRIGGER CẬP NHẬT THỜI GIAN VÀ ROWVERSION
+-- ============================================================================
 
-    review TEXT,
+CREATE OR REPLACE FUNCTION culinary_set_audit_fields()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        NEW."CreatedAt" := COALESCE(NEW."CreatedAt", NOW());
+    ELSE
+        NEW."UpdatedAt" := NOW();
+    END IF;
+    RETURN NEW;
+END;
+$$;
 
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+CREATE OR REPLACE FUNCTION culinary_refresh_row_version()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW."RowVersion" := gen_random_bytes(8);
+    RETURN NEW;
+END;
+$$;
 
-    CONSTRAINT uq_user_recipe_rating
-        UNIQUE (user_id, recipe_id),
+-- Bảng Categories
+CREATE TRIGGER "TR_Categories_Audit"
+BEFORE INSERT OR UPDATE ON "Categories"
+FOR EACH ROW EXECUTE FUNCTION culinary_set_audit_fields();
 
-    CONSTRAINT fk_ratings_user
-        FOREIGN KEY (user_id)
-        REFERENCES users(id),
+CREATE TRIGGER "TR_Categories_RowVersion"
+BEFORE UPDATE ON "Categories"
+FOR EACH ROW EXECUTE FUNCTION culinary_refresh_row_version();
 
-    CONSTRAINT fk_ratings_recipe
-        FOREIGN KEY (recipe_id)
-        REFERENCES recipes(id)
-        ON DELETE CASCADE
-);
+-- Bảng Recipes
+CREATE TRIGGER "TR_Recipes_Audit"
+BEFORE INSERT OR UPDATE ON "Recipes"
+FOR EACH ROW EXECUTE FUNCTION culinary_set_audit_fields();
 
--- ============================================================
--- 11. FAVORITES
--- ============================================================
+CREATE TRIGGER "TR_Recipes_RowVersion"
+BEFORE UPDATE ON "Recipes"
+FOR EACH ROW EXECUTE FUNCTION culinary_refresh_row_version();
 
-CREATE TABLE favorites (
-    user_id BIGINT NOT NULL,
-    recipe_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-- Bảng RecipeSteps
+CREATE TRIGGER "TR_RecipeSteps_Audit"
+BEFORE INSERT OR UPDATE ON "RecipeSteps"
+FOR EACH ROW EXECUTE FUNCTION culinary_set_audit_fields();
 
-    PRIMARY KEY (user_id, recipe_id),
+CREATE TRIGGER "TR_RecipeSteps_RowVersion"
+BEFORE UPDATE ON "RecipeSteps"
+FOR EACH ROW EXECUTE FUNCTION culinary_refresh_row_version();
 
-    CONSTRAINT fk_favorites_user
-        FOREIGN KEY (user_id)
-        REFERENCES users(id),
+-- Bảng RecipeIngredients
+CREATE TRIGGER "TR_RecipeIngredients_Audit"
+BEFORE INSERT OR UPDATE ON "RecipeIngredients"
+FOR EACH ROW EXECUTE FUNCTION culinary_set_audit_fields();
 
-    CONSTRAINT fk_favorites_recipe
-        FOREIGN KEY (recipe_id)
-        REFERENCES recipes(id)
-        ON DELETE CASCADE
-);
+CREATE TRIGGER "TR_RecipeIngredients_RowVersion"
+BEFORE UPDATE ON "RecipeIngredients"
+FOR EACH ROW EXECUTE FUNCTION culinary_refresh_row_version();
 
--- ============================================================
--- 12. INDEXES
--- ============================================================
+-- Bảng RecipeImages
+CREATE TRIGGER "TR_RecipeImages_Audit"
+BEFORE INSERT OR UPDATE ON "RecipeImages"
+FOR EACH ROW EXECUTE FUNCTION culinary_set_audit_fields();
 
-CREATE INDEX idx_recipes_author_id
-ON recipes(author_id);
+CREATE TRIGGER "TR_RecipeImages_RowVersion"
+BEFORE UPDATE ON "RecipeImages"
+FOR EACH ROW EXECUTE FUNCTION culinary_refresh_row_version();
 
-CREATE INDEX idx_recipes_status
-ON recipes(status);
+-- ============================================================================
+-- 11. TRIGGER TÌM KIẾM TOÀN VĂN BẢN
+--     Cấu hình "simple" kết hợp unaccent phù hợp để tìm kiếm nội dung tiếng Việt.
+-- ============================================================================
 
-CREATE INDEX idx_recipes_active
-ON recipes(is_deleted)
-WHERE is_deleted = FALSE;
+CREATE OR REPLACE FUNCTION culinary_update_recipe_search_vector()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW."SearchVector" :=
+        to_tsvector(
+            'simple',
+            unaccent(
+                COALESCE(NEW."Title", '') || ' ' ||
+                COALESCE(NEW."Description", '')
+            )
+        );
+    RETURN NEW;
+END;
+$$;
 
-CREATE INDEX idx_recipes_created_at
-ON recipes(created_at DESC);
+CREATE TRIGGER "TR_Recipes_SearchVector"
+BEFORE INSERT OR UPDATE OF "Title", "Description"
+ON "Recipes"
+FOR EACH ROW
+EXECUTE FUNCTION culinary_update_recipe_search_vector();
 
-CREATE INDEX idx_categories_active
-ON categories(is_deleted)
-WHERE is_deleted = FALSE;
+-- ============================================================================
+-- 12. TỰ ĐỘNG GÁN SỐ THỨ TỰ BƯỚC
+--     Trong ứng dụng thực tế, backend nên gán StepNumber bên trong transaction.
+--     Trigger này là lớp dự phòng khi insert trực tiếp hoặc khi tạo dữ liệu mẫu.
+-- ============================================================================
 
-CREATE INDEX idx_recipe_ingredients_recipe_id
-ON recipe_ingredients(recipe_id);
+CREATE OR REPLACE FUNCTION culinary_assign_step_number()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW."StepNumber" IS NULL OR NEW."StepNumber" <= 0 THEN
+        SELECT COALESCE(MAX(rs."StepNumber"), 0) + 1
+        INTO NEW."StepNumber"
+        FROM "RecipeSteps" rs
+        WHERE rs."RecipeId" = NEW."RecipeId"
+          AND rs."IsDeleted" = false;
+    END IF;
 
-CREATE INDEX idx_recipe_ingredients_ingredient_id
-ON recipe_ingredients(ingredient_id);
+    RETURN NEW;
+END;
+$$;
 
-CREATE INDEX idx_recipe_steps_recipe_id
-ON recipe_steps(recipe_id);
+CREATE TRIGGER "TR_RecipeSteps_AssignStepNumber"
+BEFORE INSERT ON "RecipeSteps"
+FOR EACH ROW EXECUTE FUNCTION culinary_assign_step_number();
 
-CREATE INDEX idx_ratings_recipe_id
-ON ratings(recipe_id);
+-- Hàm hỗ trợ để ứng dụng có thể đánh lại số thứ tự sau khi xóa mềm hoặc sắp xếp lại bước.
+CREATE OR REPLACE FUNCTION culinary_renumber_recipe_steps(p_recipe_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    WITH ordered AS (
+        SELECT
+            "Id",
+            row_number() OVER (ORDER BY "StepNumber", "CreatedAt", "Id") AS new_no
+        FROM "RecipeSteps"
+        WHERE "RecipeId" = p_recipe_id
+          AND "IsDeleted" = false
+    )
+    UPDATE "RecipeSteps" rs
+    SET "StepNumber" = ordered.new_no
+    FROM ordered
+    WHERE rs."Id" = ordered."Id";
+END;
+$$;
 
-CREATE INDEX idx_comments_recipe_id
-ON comments(recipe_id);
+-- ============================================================================
+-- 13. DỮ LIỆU MẪU CHO ROLE VÀ NGƯỜI DÙNG
+--     PasswordHash được để NULL có chủ đích. KHÔNG lưu mật khẩu dạng văn bản thuần.
+-- ============================================================================
 
-CREATE INDEX idx_favorites_user_id
-ON favorites(user_id);
+INSERT INTO "AspNetRoles" ("Id", "Name", "NormalizedName", "ConcurrencyStamp")
+VALUES
+    ('role-admin',  'Admin',  'ADMIN',  gen_random_uuid()::text),
+    ('role-author', 'Author', 'AUTHOR', gen_random_uuid()::text);
 
--- ============================================================
--- 13. SEED DATA
--- ============================================================
-
--- ------------------------------------------------------------
--- 13.1 USERS MẪU
--- ------------------------------------------------------------
-
-INSERT INTO users (
-    username,
-    email,
-    password_hash,
-    full_name,
-    role
+INSERT INTO "AspNetUsers" (
+    "Id", "UserName", "NormalizedUserName",
+    "Email", "NormalizedEmail", "EmailConfirmed",
+    "SecurityStamp", "ConcurrencyStamp",
+    "DisplayName", "AvatarUrl", "Bio", "IsActive"
 )
 VALUES
-('admin',      'admin@culinaryblog.local', '$2b$12$development_admin_hash', 'Administrator', 'ADMIN'),
-('user01',     'user01@example.com',        '$2b$12$development_user_hash',  'Người dùng 01', 'USER'),
-('user02',     'user02@example.com',        '$2b$12$development_user_hash',  'Người dùng 02', 'USER'),
-('user03',     'user03@example.com',        '$2b$12$development_user_hash',  'Người dùng 03', 'USER'),
-('user04',     'user04@example.com',        '$2b$12$development_user_hash',  'Người dùng 04', 'USER');
+    ('user-admin-001', 'admin', 'ADMIN',
+     'admin@culinary.local', 'ADMIN@CULINARY.LOCAL', true,
+     gen_random_uuid()::text, gen_random_uuid()::text,
+     'Quản trị Culinary Blog',
+     'https://picsum.photos/seed/admin/300/300',
+     'Tài khoản quản trị mẫu phục vụ development.', true),
 
--- ------------------------------------------------------------
--- 13.2 20 CATEGORIES
--- ------------------------------------------------------------
+    ('user-author-001', 'author01', 'AUTHOR01',
+     'author01@culinary.local', 'AUTHOR01@CULINARY.LOCAL', true,
+     gen_random_uuid()::text, gen_random_uuid()::text,
+     'Nguyễn An',
+     'https://picsum.photos/seed/author01/300/300',
+     'Tác giả yêu thích các món Việt Nam.', true),
 
-INSERT INTO categories (name, slug, description)
+    ('user-author-002', 'author02', 'AUTHOR02',
+     'author02@culinary.local', 'AUTHOR02@CULINARY.LOCAL', true,
+     gen_random_uuid()::text, gen_random_uuid()::text,
+     'Trần Bình',
+     'https://picsum.photos/seed/author02/300/300',
+     'Tác giả chuyên món gia đình và món nhanh.', true),
+
+    ('user-author-003', 'author03', 'AUTHOR03',
+     'author03@culinary.local', 'AUTHOR03@CULINARY.LOCAL', true,
+     gen_random_uuid()::text, gen_random_uuid()::text,
+     'Lê Chi',
+     'https://picsum.photos/seed/author03/300/300',
+     'Tác giả chuyên bánh và món tráng miệng.', true),
+
+    ('user-author-004', 'author04', 'AUTHOR04',
+     'author04@culinary.local', 'AUTHOR04@CULINARY.LOCAL', true,
+     gen_random_uuid()::text, gen_random_uuid()::text,
+     'Phạm Dương',
+     'https://picsum.photos/seed/author04/300/300',
+     'Tác giả thích ẩm thực Á - Âu.', true),
+
+    ('user-author-005', 'author05', 'AUTHOR05',
+     'author05@culinary.local', 'AUTHOR05@CULINARY.LOCAL', true,
+     gen_random_uuid()::text, gen_random_uuid()::text,
+     'Võ Giang',
+     'https://picsum.photos/seed/author05/300/300',
+     'Tác giả chia sẻ công thức lành mạnh.', true);
+
+INSERT INTO "AspNetUserRoles" ("UserId", "RoleId")
 VALUES
-('Món Việt Nam',     'mon-viet-nam',     'Các món ăn Việt Nam'),
-('Món Á',            'mon-a',            'Các món ăn châu Á'),
-('Món Âu',           'mon-au',           'Các món ăn châu Âu'),
-('Món chay',         'mon-chay',         'Các món ăn chay'),
-('Món tráng miệng',  'mon-trang-mieng',  'Các món tráng miệng'),
-('Đồ uống',          'do-uong',          'Các loại đồ uống'),
-('Món ăn sáng',      'mon-an-sang',      'Các món ăn sáng'),
-('Món ăn trưa',      'mon-an-trua',      'Các món ăn trưa'),
-('Món ăn tối',       'mon-an-toi',       'Các món ăn tối'),
-('Món khai vị',      'mon-khai-vi',      'Các món khai vị'),
-('Món chính',        'mon-chinh',        'Các món chính'),
-('Món nước',         'mon-nuoc',         'Các món nước'),
-('Món chiên',        'mon-chien',        'Các món chiên'),
-('Món xào',          'mon-xao',          'Các món xào'),
-('Món nướng',        'mon-nuong',        'Các món nướng'),
-('Món hấp',          'mon-hap',          'Các món hấp'),
-('Món kho',          'mon-kho',          'Các món kho'),
-('Món canh',         'mon-canh',         'Các món canh'),
-('Salad',            'salad',            'Các món salad'),
-('Món ăn vặt',       'mon-an-vat',       'Các món ăn vặt');
+    ('user-admin-001',  'role-admin'),
+    ('user-admin-001',  'role-author'),
+    ('user-author-001', 'role-author'),
+    ('user-author-002', 'role-author'),
+    ('user-author-003', 'role-author'),
+    ('user-author-004', 'role-author'),
+    ('user-author-005', 'role-author');
 
--- ------------------------------------------------------------
--- 13.3 80 INGREDIENTS
--- ------------------------------------------------------------
+-- ============================================================================
+-- 14. DỮ LIỆU MẪU: 20 DANH MỤC
+-- ============================================================================
 
-INSERT INTO ingredients (name)
+INSERT INTO "Categories"
+("Name", "Slug", "Description", "ImageUrl", "OrderIndex")
 VALUES
-('Thịt bò'), ('Thịt heo'), ('Thịt gà'), ('Cá hồi'), ('Cá basa'),
-('Tôm'), ('Mực'), ('Trứng gà'), ('Đậu hũ'), ('Cà chua'),
-('Cà rốt'), ('Khoai tây'), ('Khoai lang'), ('Hành tây'), ('Hành tím'),
-('Hành lá'), ('Tỏi'), ('Gừng'), ('Sả'), ('Ớt'),
-('Ớt chuông'), ('Rau cải'), ('Rau muống'), ('Xà lách'), ('Bắp cải'),
-('Rau thơm'), ('Ngò rí'), ('Húng quế'), ('Nấm rơm'), ('Nấm hương'),
-('Bí đỏ'), ('Bí xanh'), ('Đậu que'), ('Bắp ngọt'), ('Dưa leo'),
-('Bún tươi'), ('Phở'), ('Mì'), ('Miến'), ('Cơm'),
-('Gạo'), ('Bột mì'), ('Bột gạo'), ('Bột năng'), ('Đường'),
-('Muối'), ('Tiêu'), ('Nước mắm'), ('Nước tương'), ('Dầu ăn'),
-('Dầu mè'), ('Giấm'), ('Sữa tươi'), ('Sữa đặc'), ('Bơ'),
-('Phô mai'), ('Kem tươi'), ('Chanh'), ('Cam'), ('Dừa'),
-('Đậu phộng'), ('Mè trắng'), ('Mè đen'), ('Hạt điều'), ('Mật ong'),
-('Nước cốt dừa'), ('Tương ớt'), ('Tương cà'), ('Dầu hào'), ('Hạt nêm'),
-('Bột ngọt'), ('Quế'), ('Hoa hồi'), ('Thảo quả'), ('Lá chanh'),
-('Lá dứa'), ('Đậu xanh'), ('Đậu đỏ'), ('Chuối'), ('Táo');
+('Món khai vị',       'mon-khai-vi',       'Các món mở đầu nhẹ nhàng, kích thích vị giác.', 'https://picsum.photos/seed/cat01/1200/630', 1),
+('Món chính',         'mon-chinh',         'Các món chính dùng trong bữa cơm gia đình.', 'https://picsum.photos/seed/cat02/1200/630', 2),
+('Món canh',          'mon-canh',          'Các món canh thanh mát và bổ dưỡng.', 'https://picsum.photos/seed/cat03/1200/630', 3),
+('Món xào',           'mon-xao',           'Các món xào nhanh, đậm vị.', 'https://picsum.photos/seed/cat04/1200/630', 4),
+('Món kho',           'mon-kho',           'Các món kho truyền thống, đưa cơm.', 'https://picsum.photos/seed/cat05/1200/630', 5),
+('Món chiên',         'mon-chien',         'Các món chiên giòn hấp dẫn.', 'https://picsum.photos/seed/cat06/1200/630', 6),
+('Món nướng',         'mon-nuong',         'Các món nướng thơm ngon cho gia đình.', 'https://picsum.photos/seed/cat07/1200/630', 7),
+('Món hấp',           'mon-hap',           'Các món hấp giữ vị tự nhiên.', 'https://picsum.photos/seed/cat08/1200/630', 8),
+('Món nước',          'mon-nuoc',          'Phở, bún, mì và các món nước.', 'https://picsum.photos/seed/cat09/1200/630', 9),
+('Cơm và cháo',       'com-va-chao',       'Cơm, cháo và các biến tấu từ gạo.', 'https://picsum.photos/seed/cat10/1200/630', 10),
+('Bánh Việt Nam',     'banh-viet-nam',     'Các loại bánh truyền thống Việt Nam.', 'https://picsum.photos/seed/cat11/1200/630', 11),
+('Bánh ngọt',         'banh-ngot',         'Bánh ngọt, bánh kem và món nướng ngọt.', 'https://picsum.photos/seed/cat12/1200/630', 12),
+('Tráng miệng',       'trang-mieng',       'Các món tráng miệng sau bữa ăn.', 'https://picsum.photos/seed/cat13/1200/630', 13),
+('Đồ uống',           'do-uong',           'Nước ép, sinh tố, trà và đồ uống không cồn.', 'https://picsum.photos/seed/cat14/1200/630', 14),
+('Món chay',          'mon-chay',          'Các món chay đa dạng từ rau củ và đậu.', 'https://picsum.photos/seed/cat15/1200/630', 15),
+('Món ăn sáng',       'mon-an-sang',       'Các món phù hợp cho bữa sáng.', 'https://picsum.photos/seed/cat16/1200/630', 16),
+('Món ăn nhanh',      'mon-an-nhanh',      'Các món đơn giản, thời gian chế biến ngắn.', 'https://picsum.photos/seed/cat17/1200/630', 17),
+('Món healthy',       'mon-healthy',       'Công thức cân bằng dinh dưỡng.', 'https://picsum.photos/seed/cat18/1200/630', 18),
+('Ẩm thực Á',         'am-thuc-a',         'Các món tiêu biểu từ nhiều nền ẩm thực châu Á.', 'https://picsum.photos/seed/cat19/1200/630', 19),
+('Ẩm thực Âu',        'am-thuc-au',        'Các món Âu phổ biến và dễ thực hiện.', 'https://picsum.photos/seed/cat20/1200/630', 20);
 
--- ------------------------------------------------------------
--- 13.4 100 RECIPES
--- ------------------------------------------------------------
+-- ============================================================================
+-- 15. DỮ LIỆU MẪU: 100 CÔNG THỨC
+--     Sử dụng hàm random() của PostgreSQL để tạo dữ liệu mẫu đa dạng.
+--     Mỗi công thức sẽ có:
+--       - một danh mục trong 20 danh mục
+--       - một trong 5 tác giả mẫu
+--       - dữ liệu dinh dưỡng được lưu trực tiếp trong Recipes
+--       - trạng thái Published
+--       - slug duy nhất từ recipe-001 đến recipe-100
+-- ============================================================================
 
-INSERT INTO recipes (
-    author_id,
-    title,
-    slug,
-    description,
-    thumbnail_url,
-    prep_time_minutes,
-    cook_time_minutes,
-    servings,
-    difficulty,
-    status,
-    view_count,
-    published_at
+WITH
+category_pool AS (
+    SELECT array_agg("Id" ORDER BY "OrderIndex") AS ids
+    FROM "Categories"
+    WHERE "IsDeleted" = false
+),
+author_pool AS (
+    SELECT ARRAY[
+        'user-author-001',
+        'user-author-002',
+        'user-author-003',
+        'user-author-004',
+        'user-author-005'
+    ]::varchar[] AS ids
+),
+dish_names AS (
+    SELECT ARRAY[
+        'Gà nướng mật ong', 'Bò xào rau củ', 'Cá kho tiêu', 'Canh chua cá',
+        'Cơm chiên hải sản', 'Phở bò', 'Bún bò', 'Mì xào', 'Gỏi cuốn',
+        'Chả giò', 'Thịt kho trứng', 'Sườn nướng', 'Tôm hấp', 'Cá chiên',
+        'Salad gà', 'Cháo sườn', 'Cơm gà', 'Bánh xèo', 'Bánh cuốn',
+        'Bánh flan', 'Chè đậu', 'Sinh tố xoài', 'Nước ép cam',
+        'Đậu hũ sốt cà', 'Rau củ áp chảo', 'Mì Ý sốt bò', 'Pizza rau củ',
+        'Khoai tây nghiền', 'Súp bí đỏ', 'Sandwich gà'
+    ]::text[] AS names
+)
+INSERT INTO "Recipes" (
+    "Title", "Slug", "Description", "Instructions",
+    "PrepTime", "CookTime", "Servings", "Difficulty", "Status",
+    "CategoryId", "AuthorId", "PublishedAt",
+    "Nutrition_Calories", "Nutrition_Protein",
+    "Nutrition_Carbohydrates", "Nutrition_Fat",
+    "Nutrition_Fiber", "Nutrition_Sodium",
+    "CreatedAt"
 )
 SELECT
-    2 + ((n - 1) % 4) AS author_id,
-    'Công thức món ăn ' || LPAD(n::TEXT, 3, '0') AS title,
-    'cong-thuc-mon-an-' || LPAD(n::TEXT, 3, '0') AS slug,
-    'Dữ liệu mẫu cho công thức số ' || n || ' của Culinary Blog.' AS description,
-    'https://picsum.photos/seed/recipe-' || n || '/800/600' AS thumbnail_url,
-    5 + ((n * 3) % 40) AS prep_time_minutes,
-    10 + ((n * 7) % 110) AS cook_time_minutes,
-    1 + (n % 6) AS servings,
-    CASE ((n - 1) % 3)
-        WHEN 0 THEN 'EASY'
-        WHEN 1 THEN 'MEDIUM'
-        ELSE 'HARD'
-    END AS difficulty,
-    'PUBLISHED' AS status,
-    (n * 37) % 5000 AS view_count,
-    CURRENT_TIMESTAMP - ((100 - n) * INTERVAL '1 hour') AS published_at
-FROM generate_series(1, 100) AS gs(n);
+    d.names[1 + floor(random() * array_length(d.names, 1))::int]
+        || ' #' || lpad(gs::text, 3, '0') AS "Title",
 
--- ------------------------------------------------------------
--- 13.5 MỖI RECIPE GẮN 2 CATEGORIES
--- ------------------------------------------------------------
+    'recipe-' || lpad(gs::text, 3, '0') AS "Slug",
 
-INSERT INTO recipe_categories (recipe_id, category_id)
-SELECT
-    r.id,
-    1 + ((r.id - 1) % 20)
-FROM recipes r;
+    'Công thức mẫu số ' || gs ||
+    ' được tạo để phục vụ phát triển, kiểm thử tìm kiếm, lọc, sắp xếp và phân trang.'
+        AS "Description",
 
-INSERT INTO recipe_categories (recipe_id, category_id)
-SELECT
-    r.id,
-    1 + (r.id % 20)
-FROM recipes r;
+    'Thực hiện lần lượt theo danh sách RecipeSteps. Điều chỉnh gia vị theo khẩu vị.'
+        AS "Instructions",
 
--- ------------------------------------------------------------
--- 13.6 MỖI RECIPE CÓ ĐÚNG 10 NGUYÊN LIỆU
--- ------------------------------------------------------------
+    (10 + floor(random() * 31))::int AS "PrepTime",       -- từ 10 đến 40
+    floor(random() * 61)::int AS "CookTime",              -- từ 0 đến 60
+    (1 + floor(random() * 7))::int AS "Servings",         -- từ 1 đến 7
+    (1 + floor(random() * 4))::smallint AS "Difficulty",  -- từ 1 đến 4
+    1::smallint AS "Status",                              -- Đã xuất bản
 
-INSERT INTO recipe_ingredients (
-    recipe_id,
-    ingredient_id,
-    quantity,
-    unit,
-    note,
-    sort_order
+    c.ids[1 + floor(random() * array_length(c.ids, 1))::int] AS "CategoryId",
+    a.ids[1 + floor(random() * array_length(a.ids, 1))::int] AS "AuthorId",
+
+    NOW() - (floor(random() * 365) || ' days')::interval AS "PublishedAt",
+
+    round((180 + random() * 620)::numeric, 2) AS "Nutrition_Calories",
+    round((5 + random() * 55)::numeric, 2) AS "Nutrition_Protein",
+    round((10 + random() * 90)::numeric, 2) AS "Nutrition_Carbohydrates",
+    round((3 + random() * 35)::numeric, 2) AS "Nutrition_Fat",
+    round((1 + random() * 15)::numeric, 2) AS "Nutrition_Fiber",
+    round((80 + random() * 1300)::numeric, 2) AS "Nutrition_Sodium",
+
+    NOW() - (floor(random() * 365) || ' days')::interval AS "CreatedAt"
+FROM generate_series(1, 100) gs
+CROSS JOIN category_pool c
+CROSS JOIN author_pool a
+CROSS JOIN dish_names d;
+
+-- ============================================================================
+-- 16. DỮ LIỆU MẪU: NGUYÊN LIỆU
+--     Mỗi công thức có ít nhất 10 nguyên liệu.
+--     Script này tạo chính xác 12 nguyên liệu cho mỗi công thức = 1.200 bản ghi.
+-- ============================================================================
+
+WITH ingredient_pool AS (
+    SELECT
+        ARRAY[
+            'Thịt gà', 'Thịt bò', 'Thịt heo', 'Cá', 'Tôm',
+            'Trứng gà', 'Đậu hũ', 'Cà chua', 'Cà rốt', 'Khoai tây',
+            'Hành tây', 'Hành lá', 'Tỏi', 'Gừng', 'Sả',
+            'Ớt', 'Rau mùi', 'Rau xà lách', 'Nấm', 'Bắp cải',
+            'Bí đỏ', 'Đậu que', 'Gạo', 'Bún', 'Mì',
+            'Bột mì', 'Đường', 'Muối', 'Nước mắm', 'Dầu ăn',
+            'Dầu hào', 'Nước tương', 'Tiêu', 'Sữa tươi', 'Bơ'
+        ]::text[] AS names,
+
+        ARRAY[
+            'g', 'kg', 'ml', 'lít', 'muỗng cà phê',
+            'muỗng canh', 'cái', 'quả', 'củ', 'nhánh'
+        ]::text[] AS units
+)
+INSERT INTO "RecipeIngredients" (
+    "RecipeId", "Name", "Quantity", "Unit", "Notes", "OrderIndex"
 )
 SELECT
-    r.id AS recipe_id,
+    r."Id",
+    p.names[1 + floor(random() * array_length(p.names, 1))::int]
+        || ' ' || ing_no AS "Name",
 
-    1 + (((r.id - 1) * 10 + (pos - 1)) % 80) AS ingredient_id,
+    round((0.5 + random() * 499.5)::numeric, 3) AS "Quantity",
 
-    ROUND(
-        (
-            0.5
-            + (((r.id + pos) % 20) * 0.25)
-        )::NUMERIC,
-        3
-    ) AS quantity,
-
-    CASE (pos % 8)
-        WHEN 0 THEN 'kg'
-        WHEN 1 THEN 'g'
-        WHEN 2 THEN 'ml'
-        WHEN 3 THEN 'muỗng canh'
-        WHEN 4 THEN 'muỗng cà phê'
-        WHEN 5 THEN 'quả'
-        WHEN 6 THEN 'củ'
-        ELSE 'phần'
-    END AS unit,
+    p.units[1 + floor(random() * array_length(p.units, 1))::int] AS "Unit",
 
     CASE
-        WHEN pos % 3 = 0 THEN 'Sơ chế sạch trước khi sử dụng'
-        WHEN pos % 3 = 1 THEN 'Chuẩn bị theo khẩu phần'
+        WHEN random() < 0.35 THEN 'Sơ chế sạch trước khi sử dụng'
+        WHEN random() < 0.55 THEN 'Điều chỉnh lượng theo khẩu vị'
         ELSE NULL
-    END AS note,
+    END AS "Notes",
 
-    pos AS sort_order
+    ing_no - 1 AS "OrderIndex"
+FROM "Recipes" r
+CROSS JOIN generate_series(1, 12) AS ing_no
+CROSS JOIN ingredient_pool p
+WHERE r."IsDeleted" = false;
 
-FROM recipes r
-CROSS JOIN generate_series(1, 10) AS gs(pos);
+-- ============================================================================
+-- 17. DỮ LIỆU MẪU: CÁC BƯỚC CHẾ BIẾN
+--     Mỗi công thức có ít nhất 5 bước chế biến.
+--     Script này tạo chính xác 6 bước cho mỗi công thức = 600 bản ghi.
+--     StepNumber chỉ được gán trực tiếp ở đây để dữ liệu seed có thứ tự ổn định; request từ client
+--     trong ứng dụng thực tế nên bỏ trường này để backend tự gán.
+-- ============================================================================
 
--- ------------------------------------------------------------
--- 13.7 MỖI RECIPE CÓ 5-8 BƯỚC
--- ============================================================
-
-INSERT INTO recipe_steps (
-    recipe_id,
-    step_number,
-    instruction,
-    image_url
+INSERT INTO "RecipeSteps" (
+    "RecipeId", "StepNumber", "Title", "Description", "TimerMinutes", "ImageUrl"
 )
 SELECT
-    r.id AS recipe_id,
-    s.step_number,
+    r."Id",
+    step_no,
+    CASE step_no
+        WHEN 1 THEN 'Chuẩn bị nguyên liệu'
+        WHEN 2 THEN 'Sơ chế'
+        WHEN 3 THEN 'Ướp và nêm gia vị'
+        WHEN 4 THEN 'Chế biến chính'
+        WHEN 5 THEN 'Hoàn thiện món'
+        ELSE 'Trình bày và thưởng thức'
+    END AS "Title",
+    CASE step_no
+        WHEN 1 THEN 'Cân, đong và chuẩn bị đầy đủ nguyên liệu theo danh sách.'
+        WHEN 2 THEN 'Rửa sạch, cắt thái và sơ chế nguyên liệu phù hợp với món ăn.'
+        WHEN 3 THEN 'Kết hợp gia vị và ướp nguyên liệu để hương vị thấm đều.'
+        WHEN 4 THEN 'Tiến hành nấu, xào, hấp, nướng hoặc chế biến theo đặc trưng công thức.'
+        WHEN 5 THEN 'Kiểm tra độ chín, nêm nếm lần cuối và tắt bếp.'
+        ELSE 'Cho món ăn ra đĩa, trang trí phù hợp và dùng khi còn ngon.'
+    END AS "Description",
+    CASE step_no
+        WHEN 1 THEN 10
+        WHEN 2 THEN 10
+        WHEN 3 THEN 15
+        WHEN 4 THEN 25
+        WHEN 5 THEN 5
+        ELSE 3
+    END AS "TimerMinutes",
+    NULL
+FROM "Recipes" r
+CROSS JOIN generate_series(1, 6) AS step_no
+WHERE r."IsDeleted" = false;
 
-    CASE s.step_number
-        WHEN 1 THEN 'Chuẩn bị đầy đủ nguyên liệu và dụng cụ cần thiết.'
-        WHEN 2 THEN 'Rửa sạch và sơ chế nguyên liệu theo yêu cầu của món ăn.'
-        WHEN 3 THEN 'Ướp hoặc nêm nguyên liệu với gia vị phù hợp.'
-        WHEN 4 THEN 'Tiến hành chế biến nguyên liệu chính ở nhiệt độ phù hợp.'
-        WHEN 5 THEN 'Nêm nếm lần cuối, hoàn thiện và trình bày món ăn.'
-        WHEN 6 THEN 'Chuẩn bị phần nước sốt hoặc món ăn kèm nếu có.'
-        WHEN 7 THEN 'Kiểm tra độ chín và điều chỉnh gia vị lần cuối.'
-        WHEN 8 THEN 'Trang trí món ăn và sẵn sàng phục vụ.'
-    END AS instruction,
+-- ============================================================================
+-- 18. DỮ LIỆU MẪU: MỖI CÔNG THỨC CÓ MỘT ẢNH
+-- ============================================================================
 
-    CASE
-        WHEN s.step_number IN (1, 5)
-            THEN 'https://picsum.photos/seed/recipe-step-' ||
-                 r.id || '-' || s.step_number || '/800/600'
-        ELSE NULL
-    END AS image_url
-
-FROM recipes r
-CROSS JOIN LATERAL generate_series(
-    1,
-    5 + ((r.id - 1) % 4)
-) AS s(step_number);
-
--- ------------------------------------------------------------
--- 13.8 NUTRITION CHO 100 RECIPES
--- ============================================================
-
-INSERT INTO recipe_nutritions (
-    recipe_id,
-    calories,
-    protein,
-    carbohydrates,
-    fat,
-    fiber,
-    sugar,
-    sodium
+INSERT INTO "RecipeImages" (
+    "RecipeId", "OriginalUrl", "MediumUrl", "ThumbnailUrl",
+    "AltText", "IsPrimary", "OrderIndex"
 )
 SELECT
-    r.id,
-    250 + (r.id % 500),
-    ROUND((10 + (r.id % 40) * 0.80)::NUMERIC, 2),
-    ROUND((20 + (r.id % 70) * 1.10)::NUMERIC, 2),
-    ROUND((5 + (r.id % 30) * 0.70)::NUMERIC, 2),
-    ROUND((2 + (r.id % 10) * 0.40)::NUMERIC, 2),
-    ROUND((3 + (r.id % 15) * 0.50)::NUMERIC, 2),
-    200 + (r.id % 800)
-FROM recipes r;
+    r."Id",
+    'https://picsum.photos/seed/' || r."Slug" || '/1200/800',
+    'https://picsum.photos/seed/' || r."Slug" || '-medium/800/600',
+    'https://picsum.photos/seed/' || r."Slug" || '-thumb/300/300',
+    'Ảnh minh họa ' || r."Title",
+    true,
+    0
+FROM "Recipes" r
+WHERE r."IsDeleted" = false;
 
--- ------------------------------------------------------------
--- 13.9 COMMENT / RATING / FAVORITE MẪU
--- Không bắt buộc cho Lab 2 nhưng giúp database đầy đủ hơn
--- ------------------------------------------------------------
+-- ============================================================================
+-- 19. DỮ LIỆU MẪU REFRESH TOKEN (TÙY CHỌN)
+--     Chỉ lưu giá trị TokenHash bằng SHA-256; không lưu refresh token gốc.
+-- ============================================================================
 
-INSERT INTO comments (
-    user_id,
-    recipe_id,
-    content
+INSERT INTO "RefreshTokens" (
+    "UserId", "TokenHash", "ExpiresAt", "CreatedByIp"
 )
 SELECT
-    2,
-    r.id,
-    'Bình luận mẫu cho ' || r.title
-FROM recipes r
-WHERE r.id <= 20;
-
-INSERT INTO ratings (
-    user_id,
-    recipe_id,
-    rating,
-    review
-)
-SELECT
-    2,
-    r.id,
-    1 + ((r.id - 1) % 5)::INT,
-    'Đánh giá mẫu cho ' || r.title
-FROM recipes r
-WHERE r.id <= 20;
-
-INSERT INTO favorites (
-    user_id,
-    recipe_id
-)
-SELECT
-    2,
-    r.id
-FROM recipes r
-WHERE r.id <= 10;
-
--- ============================================================
--- 14. COMMENTS / DOCUMENTATION
--- ============================================================
-
-COMMENT ON TABLE users IS
-'Tài khoản người dùng. Admin và User dùng chung bảng, phân biệt bằng role.';
-
-COMMENT ON TABLE categories IS
-'Danh mục công thức. Dùng xóa mềm bằng is_deleted.';
-
-COMMENT ON TABLE recipes IS
-'Công thức nấu ăn. Dùng xóa mềm bằng is_deleted.';
-
-COMMENT ON TABLE recipe_categories IS
-'Bảng nối quan hệ nhiều-nhiều giữa recipes và categories.';
-
-COMMENT ON TABLE ingredients IS
-'Danh mục nguyên liệu dùng chung.';
-
-COMMENT ON TABLE recipe_ingredients IS
-'Nguyên liệu của từng công thức. quantity là NUMERIC, unit là chuỗi.';
-
-COMMENT ON TABLE recipe_steps IS
-'Các bước chế biến. step_number do backend tự gán trong ứng dụng thật.';
-
-COMMENT ON TABLE recipe_nutritions IS
-'Thông tin dinh dưỡng, quan hệ 1-1 với recipes.';
-
-SELECT * FROM users;
-
-SELECT * FROM categories;
-
-SELECT * FROM recipes;
-
-SELECT * FROM recipe_categories;
-
-SELECT * FROM ingredients;
-
-SELECT * FROM recipe_ingredients;
-
-SELECT * FROM recipe_steps;
-
-SELECT * FROM recipe_nutritions;
-
-SELECT * FROM comments;
-
-SELECT * FROM ratings;
-
-SELECT * FROM favorites;
-
+    u."Id",
+    encode(digest(u."Id" || ':' || gen_random_uuid()::text, 'sha256'), 'hex'),
+    NOW() + interval '7 days',
+    '127.0.0.1'
+FROM "AspNetUsers" u
+WHERE u."Id" LIKE 'user-author-%';
 
 COMMIT;
 
--- ============================================================
--- KẾT QUẢ MONG ĐỢI:
--- categories                  = 20
--- recipes                     = 100
--- min_ingredients_per_recipe  = 10
--- min_steps_per_recipe        = 5
--- Hai truy vấn HAVING         = 0 dòng
--- ============================================================
+-- ============================================================================
+-- 20. CÁC TRUY VẤN KIỂM TRA
+--     Kết quả mong đợi sau khi chạy thành công:
+--       Categories        = 20
+--       Recipes           = 100
+--       RecipeIngredients = 1.200 (mỗi recipe 12 nguyên liệu)
+--       RecipeSteps       = 600 (mỗi recipe 6 bước)
+--       RecipeImages      = 100
+-- ============================================================================
+
+SELECT COUNT(*) AS "CategoryCount"
+FROM "Categories"
+WHERE "IsDeleted" = false;
+
+SELECT COUNT(*) AS "RecipeCount"
+FROM "Recipes"
+WHERE "IsDeleted" = false;
+
+SELECT
+    MIN(x.ingredient_count) AS "MinIngredientsPerRecipe",
+    MAX(x.ingredient_count) AS "MaxIngredientsPerRecipe"
+FROM (
+    SELECT r."Id", COUNT(ri."Id") AS ingredient_count
+    FROM "Recipes" r
+    LEFT JOIN "RecipeIngredients" ri
+        ON ri."RecipeId" = r."Id"
+       AND ri."IsDeleted" = false
+    WHERE r."IsDeleted" = false
+    GROUP BY r."Id"
+) x;
+
+SELECT
+    MIN(x.step_count) AS "MinStepsPerRecipe",
+    MAX(x.step_count) AS "MaxStepsPerRecipe"
+FROM (
+    SELECT r."Id", COUNT(rs."Id") AS step_count
+    FROM "Recipes" r
+    LEFT JOIN "RecipeSteps" rs
+        ON rs."RecipeId" = r."Id"
+       AND rs."IsDeleted" = false
+    WHERE r."IsDeleted" = false
+    GROUP BY r."Id"
+) x;
+
+-- Kiểm tra khóa ngoại và toàn vẹn dữ liệu: kết quả đúng phải trả về 0 dòng.
+SELECT r."Id", r."Title"
+FROM "Recipes" r
+LEFT JOIN "Categories" c ON c."Id" = r."CategoryId"
+LEFT JOIN "AspNetUsers" u ON u."Id" = r."AuthorId"
+WHERE c."Id" IS NULL OR u."Id" IS NULL;
+
+-- Ví dụ truy vấn danh sách theo đúng quy ước sắp xếp của nhóm:
+-- sortBy = createdAt, sortOrder = desc
+SELECT
+    r."Id",
+    r."Title",
+    r."Slug",
+    r."CreatedAt"
+FROM "Recipes" r
+WHERE r."IsDeleted" = false
+  AND r."Status" = 1
+ORDER BY r."CreatedAt" DESC
+LIMIT 12 OFFSET 0;

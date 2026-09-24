@@ -1,0 +1,342 @@
+# ============================================================
+# CulinaryBlog - .gitignore
+# .NET 10 + ASP.NET Core + Next.js + PostgreSQL + Docker
+# ============================================================
+
+
+# ============================================================
+# .NET / C#
+# ============================================================
+
+# Build output
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+.nuget/packages/
+
+# Test results
+TestResults/
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Generated documentation
+DocOutput/
+
+# MSBuild logs
+*.binlog
+*.buildlog
+
+# ASP.NET generated files
+wwwroot/lib/
+wwwroot/dist/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+
+# ============================================================
+# ASP.NET Core
+# ============================================================
+
+# User secrets
+**/secrets.json
+
+# Local development settings
+appsettings.Local.json
+appsettings.*.Local.json
+
+# Development certificates
+*.pfx
+*.p12
+
+# HTTPS development certificate
+aspnetapp.pfx
+
+
+# ============================================================
+# Entity Framework Core
+# ============================================================
+
+# EF generated database files
+*.db
+*.db-shm
+*.db-wal
+
+# NOTE:
+# Do NOT ignore Migrations/
+# Migrations should normally be committed to Git.
+
+# Example:
+# **/Persistence/Migrations/   <-- DO NOT ADD THIS
+
+
+# ============================================================
+# Application generated files
+# ============================================================
+
+# Logs
+logs/
+**/logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Uploads generated during local development
+uploads/
+**/uploads/
+
+# Generated storage files
+storage/
+**/storage/
+
+
+# ============================================================
+# Environment variables / Secrets
+# ============================================================
+
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Keep example environment files
+!.env.example
+!.env.example.*
+
+# Certificates / private keys
+*.key
+*.pem
+*.crt
+
+
+# ============================================================
+# Node.js / Next.js
+# ============================================================
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js
+.next/
+**/.next/
+
+# Production build
+out/
+**/out/
+
+# Next.js cache
+.turbo/
+**/.turbo/
+
+# npm
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Package manager caches
+.npm-cache/
+.yarn/cache/
+.pnpm-store/
+
+# Optional npm cache
+node_modules/.cache/
+
+
+# ============================================================
+# Frontend environment files
+# ============================================================
+
+# Next.js environment variables
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+frontend/.env.test
+
+# Keep example
+!frontend/.env.example
+
+
+# ============================================================
+# Docker
+# ============================================================
+
+# Docker local override
+docker-compose.override.yml
+
+# Docker volumes
+.docker/
+docker-data/
+postgres-data/
+redis-data/
+minio-data/
+
+# Local Docker environment
+docker/.env
+
+
+# ============================================================
+# PostgreSQL
+# ============================================================
+
+# Local PostgreSQL data
+postgres/
+postgres-data/
+pgdata/
+**/pgdata/
+
+# PostgreSQL dumps
+*.dump
+*.backup
+*.sql.bak
+
+# PostgreSQL logs
+postgresql.log
+
+
+# ============================================================
+# Redis
+# ============================================================
+
+redis-data/
+**/redis-data/
+dump.rdb
+appendonly.aof
+
+
+# ============================================================
+# MinIO
+# ============================================================
+
+minio-data/
+**/minio-data/
+
+# MinIO configuration
+.minio/
+
+
+# ============================================================
+# IDE / OS
+# ============================================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# Windows temporary files
+*.tmp
+*.temp
+
+
+# ============================================================
+# Backup files
+# ============================================================
+
+*.bak
+*.backup
+*.old
+*.orig
+*.swp
+*.swo
+
+
+# ============================================================
+# Generated files
+# ============================================================
+
+coverage/
+coverage.xml
+*.generated.cs
+
+# OpenAPI generated files
+openapi.json
+
+# Generated frontend files
+frontend/.next/
+frontend/out/
+
+
+# ============================================================
+# Local development / scripts
+# ============================================================
+
+scripts/local/
+scripts/tmp/
+
+# Local database initialization files
+scripts/generated/
+
+
+# ============================================================
+# AI / Editor temporary files
+# ============================================================
+
+.cursor/
+.cursorignore
+
+# Claude Code local files
+.claude/
+
+# Copilot temporary files
+.github/copilot/
+
+
+# ============================================================
+# Project-specific temporary folders
+# ============================================================
+
+backend/tmp/
+backend/temp/
+
+frontend/tmp/
+frontend/temp/
+
+
+# ============================================================
+# Keep important files
+# ============================================================
+
+!.gitkeep
+!.env.example
+!README.md
+!CHANGELOG.md

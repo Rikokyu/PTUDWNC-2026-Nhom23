@@ -33,9 +33,9 @@
 |---|---|
 | **Nguyễn Trung Hiệp** | `FR-RCP-001` – Xem Danh sách Công thức |
 | | `FR-RCP-002` – Xem Chi tiết Công thức |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-001` – Đăng ký Tài khoản |
-| **Lê Thị Mai Anh** | Chuẩn bị module `Category` và cấu trúc quản lý danh mục |
+| **Lê Thị Mai Anh** | `FR-JOB-001` – Welcome Email Job |
 | **Nguyễn Quang Trường** | `FR-OBS-001` – Health Check Endpoints |
+| **Nguyễn Đức Hoàng** | `FR-AUTH-001` – Đăng ký Tài khoản |
 
 **Kết quả dự kiến:**
 - Hoàn thành API xem danh sách công thức.
@@ -53,10 +53,10 @@
 | Thành viên | Công việc |
 |---|---|
 | **Nguyễn Trung Hiệp** | `FR-RCP-003` – Tạo Công thức Nấu ăn Mới |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-002` – Đăng nhập Email/Mật khẩu |
-| **Lê Thị Mai Anh** | `FR-CAT-001` – Xem Danh sách Danh mục |
+| **Lê Thị Mai Anh** | `FR-JOB-002` – Image Resize / Thumbnail Job |
 | **Nguyễn Quang Trường** | `FR-FILE-001` – Upload File lên MinIO |
 | | `FR-OBS-002` – Structured Logging |
+| **Nguyễn Đức Hoàng** | `FR-AUTH-002` – Đăng nhập Email/Mật khẩu |
 
 **Kết quả dự kiến:**
 - Có thể tạo công thức mới ở trạng thái Draft.
@@ -75,9 +75,9 @@
 |---|---|
 | **Nguyễn Trung Hiệp** | `FR-RCP-004` – Cập nhật Công thức |
 | | `FR-RCP-005` – Xuất bản / Hủy Xuất bản Công thức |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-003` – Đăng nhập Google OAuth 2.0 |
-| **Lê Thị Mai Anh** | `FR-CAT-002` – Xem Chi tiết Danh mục & Công thức |
+| **Lê Thị Mai Anh** | `FR-JOB-003` – Sitemap Generation Job |
 | **Nguyễn Quang Trường** | `FR-FILE-002` – Xóa File khỏi MinIO |
+| **Nguyễn Đức Hoàng** | `FR-AUTH-005` – Đăng xuất |
 
 **Kết quả dự kiến:**
 - Hoàn thành cập nhật công thức với Resource-based Authorization và xử lý concurrency.
@@ -96,10 +96,11 @@
 |---|---|
 | **Nguyễn Trung Hiệp** | `FR-RCP-006` – Lưu trữ Công thức (Archive) |
 | | `FR-RCP-007` – Xóa Công thức |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-004` – Làm mới Access Token |
-| | `FR-AUTH-005` – Đăng xuất |
-| **Lê Thị Mai Anh** | `FR-CAT-003` – Tạo Danh mục mới [Admin] |
+| **Lê Thị Mai Anh** | `FR-CAT-001` – Xem Danh sách Danh mục |
+| | `FR-CAT-002` - Xem Chi tiết Danh mục & Công thức
 | **Nguyễn Quang Trường** | `FR-SRCH-001` – Tìm kiếm Toàn văn (FTS) |
+| **Nguyễn Đức Hoàng** | `FR-AUTH-006` – Xem Hồ sơ Cá nhân |
+
 
 **Kết quả dự kiến:**
 - Hoàn thành chuyển công thức sang trạng thái Archived.
@@ -119,11 +120,11 @@
 |---|---|
 | **Nguyễn Trung Hiệp** | `FR-RCP-008` – Quản lý Ảnh Công thức |
 | | `FR-RCP-009` – Quản lý Nguyên liệu (CRUD) |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-006` – Xem Hồ sơ Cá nhân |
-| **Lê Thị Mai Anh** | `FR-JOB-001` – Welcome Email Job |
+| **Lê Thị Mai Anh** | `FR-CAT-003` – Tạo Danh mục Mới [Admin] |
 | | `FR-CAT-004` – Cập nhật Danh mục [Admin] |
 | **Nguyễn Quang Trường** | `FR-SRCH-002` – Bộ lọc Công thức nâng cao |
 | | `FR-SRCH-003` – Sắp xếp Kết quả |
+| **Nguyễn Đức Hoàng** | `FR-AUTH-007` –Cập nhật Hồ sơ Cá nhân |
 
 **Kết quả dự kiến:**
 - Hoàn thành upload, thiết lập ảnh chính và xóa ảnh công thức.
@@ -143,10 +144,10 @@
 | Thành viên | Công việc |
 |---|---|
 | **Nguyễn Trung Hiệp** | `FR-RCP-010` – Quản lý Các bước Thực hiện (CRUD) |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-007` – Cập nhật Hồ sơ Cá nhân |
-| **Lê Thị Mai Anh** | `FR-JOB-002` – Image Resize / Thumbnail Job |
+| **Lê Thị Mai Anh** | `FR-CAT-005` – Xóa Danh mục [Admin] |
 | | `FR-CAT-005` – Xóa Danh mục [Admin] |
 | **Nguyễn Quang Trường** | `FR-SRCH-004` – Phân trang Offset-based |
+| **Nguyễn Đức Hoàng** | `FR-AUTH-003` – Đăng nhập Google OAuth 2.0 |
 
 **Kết quả dự kiến:**
 - Hoàn thành CRUD các bước thực hiện và tự động đánh lại số thứ tự bước.
@@ -164,9 +165,9 @@
 | Thành viên | Công việc |
 |---|---|
 | **Nguyễn Trung Hiệp** | Kiểm tra và tích hợp toàn bộ module `Recipe` |
-| **Nguyễn Đức Hoàng** | Kiểm tra và tích hợp module `Authentication` |
-| **Lê Thị Mai Anh** | `FR-JOB-003` – Sitemap Generation Job |
+| **Lê Thị Mai Anh** | Kiểm tra và tích hợp toàn bộ module `Category` |
 | **Nguyễn Quang Trường** | `FR-OBS-003` – Distributed Tracing & Metrics |
+| **Nguyễn Đức Hoàng** | `FR-AUTH-04`Làm mới Access Token |
 
 **Kết quả dự kiến:**
 - Hoàn thành Sitemap Generation Job bằng Hangfire.

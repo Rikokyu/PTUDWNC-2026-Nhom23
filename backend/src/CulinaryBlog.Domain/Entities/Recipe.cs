@@ -27,6 +27,12 @@ public class Recipe : BaseEntity
 
     public Category Category { get; set; } = null!;
 
+    public RecipeNutrition? Nutrition { get; set; }
+
+    public Guid? AuthorId { get; set; }
+
+    public ApplicationUser? Author { get; set; }
+
     public ICollection<RecipeIngredient> Ingredients { get; set; }
         = new List<RecipeIngredient>();
 

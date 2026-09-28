@@ -1,8 +1,8 @@
 namespace CulinaryBlog.Application.Common.Exceptions;
 
-public class ForbiddenException : Exception
+public class ValidationException : Exception
 {
-    public ForbiddenException(string message)
+    public ValidationException(string message)
         : base(message)
     {
     }

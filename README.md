@@ -1,48 +1,82 @@
 ## Thông tin sinh viên
 
-|MSSV      |Họ tên sinh viên        |Mail cá nhân           |Github cá nhân                  |Số điện thoại   |
-|---|---|---|---|---|
-|2312610   |Nguyễn Trung Hiệp       |2312610@dlu.edu.vn     |https://github.com/Rikokyu      |0358756475      |
-|2312569   |Lê Thị Mai Anh          |2312569@dlu.edu.vn     |https://github.com/maianhtl     |0941617043      |
-|2312789   |K'Nguyễn Quang Trường   |2312789@dlu.edu.vn     |https://github.com/2312789-rgb  |0365630966      |
-|2312622   |Nguyễn Đức Hoàng        |2312622@dlu.edu.vn     |https://github.com/Sunz9420     |0916152901      |
+| MSSV    | Họ tên sinh viên      | Mail cá nhân       | Github cá nhân                 | Số điện thoại |
+| ------- | --------------------- | ------------------ | ------------------------------ | ------------- |
+| 2312610 | Nguyễn Trung Hiệp     | 2312610@dlu.edu.vn | https://github.com/Rikokyu     | 0358756475    |
+| 2312569 | Lê Thị Mai Anh        | 2312569@dlu.edu.vn | https://github.com/maianhtl    | 0941617043    |
+| 2312789 | K'Nguyễn Quang Trường | 2312789@dlu.edu.vn | https://github.com/2312789-rgb | 0365630966    |
+| 2312622 | Nguyễn Đức Hoàng      | 2312622@dlu.edu.vn | https://github.com/Sunz9420    | 0916152901    |
 
 ## Phân công công việc
 
-|MSSV        |Mã module                |Tên module                                              |Ghi chú       |
-|---|---|---|---|
-|2312610     |FR-RCP                   |Quản lý Công thức Nấu ăn                                |10 chức năng  |
-|2312569     |FR-JOB/FR-CAT            |Background Jobs/Quản lý Danh mục                        |9 chức năng   |
-|2312789     |FR-SRCH/FR-FILE/FR-OBS   |Tìm kiếm & Phân trang/Quản lý Tệp tin/Quan sát Hệ thống |9 chức năng   |
-|2312622     |FR-AUTH                  |Xác thực & Quản lý Người dùng                           |7 chức năng   |
+| MSSV    | Mã module              | Tên module                                              | Ghi chú      |
+| ------- | ---------------------- | ------------------------------------------------------- | ------------ |
+| 2312610 | FR-RCP                 | Quản lý Công thức Nấu ăn                                | 10 chức năng |
+| 2312569 | FR-JOB/FR-CAT          | Background Jobs/Quản lý Danh mục                        | 9 chức năng  |
+| 2312789 | FR-SRCH/FR-FILE/FR-OBS | Tìm kiếm & Phân trang/Quản lý Tệp tin/Quan sát Hệ thống | 9 chức năng  |
+| 2312622 | FR-AUTH                | Xác thực & Quản lý Người dùng                           | 7 chức năng  |
 
 ## Chi tiết phân công
 
-|MSSV        |Chi tiết công việc       |Tuần thực hiện         |Tiến độ                                             |Kết quả (Hoàn thành/Không hoàn thành)       |
-|---|---|---|---|---|
-|2312610  |Xem Danh sách Công thức <br> Xem Chi tiết Công thức <br> Tạo Công thức Nấu ăn Mới <br> Cập nhật Công thức <br> Xuất bản / Hủy Xuất bản Công thức <br> Lưu trữ Công thức (Archive) <br> Xóa Công thức <br> Quản lý Ảnh Công thức <br> Quản lý Nguyên liệu (CRUD) <br> Quản lý Các bước Thực hiện (CRUD) | | | |
-|2312569  |Welcome Email Job <br> Image Resize / Thumbnail Job <br> Sitemap Generation Job <br> Xem Danh sách Danh mục <br> Xem Chi tiết Danh mục & Công thức <br> Tạo Danh mục Mới [Admin] <br> Cập nhật Danh mục [Admin] <br> Xóa Danh mục [Admin] | | |  |
-|2312789  |Health Check Endpoints <br> Structured Logging <br> Upload File lên MinIO <br> Xóa File khỏi MinIO <br> Tìm kiếm Toàn văn bản (FTS) <br> Bộ lọc Công thức nâng cao <br> Sắp xếp Kết quả <br> Phân trang Offset-based <br> Distributed Tracing & Metrics  | |  |  |
-|2312622  |Đăng ký Tài khoản <br> Đăng nhập Email/Mật khẩu <br> Đăng xuất <br> <br> Xem Hồ sơ Cá nhân <br> Cập nhật Hồ sơ Cá nhân Đăng nhập Google OAuth 2.0 <br> Làm mới Access Token  |  |   |   |
+| MSSV        | Chi tiết công việc                | Tuần    | Tiến độ | Kết quả dự kiến                                    | Kết quả thực tế |
+| ----------- | --------------------------------- | ------- | ------- | -------------------------------------------------- | --------------- |
+| **2312610** | Xem Danh sách Công thức           | 1       | 100%    | Hoàn thành API                                     | Hoàn thành      |
+|             | Xem Chi tiết Công thức            | 1       | 100%    | Hoàn thành API                                     | Hoàn thành      |
+|             | Tạo Công thức Nấu ăn Mới          | 2       |         | Tạo công thức ở trạng thái Draft                   |                 |
+|             | Cập nhật Công thức                | 3       |         | Cập nhật có phân quyền và xử lý concurrency        |                 |
+|             | Xuất bản / Hủy Xuất bản Công thức | 3       |         | Chuyển đổi trạng thái Published/Draft              |                 |
+|             | Lưu trữ Công thức (Archive)       | 4       |         | Chuyển công thức sang trạng thái Archived          |                 |
+|             | Xóa Công thức                     | 4       |         | Xóa công thức và dữ liệu liên quan                 |                 |
+|             | Quản lý Ảnh Công thức             | 5       |         | Tải lên, đặt ảnh chính và xóa ảnh công thức        |                 |
+|             | Quản lý Nguyên liệu (CRUD)        | 5       |         | Hoàn thành CRUD nguyên liệu                        |                 |
+|             | Quản lý Các bước Thực hiện (CRUD) | 6       |         | CRUD bước nấu và tự động đánh lại số thứ tự        |                 |
+| ----------- | --------------------------------- | ------  | ------- | -------------------------------------------------- | --------------- |
+| **2312569** | Welcome Email Job                 | 1       |         | Thiết lập job gửi email chào mừng bằng Hangfire    |                 |
+|             | Image Resize / Thumbnail Job      | 2       |         | Tạo thumbnail và resize ảnh                        |                 |
+|             | Sitemap Generation Job            | 3       |         | Tạo sitemap tự động bằng Hangfire                  |                 |
+|             | Xem Danh sách Danh mục            | 4       |         | Hoàn thành API xem danh sách danh mục              |                 |
+|             | Xem Chi tiết Danh mục & Công thức | 4       |         | Xem chi tiết danh mục và danh sách công thức       |                 |
+|             | Tạo Danh mục Mới [Admin]          | 5       |         | Admin tạo được danh mục mới                        |                 |
+|             | Cập nhật Danh mục [Admin]         | 5       |         | Admin cập nhật được danh mục                       |                 |
+|             | Xóa Danh mục [Admin]              | 6       |         | Admin xóa danh mục khi kiểm tra điều kiện dữ liệu  |                 |
+| ----------- | --------------------------------- | ------- | ------- | -------------------------------------------------- | --------------- |
+| **2312789** | Health Check Endpoints            | 1       |         | Thiết lập Health Check cho hệ thống                |                 |
+|             | Structured Logging                | 2       |         | Thiết lập structured logging cho backend           |                 |
+|             | Upload File lên MinIO             | 2       |         | Tích hợp chức năng tải file lên MinIO              |                 |
+|             | Xóa File khỏi MinIO               | 3       |         | Hoàn thành chức năng xóa file khỏi MinIO           |                 |
+|             | Tìm kiếm Toàn văn bản (FTS)       | 4       |         | Tìm kiếm toàn văn bằng PostgreSQL Full-Text Search |                 |
+|             | Bộ lọc Công thức nâng cao         | 5       |         | Hoàn thành bộ lọc công thức                        |                 |
+|             | Sắp xếp Kết quả                   | 5       |         | Hoàn thành sắp xếp kết quả tìm kiếm                |                 |
+|             | Phân trang Offset-based           | 6       |         | Phân trang offset-based cho kết quả tìm kiếm       |                 |
+|             | Distributed Tracing & Metrics     | 7       |         | Hoàn thiện tracing và metrics bằng OpenTelemetry   |                 |
+| ----------- | --------------------------------- | ------  | ------- | -------------------------------------------------- | --------------- |
+| **2312622** | Đăng ký Tài khoản                 | 1       |         | Khởi tạo chức năng đăng ký tài khoản               |                 |
+|             | Đăng nhập Email/Mật khẩu          | 2       |         | Hoàn thành đăng nhập bằng Email/Mật khẩu           |                 |
+|             | Đăng xuất                         | 3       |         | Hoàn thành đăng xuất và thu hồi token              |                 |
+|             | Xem Hồ sơ Cá nhân                 | 4       |         | Người dùng xem được thông tin cá nhân              |                 |
+|             | Cập nhật Hồ sơ Cá nhân            | 5       |         | Hoàn thành cập nhật thông tin cá nhân              |                 |
+|             | Đăng nhập Google OAuth 2.0        | 6       |         | Hoàn thành đăng nhập Google OAuth 2.0              |                 |
+|             | Làm mới Access Token              | 7       |         | Hoàn thành cơ chế Refresh Token                    |                 |
 
 ### Tuần 1 – Nền tảng
 
 **Mục tiêu:** Xây dựng các chức năng nền tảng ban đầu cho hệ thống.
 
-| Thành viên | Công việc |
-|---|---|
-| **Nguyễn Trung Hiệp** | `FR-RCP-001` – Xem Danh sách Công thức |
-| | `FR-RCP-002` – Xem Chi tiết Công thức |
-| **Lê Thị Mai Anh** | `FR-JOB-001` – Welcome Email Job |
-| **Nguyễn Quang Trường** | `FR-OBS-001` – Health Check Endpoints |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-001` – Đăng ký Tài khoản |
+| Thành viên              | Công việc                              |
+| ----------------------- | -------------------------------------- |
+| **Nguyễn Trung Hiệp**   | `FR-RCP-001` – Xem Danh sách Công thức |
+|                         | `FR-RCP-002` – Xem Chi tiết Công thức  |
+| **Lê Thị Mai Anh**      | `FR-JOB-001` – Welcome Email Job       |
+| **Nguyễn Quang Trường** | `FR-OBS-001` – Health Check Endpoints  |
+| **Nguyễn Đức Hoàng**    | `FR-AUTH-001` – Đăng ký Tài khoản      |
 
 **Kết quả dự kiến:**
+
 - Hoàn thành API xem danh sách công thức.
 - Hoàn thành API xem chi tiết công thức.
-- Khởi tạo chức năng đăng ký tài khoản.
-- Chuẩn bị cấu trúc module Category.
 - Thiết lập Health Check cho hệ thống.
+- Chuẩn bị cấu trúc module Category.
+- Khởi tạo chức năng đăng ký tài khoản.
 
 ---
 
@@ -50,15 +84,16 @@
 
 **Mục tiêu:** Tiếp tục các chức năng CRUD cơ bản và thiết lập các thành phần phục vụ xác thực, lưu trữ file và logging.
 
-| Thành viên | Công việc |
-|---|---|
-| **Nguyễn Trung Hiệp** | `FR-RCP-003` – Tạo Công thức Nấu ăn Mới |
-| **Lê Thị Mai Anh** | `FR-JOB-002` – Image Resize / Thumbnail Job |
-| **Nguyễn Quang Trường** | `FR-FILE-001` – Upload File lên MinIO |
-| | `FR-OBS-002` – Structured Logging |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-002` – Đăng nhập Email/Mật khẩu |
+| Thành viên              | Công việc                                   |
+| ----------------------- | ------------------------------------------- |
+| **Nguyễn Trung Hiệp**   | `FR-RCP-003` – Tạo Công thức Nấu ăn Mới     |
+| **Lê Thị Mai Anh**      | `FR-JOB-002` – Image Resize / Thumbnail Job |
+| **Nguyễn Quang Trường** | `FR-FILE-001` – Upload File lên MinIO       |
+|                         | `FR-OBS-002` – Structured Logging           |
+| **Nguyễn Đức Hoàng**    | `FR-AUTH-002` – Đăng nhập Email/Mật khẩu    |
 
 **Kết quả dự kiến:**
+
 - Có thể tạo công thức mới ở trạng thái Draft.
 - Hoàn thành đăng nhập bằng Email/Mật khẩu.
 - Hoàn thành API xem danh sách danh mục.
@@ -71,15 +106,16 @@
 
 **Mục tiêu:** Phát triển các chức năng quản lý công thức, xác thực nâng cao, danh mục và file.
 
-| Thành viên | Công việc |
-|---|---|
-| **Nguyễn Trung Hiệp** | `FR-RCP-004` – Cập nhật Công thức |
-| | `FR-RCP-005` – Xuất bản / Hủy Xuất bản Công thức |
-| **Lê Thị Mai Anh** | `FR-JOB-003` – Sitemap Generation Job |
-| **Nguyễn Quang Trường** | `FR-FILE-002` – Xóa File khỏi MinIO |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-005` – Đăng xuất |
+| Thành viên              | Công việc                                        |
+| ----------------------- | ------------------------------------------------ |
+| **Nguyễn Trung Hiệp**   | `FR-RCP-004` – Cập nhật Công thức                |
+|                         | `FR-RCP-005` – Xuất bản / Hủy Xuất bản Công thức |
+| **Lê Thị Mai Anh**      | `FR-JOB-003` – Sitemap Generation Job            |
+| **Nguyễn Quang Trường** | `FR-FILE-002` – Xóa File khỏi MinIO              |
+| **Nguyễn Đức Hoàng**    | `FR-AUTH-005` – Đăng xuất                        |
 
 **Kết quả dự kiến:**
+
 - Hoàn thành cập nhật công thức với Resource-based Authorization và xử lý concurrency.
 - Hoàn thành chuyển đổi trạng thái Published/Draft.
 - Tích hợp đăng nhập Google OAuth 2.0.
@@ -92,17 +128,17 @@
 
 **Mục tiêu:** Hoàn thiện các thao tác quản lý công thức, token và bắt đầu triển khai tìm kiếm.
 
-| Thành viên | Công việc |
-|---|---|
-| **Nguyễn Trung Hiệp** | `FR-RCP-006` – Lưu trữ Công thức (Archive) |
-| | `FR-RCP-007` – Xóa Công thức |
-| **Lê Thị Mai Anh** | `FR-CAT-001` – Xem Danh sách Danh mục |
-| | `FR-CAT-002` - Xem Chi tiết Danh mục & Công thức
-| **Nguyễn Quang Trường** | `FR-SRCH-001` – Tìm kiếm Toàn văn (FTS) |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-006` – Xem Hồ sơ Cá nhân |
-
+| Thành viên              | Công việc                                        |
+| ----------------------- | ------------------------------------------------ |
+| **Nguyễn Trung Hiệp**   | `FR-RCP-006` – Lưu trữ Công thức (Archive)       |
+|                         | `FR-RCP-007` – Xóa Công thức                     |
+| **Lê Thị Mai Anh**      | `FR-CAT-001` – Xem Danh sách Danh mục            |
+|                         | `FR-CAT-002` - Xem Chi tiết Danh mục & Công thức |
+| **Nguyễn Quang Trường** | `FR-SRCH-001` – Tìm kiếm Toàn văn (FTS)          |
+| **Nguyễn Đức Hoàng**    | `FR-AUTH-006` – Xem Hồ sơ Cá nhân                |
 
 **Kết quả dự kiến:**
+
 - Hoàn thành chuyển công thức sang trạng thái Archived.
 - Hoàn thành xóa công thức và xử lý dữ liệu liên quan.
 - Hoàn thành cơ chế Refresh Token.
@@ -116,17 +152,18 @@
 
 **Mục tiêu:** Phát triển các chức năng mở rộng của Recipe, User, Category, Search và Background Jobs.
 
-| Thành viên | Công việc |
-|---|---|
-| **Nguyễn Trung Hiệp** | `FR-RCP-008` – Quản lý Ảnh Công thức |
-| | `FR-RCP-009` – Quản lý Nguyên liệu (CRUD) |
-| **Lê Thị Mai Anh** | `FR-CAT-003` – Tạo Danh mục Mới [Admin] |
-| | `FR-CAT-004` – Cập nhật Danh mục [Admin] |
+| Thành viên              | Công việc                                 |
+| ----------------------- | ----------------------------------------- |
+| **Nguyễn Trung Hiệp**   | `FR-RCP-008` – Quản lý Ảnh Công thức      |
+|                         | `FR-RCP-009` – Quản lý Nguyên liệu (CRUD) |
+| **Lê Thị Mai Anh**      | `FR-CAT-003` – Tạo Danh mục Mới [Admin]   |
+|                         | `FR-CAT-004` – Cập nhật Danh mục [Admin]  |
 | **Nguyễn Quang Trường** | `FR-SRCH-002` – Bộ lọc Công thức nâng cao |
-| | `FR-SRCH-003` – Sắp xếp Kết quả |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-007` –Cập nhật Hồ sơ Cá nhân |
+|                         | `FR-SRCH-003` – Sắp xếp Kết quả           |
+| **Nguyễn Đức Hoàng**    | `FR-AUTH-007` –Cập nhật Hồ sơ Cá nhân     |
 
 **Kết quả dự kiến:**
+
 - Hoàn thành upload, thiết lập ảnh chính và xóa ảnh công thức.
 - Hoàn thành CRUD nguyên liệu.
 - Người dùng có thể xem thông tin cá nhân.
@@ -141,15 +178,15 @@
 
 **Mục tiêu:** Hoàn thiện các chức năng CRUD còn lại và bổ sung các thành phần hỗ trợ hệ thống.
 
-| Thành viên | Công việc |
-|---|---|
-| **Nguyễn Trung Hiệp** | `FR-RCP-010` – Quản lý Các bước Thực hiện (CRUD) |
-| **Lê Thị Mai Anh** | `FR-CAT-005` – Xóa Danh mục [Admin] |
-| | `FR-CAT-005` – Xóa Danh mục [Admin] |
-| **Nguyễn Quang Trường** | `FR-SRCH-004` – Phân trang Offset-based |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-003` – Đăng nhập Google OAuth 2.0 |
+| Thành viên              | Công việc                                        |
+| ----------------------- | ------------------------------------------------ |
+| **Nguyễn Trung Hiệp**   | `FR-RCP-010` – Quản lý Các bước Thực hiện (CRUD) |
+| **Lê Thị Mai Anh**      | `FR-CAT-005` – Xóa Danh mục [Admin]              |
+| **Nguyễn Quang Trường** | `FR-SRCH-004` – Phân trang Offset-based          |
+| **Nguyễn Đức Hoàng**    | `FR-AUTH-003` – Đăng nhập Google OAuth 2.0       |
 
 **Kết quả dự kiến:**
+
 - Hoàn thành CRUD các bước thực hiện và tự động đánh lại số thứ tự bước.
 - Hoàn thành cập nhật thông tin cá nhân.
 - Hoàn thành job tạo thumbnail và resize ảnh.
@@ -162,14 +199,15 @@
 
 **Mục tiêu:** Hoàn thiện các chức năng cuối cùng, tích hợp toàn hệ thống và kiểm tra các module.
 
-| Thành viên | Công việc |
-|---|---|
-| **Nguyễn Trung Hiệp** | Kiểm tra và tích hợp toàn bộ module `Recipe` |
-| **Lê Thị Mai Anh** | Kiểm tra và tích hợp toàn bộ module `Category` |
-| **Nguyễn Quang Trường** | `FR-OBS-003` – Distributed Tracing & Metrics |
-| **Nguyễn Đức Hoàng** | `FR-AUTH-04`Làm mới Access Token |
+| Thành viên              | Công việc                                      |
+| ----------------------- | ---------------------------------------------- |
+| **Nguyễn Trung Hiệp**   | Kiểm tra và tích hợp toàn bộ module `Recipe`   |
+| **Lê Thị Mai Anh**      | Kiểm tra và tích hợp toàn bộ module `Category` |
+| **Nguyễn Quang Trường** | `FR-OBS-003` – Distributed Tracing & Metrics   |
+| **Nguyễn Đức Hoàng**    | `FR-AUTH-04`Làm mới Access Token               |
 
 **Kết quả dự kiến:**
+
 - Hoàn thành Sitemap Generation Job bằng Hangfire.
 - Hoàn thiện Distributed Tracing và Metrics bằng OpenTelemetry.
 - Kiểm tra khả năng tích hợp giữa Authentication và các module nghiệp vụ.
@@ -190,13 +228,13 @@
 
 ## Các phương án được lựa chọn
 
-| Điểm cần thống nhất | Phương án áp dụng | Lý do chọn và đánh đổi |
-| --- | --- | --- |
-| Xóa công thức, danh mục | Xóa mềm bằng `IsDeleted` | Giữ dữ liệu khi xóa nhầm; phải lọc dữ liệu đã xóa và tiếp tục lưu ảnh |
-| Sắp xếp danh sách | `sortBy` chỉ tên trường, `sortOrder` là `asc` hoặc `desc` | Rõ nghĩa, dễ làm giao diện và kiểm tra đầu vào; URL dài hơn cách dùng dấu trừ |
-| Dinh dưỡng | Gửi `nutrition` kèm yêu cầu tạo/cập nhật công thức | Một lần lưu thống nhất, ít API; biểu mẫu phải gom dữ liệu trước khi gửi |
-| Thứ tự bước nấu | Backend tự gán `stepNumber` | Người dùng không nhập số bước; backend phải đánh lại số khi xóa và xử lý thao tác đồng thời |
-| Số lượng và đơn vị nguyên liệu | `quantity` là số thập phân; `unit` là chuỗi | Vừa tính toán được, vừa biểu diễn được “muỗng cà phê”; giao diện cần chuyển phân số thành số |
+| Điểm cần thống nhất            | Phương án áp dụng                                         | Lý do chọn và đánh đổi                                                                       |
+| ------------------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Xóa công thức, danh mục        | Xóa mềm bằng `IsDeleted`                                  | Giữ dữ liệu khi xóa nhầm; phải lọc dữ liệu đã xóa và tiếp tục lưu ảnh                        |
+| Sắp xếp danh sách              | `sortBy` chỉ tên trường, `sortOrder` là `asc` hoặc `desc` | Rõ nghĩa, dễ làm giao diện và kiểm tra đầu vào; URL dài hơn cách dùng dấu trừ                |
+| Dinh dưỡng                     | Gửi `nutrition` kèm yêu cầu tạo/cập nhật công thức        | Một lần lưu thống nhất, ít API; biểu mẫu phải gom dữ liệu trước khi gửi                      |
+| Thứ tự bước nấu                | Backend tự gán `stepNumber`                               | Người dùng không nhập số bước; backend phải đánh lại số khi xóa và xử lý thao tác đồng thời  |
+| Số lượng và đơn vị nguyên liệu | `quantity` là số thập phân; `unit` là chuỗi               | Vừa tính toán được, vừa biểu diễn được “muỗng cà phê”; giao diện cần chuyển phân số thành số |
 
 Các chương sau áp dụng nhất quán những lựa chọn này. Cấu trúc đi theo 8 nhóm nội dung chính của PDF, với phần mô tả được rút gọn để nhóm dễ sử dụng.
 
@@ -214,19 +252,19 @@ Phiên bản đầu gồm 7 nhóm chức năng: tài khoản, danh mục, công 
 
 ### Người sử dụng
 
-| Vai trò | Quyền chính |
-| --- | --- |
-| Khách | Xem và tìm kiếm công thức công khai, xem danh mục |
-| Tác giả — Author | Có quyền của khách; tạo, sửa, đăng, ẩn và xóa công thức của mình; cập nhật hồ sơ |
-| Quản trị viên — Admin | Quản lý danh mục và công thức của tất cả tác giả; theo dõi hệ thống |
+| Vai trò               | Quyền chính                                                                      |
+| --------------------- | -------------------------------------------------------------------------------- |
+| Khách                 | Xem và tìm kiếm công thức công khai, xem danh mục                                |
+| Tác giả — Author      | Có quyền của khách; tạo, sửa, đăng, ẩn và xóa công thức của mình; cập nhật hồ sơ |
+| Quản trị viên — Admin | Quản lý danh mục và công thức của tất cả tác giả; theo dõi hệ thống              |
 
 ### Phân công theo bảng công việc Nhóm 23
 
-| Thành viên | Module được phân công |
-| --- | --- |
-| Nguyễn Trung Hiệp | Công thức nấu ăn — `FR-RCP` |
-| Nguyễn Đức Hoàng | Xác thực và quản lý người dùng — `FR-AUTH` |
-| Lê Thị Mai Anh | Danh mục và công việc tự động — `FR-CAT`, `FR-JOB` |
+| Thành viên            | Module được phân công                                                   |
+| --------------------- | ----------------------------------------------------------------------- |
+| Nguyễn Trung Hiệp     | Công thức nấu ăn — `FR-RCP`                                             |
+| Nguyễn Đức Hoàng      | Xác thực và quản lý người dùng — `FR-AUTH`                              |
+| Lê Thị Mai Anh        | Danh mục và công việc tự động — `FR-CAT`, `FR-JOB`                      |
 | K'Nguyễn Quang Trường | Tìm kiếm, tệp tin và theo dõi hệ thống — `FR-SRCH`, `FR-FILE`, `FR-OBS` |
 
 Nguồn: [bảng phân công Nhóm 23](./Ph%C3%A2n%20c%C3%B4ng%20C%C3%B4ng%20vi%E1%BB%87c%20Nh%C3%B3m%2023.xlsx). Tên và module lấy theo bảng; các mô tả kỹ thuật cũ như cascade delete hoặc cache bộ nhớ được thay bằng quy tắc trong README này.
@@ -248,11 +286,11 @@ Nguồn: [bảng phân công Nhóm 23](./Ph%C3%A2n%20c%C3%B4ng%20C%C3%B4ng%20vi%
 
 ### 3.2. Công thức và trạng thái
 
-| Trạng thái | Hành vi |
-| --- | --- |
-| `Draft` | Bản nháp, chỉ chủ sở hữu và Admin được xem |
-| `Published` | Công khai, xuất hiện trong danh sách, tìm kiếm và sitemap |
-| `Archived` | Lưu trữ để ẩn khỏi nội dung công khai; chủ sở hữu/Admin vẫn quản lý được |
+| Trạng thái  | Hành vi                                                                  |
+| ----------- | ------------------------------------------------------------------------ |
+| `Draft`     | Bản nháp, chỉ chủ sở hữu và Admin được xem                               |
+| `Published` | Công khai, xuất hiện trong danh sách, tìm kiếm và sitemap                |
+| `Archived`  | Lưu trữ để ẩn khỏi nội dung công khai; chủ sở hữu/Admin vẫn quản lý được |
 
 - Công thức mới luôn là Draft. Để xuất bản, phải có ít nhất **1 nguyên liệu và 1 bước thực hiện** đang còn sử dụng.
 - Bài đang Published không được xóa nguyên liệu hoặc bước cuối cùng. Muốn sửa đến mức chưa đủ nội dung, tác giả đưa bài về Draft trước.
@@ -315,13 +353,13 @@ PDF đã có `nutrition?` trong luồng tạo/cập nhật (trang 29–31) và m
 
 ### 3.7. Số lượng và đơn vị nguyên liệu
 
-| Trường | Kiểu và quy tắc |
-| --- | --- |
-| `name` | Chuỗi từ 1–100 ký tự, bắt buộc |
-| `quantity` | C# `decimal?`, PostgreSQL `numeric(10,3)`, API nhận JSON number hoặc `null` |
-| `unit` | Chuỗi tối đa 50 ký tự, ví dụ `g`, `ml`, `quả`, `muỗng cà phê` |
-| `notes` | Chuỗi ghi chú tối đa 500 ký tự |
-| `orderIndex` | Số nguyên từ 0, thứ tự hiển thị nguyên liệu |
+| Trường       | Kiểu và quy tắc                                                             |
+| ------------ | --------------------------------------------------------------------------- |
+| `name`       | Chuỗi từ 1–100 ký tự, bắt buộc                                              |
+| `quantity`   | C# `decimal?`, PostgreSQL `numeric(10,3)`, API nhận JSON number hoặc `null` |
+| `unit`       | Chuỗi tối đa 50 ký tự, ví dụ `g`, `ml`, `quả`, `muỗng cà phê`               |
+| `notes`      | Chuỗi ghi chú tối đa 500 ký tự                                              |
+| `orderIndex` | Số nguyên từ 0, thứ tự hiển thị nguyên liệu                                 |
 
 - **Có định lượng:** `quantity > 0`, tối đa 3 chữ số sau dấu thập phân và trong giới hạn kiểu dữ liệu; `unit` bắt buộc, không chỉ gồm khoảng trắng.
 - **Không định lượng:** cả `quantity` và `unit` là `null`; `notes` bắt buộc giải thích, ví dụ “vừa đủ”. Không dùng số 0 để thay cho chưa biết lượng.
@@ -329,12 +367,12 @@ PDF đã có `nutrition?` trong luồng tạo/cập nhật (trang 29–31) và m
 - Với phân số không biểu diễn chính xác trong 3 chữ số thập phân, form hiển thị giá trị làm tròn để người dùng kiểm tra trước khi lưu; không được làm tròn một lượng dương thành 0 để gửi đi.
 - Backend chỉ nhận số đã chuẩn hóa, không nhận chuỗi `"1/2"`, `"0,5"` hoặc `"1/2 muỗng canh"` trong `quantity`. Mẫu số 0 và dữ liệu không phải số bị từ chối ở form.
 
-| Người dùng nhập | `quantity` gửi API | `unit` gửi API | `notes` |
-| --- | --- | --- | --- |
-| 2 muỗng cà phê | `2` | `"muỗng cà phê"` | `null` |
-| 1/2 muỗng canh | `0.5` | `"muỗng canh"` | `null` |
-| 250 g | `250` | `"g"` | `null` |
-| Muối vừa đủ | `null` | `null` | `"vừa đủ"` |
+| Người dùng nhập | `quantity` gửi API | `unit` gửi API   | `notes`    |
+| --------------- | ------------------ | ---------------- | ---------- |
+| 2 muỗng cà phê  | `2`                | `"muỗng cà phê"` | `null`     |
+| 1/2 muỗng canh  | `0.5`              | `"muỗng canh"`   | `null`     |
+| 250 g           | `250`              | `"g"`            | `null`     |
+| Muối vừa đủ     | `null`             | `null`           | `"vừa đủ"` |
 
 Chọn số thập phân thay cho lưu cả cụm dưới dạng chuỗi giúp kiểm tra lượng và hỗ trợ tính theo khẩu phần trong tương lai. [PostgreSQL `numeric`](https://www.postgresql.org/docs/16/datatype-numeric.html) lưu số thập phân chính xác trong phạm vi khai báo. API phải kiểm tra số chữ số thập phân trước khi ghi, không dựa vào việc database tự làm tròn.
 
@@ -348,18 +386,18 @@ Chọn số thập phân thay cho lưu cả cụm dưới dạng chuỗi giúp k
 
 ## 4. Yêu cầu chất lượng và bảo mật
 
-| Nội dung | Mục tiêu và quy tắc áp dụng |
-| --- | --- |
-| Giao diện | Dùng được trên điện thoại, tablet, máy tính; có trạng thái đang tải, lỗi và lưu thành công; hướng đến WCAG 2.1 AA |
-| Tài khoản | Mật khẩu tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt; hash bằng ASP.NET Core Identity; khóa 15 phút sau 5 lần đăng nhập sai |
-| Quyền truy cập | Kiểm tra vai trò và chủ sở hữu ở backend, kể cả với bước, nguyên liệu và ảnh; không chỉ ẩn nút ở frontend |
-| Bảo mật kết nối | HTTPS khi triển khai; CORS chỉ cho origin được cấu hình; secrets nằm trong biến môi trường/User Secrets |
-| Giới hạn request | Auth 10, API chung 100, upload 5 request/phút/IP; vượt mức trả `429` kèm `Retry-After` |
-| Hiệu năng | Theo điều kiện đo của SRS: tối thiểu 100 người dùng đồng thời; cache warm thì GET có cache p50 ≤ 150 ms, API p95 ≤ 500 ms, p99 ≤ 1.000 ms |
-| Frontend | LCP ≤ 2,5 giây, CLS ≤ 0,1, INP ≤ 200 ms; đây là chỉ tiêu cần kiểm thử |
-| Độ tin cậy | Uptime mục tiêu ≥ 99,5%, tương ứng tối đa 43,8 giờ gián đoạn/năm 365 ngày; báo cáo theo khoảng thời gian đo thực tế, gồm thời gian bảo trì |
-| Kiểm thử | Unit test tầng Application đạt ≥ 80% line coverage; API có ca thành công và lỗi; E2E gồm đăng ký, đăng nhập, tạo bài, đăng bài, tìm kiếm |
-| SEO | Tiêu đề, mô tả, URL, JSON-LD Recipe; không tạo dữ liệu đánh giá sao giả; nội dung nháp/lưu trữ không được index |
+| Nội dung         | Mục tiêu và quy tắc áp dụng                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Giao diện        | Dùng được trên điện thoại, tablet, máy tính; có trạng thái đang tải, lỗi và lưu thành công; hướng đến WCAG 2.1 AA                                |
+| Tài khoản        | Mật khẩu tối thiểu 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt; hash bằng ASP.NET Core Identity; khóa 15 phút sau 5 lần đăng nhập sai |
+| Quyền truy cập   | Kiểm tra vai trò và chủ sở hữu ở backend, kể cả với bước, nguyên liệu và ảnh; không chỉ ẩn nút ở frontend                                        |
+| Bảo mật kết nối  | HTTPS khi triển khai; CORS chỉ cho origin được cấu hình; secrets nằm trong biến môi trường/User Secrets                                          |
+| Giới hạn request | Auth 10, API chung 100, upload 5 request/phút/IP; vượt mức trả `429` kèm `Retry-After`                                                           |
+| Hiệu năng        | Theo điều kiện đo của SRS: tối thiểu 100 người dùng đồng thời; cache warm thì GET có cache p50 ≤ 150 ms, API p95 ≤ 500 ms, p99 ≤ 1.000 ms        |
+| Frontend         | LCP ≤ 2,5 giây, CLS ≤ 0,1, INP ≤ 200 ms; đây là chỉ tiêu cần kiểm thử                                                                            |
+| Độ tin cậy       | Uptime mục tiêu ≥ 99,5%, tương ứng tối đa 43,8 giờ gián đoạn/năm 365 ngày; báo cáo theo khoảng thời gian đo thực tế, gồm thời gian bảo trì       |
+| Kiểm thử         | Unit test tầng Application đạt ≥ 80% line coverage; API có ca thành công và lỗi; E2E gồm đăng ký, đăng nhập, tạo bài, đăng bài, tìm kiếm         |
+| SEO              | Tiêu đề, mô tả, URL, JSON-LD Recipe; không tạo dữ liệu đánh giá sao giả; nội dung nháp/lưu trữ không được index                                  |
 
 ## 5. Giao diện và môi trường sử dụng
 
@@ -375,13 +413,13 @@ Chưa có mã nguồn và cấu hình chạy hoàn chỉnh trong thư mục. Cá
 
 ## 6. Kiến trúc và công nghệ
 
-| Thành phần | Công nghệ / trách nhiệm |
-| --- | --- |
-| Frontend | Next.js App Router, TypeScript, Tailwind CSS; Auth.js cho luồng Google; TanStack Query, React Hook Form và Zod |
-| Backend | .NET 10 Minimal APIs, C#; Clean Architecture; CQRS và MediatR |
-| Dữ liệu | EF Core 10, PostgreSQL 16, migrations; FluentValidation kiểm tra dữ liệu tại Application |
-| Lưu ảnh và jobs | MinIO, Hangfire, SMTP/MailKit |
-| Vận hành | Docker Compose, Nginx, Serilog, OpenTelemetry; Scalar tại `/scalar` |
+| Thành phần      | Công nghệ / trách nhiệm                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| Frontend        | Next.js App Router, TypeScript, Tailwind CSS; Auth.js cho luồng Google; TanStack Query, React Hook Form và Zod |
+| Backend         | .NET 10 Minimal APIs, C#; Clean Architecture; CQRS và MediatR                                                  |
+| Dữ liệu         | EF Core 10, PostgreSQL 16, migrations; FluentValidation kiểm tra dữ liệu tại Application                       |
+| Lưu ảnh và jobs | MinIO, Hangfire, SMTP/MailKit                                                                                  |
+| Vận hành        | Docker Compose, Nginx, Serilog, OpenTelemetry; Scalar tại `/scalar`                                            |
 
 Domain chỉ chứa nghiệp vụ và định danh tác giả, không phụ thuộc Identity hoặc thư viện ngoài. `ApplicationUser` kế thừa `IdentityUser<string>` đặt ở Infrastructure. Application phụ thuộc Domain và khai báo interface; Infrastructure triển khai các interface; API kết nối qua dependency injection.
 
@@ -391,16 +429,16 @@ Domain chỉ chứa nghiệp vụ và định danh tác giả, không phụ thu�
 
 ## 7. Mô hình dữ liệu
 
-| Thực thể | Nội dung và quy tắc chính |
-| --- | --- |
-| `ApplicationUser` | Identity có ID string; email, `DisplayName`, `AvatarUrl`, `Bio`, trạng thái tài khoản |
-| `Category` | ID Guid; tên, slug, mô tả, ảnh, `IsDeleted`; tên nhập 2–50 ký tự, slug duy nhất |
-| `Recipe` | ID Guid; tác giả, danh mục, tiêu đề 5–200 ký tự, mô tả tối đa 2.000 ký tự, thời gian, khẩu phần, độ khó, trạng thái, `IsDeleted`, phiên bản cập nhật |
-| `RecipeNutrition` | Nhóm cột nullable `Nutrition_*` trong `Recipes`; gồm calories, protein, carbohydrates, fat, fiber, sodium |
-| `RecipeStep` | ID Guid, RecipeId, số bước tự sinh, tiêu đề tùy chọn, mô tả bắt buộc tối đa 2.000 ký tự, thời gian và ảnh tùy chọn |
-| `RecipeIngredient` | ID Guid, RecipeId, tên, quantity dạng số, unit dạng chuỗi, notes và orderIndex theo mục 3.7 |
-| `RecipeImage` | ID Guid, RecipeId, URL ảnh gốc/medium/thumbnail, alt text, ảnh chính và thứ tự |
-| `RefreshToken` | ID Guid, UserId dạng string; hash, thời hạn, thời điểm thu hồi và chuỗi phiên |
+| Thực thể           | Nội dung và quy tắc chính                                                                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ApplicationUser`  | Identity có ID string; email, `DisplayName`, `AvatarUrl`, `Bio`, trạng thái tài khoản                                                                |
+| `Category`         | ID Guid; tên, slug, mô tả, ảnh, `IsDeleted`; tên nhập 2–50 ký tự, slug duy nhất                                                                      |
+| `Recipe`           | ID Guid; tác giả, danh mục, tiêu đề 5–200 ký tự, mô tả tối đa 2.000 ký tự, thời gian, khẩu phần, độ khó, trạng thái, `IsDeleted`, phiên bản cập nhật |
+| `RecipeNutrition`  | Nhóm cột nullable `Nutrition_*` trong `Recipes`; gồm calories, protein, carbohydrates, fat, fiber, sodium                                            |
+| `RecipeStep`       | ID Guid, RecipeId, số bước tự sinh, tiêu đề tùy chọn, mô tả bắt buộc tối đa 2.000 ký tự, thời gian và ảnh tùy chọn                                   |
+| `RecipeIngredient` | ID Guid, RecipeId, tên, quantity dạng số, unit dạng chuỗi, notes và orderIndex theo mục 3.7                                                          |
+| `RecipeImage`      | ID Guid, RecipeId, URL ảnh gốc/medium/thumbnail, alt text, ảnh chính và thứ tự                                                                       |
+| `RefreshToken`     | ID Guid, UserId dạng string; hash, thời hạn, thời điểm thu hồi và chuỗi phiên                                                                        |
 
 ID của các thực thể nghiệp vụ là Guid; `AuthorId` và `UserId` tham chiếu Identity là string. Không yêu cầu mọi lớp đều kế thừa cùng một BaseEntity. `IsDeleted` chỉ áp dụng theo phạm vi xóa mềm ở mục 3.3.
 
@@ -422,25 +460,25 @@ Recipe có token phiên bản `RowVersion` do backend cập nhật mỗi khi cô
 
 Các đường dẫn trong bảng đều đứng sau `/api/v1`.
 
-| Method | Đường dẫn | Công dụng |
-| --- | --- | --- |
-| POST | `/auth/register`, `/auth/login`, `/auth/google` | Đăng ký/đăng nhập và nhận bộ token |
-| POST | `/auth/refresh`, `/auth/logout` | Làm mới hoặc thu hồi phiên bằng refresh token |
-| GET / PATCH | `/auth/me` | Xem/cập nhật hồ sơ người đang đăng nhập |
-| GET | `/categories`, `/categories/{slug}` | Danh mục chưa xóa và công thức công khai thuộc danh mục |
-| POST | `/categories` | Admin tạo danh mục |
-| PATCH / DELETE | `/categories/{id}` | Admin sửa một phần hoặc xóa mềm danh mục |
-| GET | `/recipes`, `/recipes/search`, `/recipes/{slug}` | Danh sách/tìm kiếm công khai; chi tiết kiểm tra quyền nếu bài chưa công khai |
-| GET | `/me/recipes`, `/admin/recipes` | Quản lý bài chưa xóa của chính mình hoặc toàn hệ thống |
-| POST | `/recipes` | Tạo Draft; nhận kèm nutrition, ingredients và steps |
-| PATCH / DELETE | `/recipes/{id}` | Sửa một phần thông tin hoặc xóa mềm công thức |
-| PATCH | `/recipes/{id}/publish` | Xuất bản công thức đủ điều kiện |
-| PATCH | `/recipes/{id}/unpublish` | Đưa bài Published hoặc Archived về Draft |
-| PATCH | `/recipes/{id}/archive` | Chuyển Draft hoặc Published sang Archived |
-| POST | `/recipes/{id}/steps`, `/recipes/{id}/ingredients` | Thêm bước tự đánh số hoặc thêm nguyên liệu |
-| PATCH / DELETE | `/recipes/{id}/steps/{stepId}`, `/recipes/{id}/ingredients/{ingredientId}` | Sửa một phần hoặc xóa dữ liệu con |
-| POST | `/recipes/{id}/images` | Upload ảnh |
-| PATCH / DELETE | `/recipes/{id}/images/{imageId}` | Cập nhật metadata/chọn ảnh chính hoặc xóa riêng ảnh |
+| Method         | Đường dẫn                                                                  | Công dụng                                                                    |
+| -------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| POST           | `/auth/register`, `/auth/login`, `/auth/google`                            | Đăng ký/đăng nhập và nhận bộ token                                           |
+| POST           | `/auth/refresh`, `/auth/logout`                                            | Làm mới hoặc thu hồi phiên bằng refresh token                                |
+| GET / PATCH    | `/auth/me`                                                                 | Xem/cập nhật hồ sơ người đang đăng nhập                                      |
+| GET            | `/categories`, `/categories/{slug}`                                        | Danh mục chưa xóa và công thức công khai thuộc danh mục                      |
+| POST           | `/categories`                                                              | Admin tạo danh mục                                                           |
+| PATCH / DELETE | `/categories/{id}`                                                         | Admin sửa một phần hoặc xóa mềm danh mục                                     |
+| GET            | `/recipes`, `/recipes/search`, `/recipes/{slug}`                           | Danh sách/tìm kiếm công khai; chi tiết kiểm tra quyền nếu bài chưa công khai |
+| GET            | `/me/recipes`, `/admin/recipes`                                            | Quản lý bài chưa xóa của chính mình hoặc toàn hệ thống                       |
+| POST           | `/recipes`                                                                 | Tạo Draft; nhận kèm nutrition, ingredients và steps                          |
+| PATCH / DELETE | `/recipes/{id}`                                                            | Sửa một phần thông tin hoặc xóa mềm công thức                                |
+| PATCH          | `/recipes/{id}/publish`                                                    | Xuất bản công thức đủ điều kiện                                              |
+| PATCH          | `/recipes/{id}/unpublish`                                                  | Đưa bài Published hoặc Archived về Draft                                     |
+| PATCH          | `/recipes/{id}/archive`                                                    | Chuyển Draft hoặc Published sang Archived                                    |
+| POST           | `/recipes/{id}/steps`, `/recipes/{id}/ingredients`                         | Thêm bước tự đánh số hoặc thêm nguyên liệu                                   |
+| PATCH / DELETE | `/recipes/{id}/steps/{stepId}`, `/recipes/{id}/ingredients/{ingredientId}` | Sửa một phần hoặc xóa dữ liệu con                                            |
+| POST           | `/recipes/{id}/images`                                                     | Upload ảnh                                                                   |
+| PATCH / DELETE | `/recipes/{id}/images/{imageId}`                                           | Cập nhật metadata/chọn ảnh chính hoặc xóa riêng ảnh                          |
 
 Chủ sở hữu hoặc Admin mới được ghi vào công thức/dữ liệu con. Bản này dùng **PATCH cho cập nhật một phần** thay cho những mô tả PUT không thống nhất trong PDF; không cung cấp song song hai kiểu cập nhật cho cùng chức năng. Không có API dinh dưỡng riêng hoặc endpoint `/primary` riêng.
 
@@ -466,13 +504,41 @@ Chủ sở hữu hoặc Admin mới được ghi vào công thức/dữ liệu c
     "sodium": null
   },
   "ingredients": [
-    { "name": "Xà lách", "quantity": 200, "unit": "g", "notes": null, "orderIndex": 0 },
-    { "name": "Dầu ô liu", "quantity": 0.5, "unit": "muỗng canh", "notes": null, "orderIndex": 1 },
-    { "name": "Muối", "quantity": null, "unit": null, "notes": "vừa đủ", "orderIndex": 2 }
+    {
+      "name": "Xà lách",
+      "quantity": 200,
+      "unit": "g",
+      "notes": null,
+      "orderIndex": 0
+    },
+    {
+      "name": "Dầu ô liu",
+      "quantity": 0.5,
+      "unit": "muỗng canh",
+      "notes": null,
+      "orderIndex": 1
+    },
+    {
+      "name": "Muối",
+      "quantity": null,
+      "unit": null,
+      "notes": "vừa đủ",
+      "orderIndex": 2
+    }
   ],
   "steps": [
-    { "title": "Sơ chế", "description": "Rửa sạch rau và để ráo.", "timerMinutes": 10, "imageUrl": null },
-    { "title": "Trộn salad", "description": "Trộn rau với dầu ô liu và muối.", "timerMinutes": 5, "imageUrl": null }
+    {
+      "title": "Sơ chế",
+      "description": "Rửa sạch rau và để ráo.",
+      "timerMinutes": 10,
+      "imageUrl": null
+    },
+    {
+      "title": "Trộn salad",
+      "description": "Trộn rau với dầu ô liu và muối.",
+      "timerMinutes": 5,
+      "imageUrl": null
+    }
   ]
 }
 ```
@@ -483,23 +549,23 @@ Backend tạo công thức Draft và tự gán hai bước số 1, 2; response `
 
 Theo quy trình ghi trong TXT, mỗi chức năng thực hiện qua hai bước: **phân tích và lập kế hoạch cài đặt chi tiết trong Markdown**, sau đó **cài đặt và kiểm thử theo kế hoạch đã được thống nhất**. README này là căn cứ yêu cầu cho bước lập kế hoạch.
 
-| Thứ tự | Công việc | Điều kiện hoàn thành |
-| --- | --- | --- |
-| 1 | Khóa model, kiểu dữ liệu, DTO, response và quy tắc xóa | Backend/frontend dùng cùng tên trường và cùng điều kiện dữ liệu |
-| 2 | Tạo bộ khung, migrations, Identity và danh mục | Chạy được môi trường, đăng nhập và quản lý danh mục đúng quyền |
-| 3 | Công thức, nutrition, nguyên liệu, các bước | Tạo cùng giao dịch, cập nhật một phần đúng nghĩa, tự đánh số bước |
-| 4 | Tìm kiếm, ảnh, jobs, cache và giao diện | Tích hợp được luồng tạo → upload → đăng → tìm kiếm → xóa mềm |
-| 5 | Kiểm thử tích hợp, hiệu năng, lỗi và tài liệu | Có kết quả kiểm tra, hướng dẫn chạy thực tế và kịch bản demo |
+| Thứ tự | Công việc                                              | Điều kiện hoàn thành                                              |
+| ------ | ------------------------------------------------------ | ----------------------------------------------------------------- |
+| 1      | Khóa model, kiểu dữ liệu, DTO, response và quy tắc xóa | Backend/frontend dùng cùng tên trường và cùng điều kiện dữ liệu   |
+| 2      | Tạo bộ khung, migrations, Identity và danh mục         | Chạy được môi trường, đăng nhập và quản lý danh mục đúng quyền    |
+| 3      | Công thức, nutrition, nguyên liệu, các bước            | Tạo cùng giao dịch, cập nhật một phần đúng nghĩa, tự đánh số bước |
+| 4      | Tìm kiếm, ảnh, jobs, cache và giao diện                | Tích hợp được luồng tạo → upload → đăng → tìm kiếm → xóa mềm      |
+| 5      | Kiểm thử tích hợp, hiệu năng, lỗi và tài liệu          | Có kết quả kiểm tra, hướng dẫn chạy thực tế và kịch bản demo      |
 
 Các tình huống phải kiểm tra trước khi coi 5 điểm góp ý đã xử lý xong:
 
-| Điểm | Kiểm tra bắt buộc |
-| --- | --- |
-| Xóa mềm | Sau xóa, bản ghi và ảnh còn tồn tại nhưng API/danh sách/tìm kiếm không trả bài; truy cập dữ liệu con của bài đã xóa bị chặn |
-| Sắp xếp | Cùng danh sách cho đúng hai chiều `title`; dữ liệu trùng tiêu chí có thứ tự phụ ổn định; `-title`, `dsc`, trường không hợp lệ bị từ chối |
-| Dinh dưỡng | Một POST lưu đủ dữ liệu; nutrition sai làm cả giao dịch không được lưu; PATCH bỏ qua, gửi null và gửi object có ba ý nghĩa đúng như mục 3.5 |
-| Bước nấu | Client không cần số bước; xóa bước giữa vẫn liên tục; thêm/xóa đồng thời không tạo trùng số hoặc ghi đè phiên bản |
-| Nguyên liệu | `0.5` và đơn vị chuỗi được lưu đúng; “vừa đủ” đúng cặp null; lượng âm, 0, số quá giới hạn, thiếu đơn vị hoặc chuỗi lượng bị từ chối |
+| Điểm        | Kiểm tra bắt buộc                                                                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Xóa mềm     | Sau xóa, bản ghi và ảnh còn tồn tại nhưng API/danh sách/tìm kiếm không trả bài; truy cập dữ liệu con của bài đã xóa bị chặn                 |
+| Sắp xếp     | Cùng danh sách cho đúng hai chiều `title`; dữ liệu trùng tiêu chí có thứ tự phụ ổn định; `-title`, `dsc`, trường không hợp lệ bị từ chối    |
+| Dinh dưỡng  | Một POST lưu đủ dữ liệu; nutrition sai làm cả giao dịch không được lưu; PATCH bỏ qua, gửi null và gửi object có ba ý nghĩa đúng như mục 3.5 |
+| Bước nấu    | Client không cần số bước; xóa bước giữa vẫn liên tục; thêm/xóa đồng thời không tạo trùng số hoặc ghi đè phiên bản                           |
+| Nguyên liệu | `0.5` và đơn vị chuỗi được lưu đúng; “vừa đủ” đúng cặp null; lượng âm, 0, số quá giới hạn, thiếu đơn vị hoặc chuỗi lượng bị từ chối         |
 
 ## Tài liệu tham chiếu
 

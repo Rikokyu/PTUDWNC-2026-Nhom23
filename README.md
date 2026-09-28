@@ -30,7 +30,7 @@
 |             | Quản lý Ảnh Công thức             | 5       |         | Tải lên, đặt ảnh chính và xóa ảnh công thức        |                 |
 |             | Quản lý Nguyên liệu (CRUD)        | 5       |         | Hoàn thành CRUD nguyên liệu                        |                 |
 |             | Quản lý Các bước Thực hiện (CRUD) | 6       |         | CRUD bước nấu và tự động đánh lại số thứ tự        |                 |
-| ----------- | --------------------------------- | ------  | ------- | -------------------------------------------------- | --------------- |
+| --- | --- | --- | --- | --- | --- |
 | **2312569** | Welcome Email Job                 | 1       |         | Thiết lập job gửi email chào mừng bằng Hangfire    |                 |
 |             | Image Resize / Thumbnail Job      | 2       |         | Tạo thumbnail và resize ảnh                        |                 |
 |             | Sitemap Generation Job            | 3       |         | Tạo sitemap tự động bằng Hangfire                  |                 |
@@ -39,7 +39,7 @@
 |             | Tạo Danh mục Mới [Admin]          | 5       |         | Admin tạo được danh mục mới                        |                 |
 |             | Cập nhật Danh mục [Admin]         | 5       |         | Admin cập nhật được danh mục                       |                 |
 |             | Xóa Danh mục [Admin]              | 6       |         | Admin xóa danh mục khi kiểm tra điều kiện dữ liệu  |                 |
-| ----------- | --------------------------------- | ------- | ------- | -------------------------------------------------- | --------------- |
+| --- | --- | --- | --- | --- | --- |
 | **2312789** | Health Check Endpoints            | 1       |         | Thiết lập Health Check cho hệ thống                |                 |
 |             | Structured Logging                | 2       |         | Thiết lập structured logging cho backend           |                 |
 |             | Upload File lên MinIO             | 2       |         | Tích hợp chức năng tải file lên MinIO              |                 |
@@ -49,7 +49,7 @@
 |             | Sắp xếp Kết quả                   | 5       |         | Hoàn thành sắp xếp kết quả tìm kiếm                |                 |
 |             | Phân trang Offset-based           | 6       |         | Phân trang offset-based cho kết quả tìm kiếm       |                 |
 |             | Distributed Tracing & Metrics     | 7       |         | Hoàn thiện tracing và metrics bằng OpenTelemetry   |                 |
-| ----------- | --------------------------------- | ------  | ------- | -------------------------------------------------- | --------------- |
+| --- | --- | --- | --- | --- | --- |
 | **2312622** | Đăng ký Tài khoản                 | 1       |         | Khởi tạo chức năng đăng ký tài khoản               |                 |
 |             | Đăng nhập Email/Mật khẩu          | 2       |         | Hoàn thành đăng nhập bằng Email/Mật khẩu           |                 |
 |             | Đăng xuất                         | 3       |         | Hoàn thành đăng xuất và thu hồi token              |                 |

@@ -25,6 +25,14 @@ public class CategoryConfiguration
         builder.HasIndex(x => x.Slug)
             .IsUnique();
 
+        builder.HasIndex(x => x.Name)
+            .IsUnique();
+
+        builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
+
+        builder.HasQueryFilter(x => !x.IsDeleted);
+
         builder.Property(x => x.Description)
             .HasColumnType("text");
 

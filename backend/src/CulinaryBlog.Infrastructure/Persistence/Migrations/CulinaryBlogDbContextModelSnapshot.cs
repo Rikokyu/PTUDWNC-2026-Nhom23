@@ -37,6 +37,11 @@ namespace CulinaryBlog.Infrastructure.Persistence.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -54,6 +59,9 @@ namespace CulinaryBlog.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -86,6 +94,11 @@ namespace CulinaryBlog.Infrastructure.Persistence.Migrations
                     b.Property<string>("Instructions")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("PrepTimeMinutes")
                         .HasColumnType("integer");

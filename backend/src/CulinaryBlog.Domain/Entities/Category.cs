@@ -14,6 +14,8 @@ public class Category : BaseEntity
 
     public int OrderIndex { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public ICollection<Recipe> Recipes { get; set; }
         = new List<Recipe>();
 }

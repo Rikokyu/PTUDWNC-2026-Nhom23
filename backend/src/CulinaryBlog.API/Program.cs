@@ -1,18 +1,11 @@
+using CulinaryBlog.API.Extensions;
+using CulinaryBlog.API.Middleware;
 using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Infrastructure.Persistence.Seed;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<CulinaryBlogDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString(
-            "DefaultConnection")));
-
-builder.Services.AddControllers();
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddApplicationServices(builder.Configuration);
 
 var app = builder.Build();
 
@@ -30,8 +23,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseHttpsRedirection();
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseCors("Frontend");
 
-app.MapControllers();
+app.MapApplicationEndpoints();
 
 app.Run();

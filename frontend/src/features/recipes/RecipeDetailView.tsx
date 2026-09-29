@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Badge } from "@/components/ui/Badge";
@@ -8,31 +8,27 @@ import { Button } from "@/components/ui/Button";
 import { RatingStars } from "@/components/common/RatingStars";
 import { AuthorAvatar } from "@/components/common/AuthorAvatar";
 import { RecipeCard } from "@/components/common/RecipeCard";
-import { MOCK_RECIPES } from "@/lib/mockData";
+import { ExtendedRecipeDto } from "@/lib/mockData";
 import {
   Clock,
   Flame,
   Users,
   Bookmark,
-  Share2,
   Printer,
-  CheckCircle2,
   ChefHat,
   MessageSquare,
   Send,
-  Sparkles,
 } from "lucide-react";
-import { notFound } from "next/navigation";
 
-export default function RecipeDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = use(params);
+export interface RecipeDetailViewProps {
+  recipe: ExtendedRecipeDto;
+  relatedRecipes?: ExtendedRecipeDto[];
+}
 
-  const recipe = MOCK_RECIPES.find((r) => r.slug === slug) || MOCK_RECIPES[0];
-
+export const RecipeDetailView: React.FC<RecipeDetailViewProps> = ({
+  recipe,
+  relatedRecipes = [],
+}) => {
   const [servings, setServings] = useState(recipe.servings);
   const [isSaved, setIsSaved] = useState(recipe.isLiked);
   const [checkedIngredients, setCheckedIngredients] = useState<Record<string, boolean>>({});
@@ -75,9 +71,6 @@ export default function RecipeDetailPage({
     setNewComment("");
   };
 
-  const relatedRecipes = MOCK_RECIPES.filter((r) => r.slug !== recipe.slug).slice(0, 3);
-
-  // Scaled quantity multiplier
   const multiplier = servings / recipe.servings;
 
   return (
@@ -188,14 +181,13 @@ export default function RecipeDetailPage({
 
       {/* TWO COLUMN INGREDIENTS & STEPS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* LEFT COLUMN: INGREDIENTS LIST (4 cols) */}
+        {/* LEFT COLUMN: INGREDIENTS LIST */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-subtle space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h2 className="text-lg font-bold text-content-primary">
                 Nguyên liệu chuẩn bị
               </h2>
-              {/* Servings Adjuster */}
               <div className="flex items-center gap-2 border border-slate-200 rounded-lg p-1 text-xs">
                 <button
                   onClick={() => setServings(Math.max(1, servings - 1))}
@@ -257,7 +249,7 @@ export default function RecipeDetailPage({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: INSTRUCTIONS / STEPS (8 cols) */}
+        {/* RIGHT COLUMN: INSTRUCTIONS / STEPS */}
         <div className="lg:col-span-8 space-y-6">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-content-primary pb-2 border-b border-slate-100">
@@ -305,7 +297,6 @@ export default function RecipeDetailPage({
           </h2>
         </div>
 
-        {/* Add comment form */}
         <form onSubmit={handleAddComment} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
           <textarea
             rows={3}
@@ -326,7 +317,6 @@ export default function RecipeDetailPage({
           </div>
         </form>
 
-        {/* Comments list */}
         <div className="space-y-4">
           {commentsList.map((c) => (
             <div key={c.id} className="p-4 rounded-xl border border-slate-200 bg-white space-y-2">
@@ -341,16 +331,18 @@ export default function RecipeDetailPage({
       </section>
 
       {/* RELATED RECIPES GRID */}
-      <section className="pt-12 border-t border-slate-200 space-y-6">
-        <h2 className="text-2xl font-bold text-content-primary tracking-tight">
-          Công Thức Tương Tự
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {relatedRecipes.map((r) => (
-            <RecipeCard key={r.id} {...r} />
-          ))}
-        </div>
-      </section>
+      {relatedRecipes.length > 0 && (
+        <section className="pt-12 border-t border-slate-200 space-y-6">
+          <h2 className="text-2xl font-bold text-content-primary tracking-tight">
+            Công Thức Tương Tự
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {relatedRecipes.map((r) => (
+              <RecipeCard key={r.id} {...r} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
-}
+};

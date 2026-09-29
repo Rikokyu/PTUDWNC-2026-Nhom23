@@ -1,24 +1,40 @@
-:root {
-  color-scheme: light;
-  font-family: Arial, sans-serif;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-white text-content-primary font-sans antialiased selection:bg-brand-light selection:text-brand-hover;
+    background-color: #FFFFFF;
+    color: #0F172A;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-semibold text-content-primary;
+  }
 }
 
-* {
-  box-sizing: border-box;
+/* Custom scrollbar for clean minimal look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-
-body {
-  margin: 0;
-  color: #1f2937;
-  background: #fffaf5;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-main {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
 }
-
-a {
-  color: #c2410c;
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }

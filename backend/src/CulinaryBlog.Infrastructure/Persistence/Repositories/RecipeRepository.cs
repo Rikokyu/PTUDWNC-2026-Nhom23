@@ -6,12 +6,13 @@ using CulinaryBlog.Infrastructure.Persistence;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Repositories;
 
-public class RecipeRepository : IRecipeRepository
+public class RecipeRepository : Repository<Recipe>, IRecipeRepository
 {
     private readonly CulinaryBlogDbContext _context;
 
     public RecipeRepository(
         CulinaryBlogDbContext context)
+        : base(context)
     {
         _context = context;
     }

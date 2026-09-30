@@ -12,20 +12,22 @@ public static class DatabaseSeeder
     {
         await context.Database.MigrateAsync();
 
-        if (await context.Categories.AnyAsync())
-            return;
-
         Randomizer.Seed = new Random(12345);
 
-        var categories = GenerateCategories();
+        if (!await context.Categories.AnyAsync())
+        {
+            var categories = GenerateCategories();
 
-        await context.Categories.AddRangeAsync(categories);
-        await context.SaveChangesAsync();
+            await context.Categories.AddRangeAsync(categories);
+            await context.SaveChangesAsync();
 
-        var recipes = GenerateRecipes(categories);
+            var recipes = GenerateRecipes(categories);
 
-        await context.Recipes.AddRangeAsync(recipes);
-        await context.SaveChangesAsync();
+            await context.Recipes.AddRangeAsync(recipes);
+            await context.SaveChangesAsync();
+        }
+
+        await EnsureRecipeDataAsync(context);
     }
 
     private static List<Category> GenerateCategories()
@@ -36,21 +38,25 @@ public static class DatabaseSeeder
 
         for (int i = 1; i <= 20; i++)
         {
-            categories.Add(new Category
-            {
-                Id = Guid.NewGuid(),
+            categories.Add(
+                new Category
+                {
+                    Id = Guid.NewGuid(),
 
-                Name = $"Danh mục món ăn {i}",
+                    Name =
+                        $"Danh mục món ăn {i}",
 
-                Slug = $"danh-muc-mon-an-{i}",
+                    Slug =
+                        $"danh-muc-mon-an-{i}",
 
-                Description =
-                    faker.Lorem.Sentence(),
+                    Description =
+                        faker.Lorem.Sentence(),
 
-                OrderIndex = i,
+                    OrderIndex = i,
 
-                CreatedAt = DateTime.UtcNow
-            });
+                    CreatedAt =
+                        DateTime.UtcNow
+                });
         }
 
         return categories;
@@ -67,41 +73,66 @@ public static class DatabaseSeeder
         {
             var recipeId = Guid.NewGuid();
 
-            var recipe = new Recipe
-            {
-                Id = recipeId,
+            var recipe =
+                new Recipe
+                {
+                    Id = recipeId,
 
-                Title = $"Công thức món ăn {i}",
+                    Title =
+                        $"Công thức món ăn {i}",
 
-                Slug = $"cong-thuc-mon-an-{i}",
+                    Slug =
+                        $"cong-thuc-mon-an-{i}",
 
-                Description =
-                    faker.Lorem.Paragraph(),
+                    Description =
+                        faker.Lorem.Paragraph(),
 
-                Instructions =
-                    faker.Lorem.Paragraphs(2),
+                    Instructions =
+                        faker.Lorem.Paragraphs(2),
 
-                PrepTimeMinutes =
-                    faker.Random.Int(5, 60),
+                    PrepTimeMinutes =
+                        faker.Random.Int(5, 60),
 
-                CookTimeMinutes =
-                    faker.Random.Int(10, 180),
+                    CookTimeMinutes =
+                        faker.Random.Int(10, 180),
 
-                Servings =
-                    faker.Random.Int(1, 8),
+                    Servings =
+                        faker.Random.Int(1, 8),
 
-                Difficulty =
-                    faker.PickRandom<DifficultyLevel>(),
+                    Difficulty =
+                        faker.PickRandom<DifficultyLevel>(),
 
-                Status =
-                    RecipeStatus.Published,
+                    Status =
+                        RecipeStatus.Published,
 
-                CategoryId =
-                    faker.PickRandom(categories).Id,
+                    CategoryId =
+                        faker.PickRandom(categories).Id,
 
-                CreatedAt =
-                    DateTime.UtcNow
-            };
+                    Nutrition =
+                        new RecipeNutrition
+                        {
+                            Calories =
+                                faker.Random.Decimal(100, 900),
+
+                            Protein =
+                                faker.Random.Decimal(5, 80),
+
+                            Carbs =
+                                faker.Random.Decimal(10, 120),
+
+                            Fat =
+                                faker.Random.Decimal(5, 60),
+
+                            Fiber =
+                                faker.Random.Decimal(1, 20),
+
+                            Sodium =
+                                faker.Random.Decimal(10, 1500)
+                        },
+
+                    CreatedAt =
+                        DateTime.UtcNow
+                };
 
             // 10 ingredients
             for (int j = 1; j <= 10; j++)
@@ -113,10 +144,13 @@ public static class DatabaseSeeder
 
                         RecipeId = recipeId,
 
-                        Name = $"Nguyên liệu {j}",
+                        Name =
+                            $"Nguyên liệu {j}",
 
                         Quantity =
-                            faker.Random.Int(1, 500).ToString(),
+                            faker.Random
+                                .Int(1, 500)
+                                .ToString(),
 
                         Unit =
                             faker.PickRandom(
@@ -169,4 +203,70 @@ public static class DatabaseSeeder
 
         return recipes;
     }
-}
+
+private static async Task EnsureRecipeDataAsync(
+    CulinaryBlogDbContext context)
+{
+    var hasRecipes =
+        await context.Recipes.AnyAsync();
+
+    if (hasRecipes)
+    {
+        return;
+    }
+
+    var recipes =
+        await context.Recipes
+            .Include(x => x.Nutrition)
+            .Include(x => x.Images)
+            .ToListAsync();
+
+    foreach (var recipe in recipes)
+    {
+        if (recipe.Nutrition == null)
+        {
+            recipe.Nutrition =
+                new RecipeNutrition
+                {
+                    Calories = 450,
+                    Protein = 25,
+                    Carbs = 50,
+                    Fat = 18,
+                    Fiber = 6,
+                    Sodium = 600
+                };
+        }
+
+        if (!recipe.Images.Any())
+        {
+            recipe.Images.Add(
+                new RecipeImage
+                {
+                    Id = Guid.NewGuid(),
+
+                    RecipeId = recipe.Id,
+
+                    OriginalUrl =
+                        $"https://picsum.photos/seed/recipe-{recipe.Id}/1200/800",
+
+                    MediumUrl =
+                        $"https://picsum.photos/seed/recipe-{recipe.Id}/800/600",
+
+                    ThumbnailUrl =
+                        $"https://picsum.photos/seed/recipe-{recipe.Id}/300/300",
+
+                    AltText =
+                        recipe.Title,
+
+                    IsPrimary = true,
+
+                    OrderIndex = 1,
+
+                    CreatedAt =
+                        DateTime.UtcNow
+                });
+        }
+    }
+
+    await context.SaveChangesAsync();
+}}

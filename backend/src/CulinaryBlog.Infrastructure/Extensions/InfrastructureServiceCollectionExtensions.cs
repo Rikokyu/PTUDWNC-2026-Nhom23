@@ -19,9 +19,19 @@ public static class InfrastructureServiceCollectionExtensions
                     configuration.GetConnectionString(
                         "DefaultConnection")));
 
+        services.AddScoped(
+            typeof(IRepository<>),
+            typeof(Repository<>));
+
         services.AddScoped<
             IRecipeRepository,
             RecipeRepository>();
+
+        services.AddScoped<
+            ICategoryRepository,
+            CategoryRepository>();
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }

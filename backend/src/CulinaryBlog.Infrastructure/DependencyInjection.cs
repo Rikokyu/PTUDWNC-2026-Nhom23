@@ -19,8 +19,14 @@ public static class DependencyInjection
                 configuration.GetConnectionString("DefaultConnection"));
         });
 
-        services.AddScoped<IRecipeRepository, RecipeRepository>();
+        services.AddScoped(
+            typeof(IRepository<>),
+            typeof(Repository<>));
 
+        services.AddScoped<IRecipeRepository, RecipeRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        
         return services;
     }
 }

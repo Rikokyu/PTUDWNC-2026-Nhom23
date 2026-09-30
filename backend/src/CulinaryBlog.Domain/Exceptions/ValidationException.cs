@@ -6,4 +6,9 @@ public class ValidationException : DomainException
 		: base(message)
 	{
 	}
+
+	public ValidationException(string message, Exception innerException)
+		: base(message, innerException)
+	{
+	}
 }

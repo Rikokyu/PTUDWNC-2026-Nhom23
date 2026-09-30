@@ -6,4 +6,9 @@ public class NotFoundException : DomainException
         : base(message)
     {
     }
+
+    public NotFoundException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }

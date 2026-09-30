@@ -6,4 +6,9 @@ public class ForbiddenException : Exception
         : base(message)
     {
     }
+
+    public ForbiddenException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }

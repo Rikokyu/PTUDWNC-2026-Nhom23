@@ -1,9 +1,11 @@
 using CulinaryBlog.API.Extensions;
+using CulinaryBlog.API.HealthChecks;
 using CulinaryBlog.API.Middleware;
 using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder =
     WebApplication.CreateBuilder(args);
@@ -16,6 +18,18 @@ builder.Services
 builder.Services
     .AddInfrastructure(
         builder.Configuration);
+
+builder.Services
+    .AddHealthChecks()
+    .AddCheck(
+        "self",
+        () => HealthCheckResult.Healthy(),
+        tags: new[] { "live" })
+    .AddCheck<PostgreSqlHealthCheck>(
+        "postgresql",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "ready" },
+        timeout: TimeSpan.FromSeconds(3));
 
 // Output Cache
 builder.Services
@@ -48,6 +62,9 @@ builder.Services
 
 builder.Services
     .AddSwaggerGen();
+
+builder.Services
+    .AddProblemDetails();
 
 var app =
     builder.Build();

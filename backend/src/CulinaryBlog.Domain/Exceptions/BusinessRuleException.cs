@@ -6,4 +6,9 @@ public class BusinessRuleException : DomainException
 		: base(message)
 	{
 	}
+
+	public BusinessRuleException(string message, Exception innerException)
+		: base(message, innerException)
+	{
+	}
 }

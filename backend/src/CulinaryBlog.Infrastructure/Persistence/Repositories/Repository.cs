@@ -31,6 +31,15 @@ public class Repository<TEntity> : IRepository<TEntity>
             .ToListAsync(cancellationToken);
     }
 
+    public Task<bool> ExistsAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        return DbSet.AnyAsync(
+            entity => entity.Id == id,
+            cancellationToken);
+    }
+
     public async Task AddAsync(
         TEntity entity,
         CancellationToken cancellationToken = default)
@@ -43,8 +52,13 @@ public class Repository<TEntity> : IRepository<TEntity>
         DbSet.Update(entity);
     }
 
-    public void Remove(TEntity entity)
+    public void Delete(TEntity entity)
     {
         DbSet.Remove(entity);
+    }
+
+    public void Remove(TEntity entity)
+    {
+        Delete(entity);
     }
 }

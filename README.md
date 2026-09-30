@@ -74,8 +74,8 @@
 
 - Hoàn thành API xem danh sách công thức.
 - Hoàn thành API xem chi tiết công thức.
+- Thiết lập Welcome Email Job bằng Hangfire.
 - Thiết lập Health Check cho hệ thống.
-- Chuẩn bị cấu trúc module Category.
 - Khởi tạo chức năng đăng ký tài khoản.
 
 ---
@@ -95,10 +95,10 @@
 **Kết quả dự kiến:**
 
 - Có thể tạo công thức mới ở trạng thái Draft.
-- Hoàn thành đăng nhập bằng Email/Mật khẩu.
-- Hoàn thành API xem danh sách danh mục.
+- Hoàn thành job tạo thumbnail và resize ảnh.
 - Tích hợp chức năng upload file lên MinIO.
 - Thiết lập structured logging cho backend.
+- Hoàn thành đăng nhập bằng Email/Mật khẩu.
 
 ---
 
@@ -118,9 +118,9 @@
 
 - Hoàn thành cập nhật công thức với Resource-based Authorization và xử lý concurrency.
 - Hoàn thành chuyển đổi trạng thái Published/Draft.
-- Tích hợp đăng nhập Google OAuth 2.0.
-- Hoàn thành trang/API chi tiết danh mục và danh sách công thức thuộc danh mục.
+- Hoàn thành Sitemap Generation Job bằng Hangfire.
 - Hoàn thành chức năng xóa file khỏi MinIO.
+- Hoàn thành chức năng đăng xuất và token revocation.
 
 ---
 
@@ -141,10 +141,10 @@
 
 - Hoàn thành chuyển công thức sang trạng thái Archived.
 - Hoàn thành xóa công thức và xử lý dữ liệu liên quan.
-- Hoàn thành cơ chế Refresh Token.
-- Hoàn thành chức năng đăng xuất và token revocation.
-- Admin có thể tạo danh mục mới.
+- Hoàn thành API xem danh sách danh mục.
+- Hoàn thành trang/API chi tiết danh mục và danh sách công thức thuộc danh mục.
 - Triển khai tìm kiếm toàn văn bằng PostgreSQL Full-Text Search.
+- Người dùng có thể xem thông tin cá nhân.
 
 ---
 
@@ -166,11 +166,11 @@
 
 - Hoàn thành upload, thiết lập ảnh chính và xóa ảnh công thức.
 - Hoàn thành CRUD nguyên liệu.
-- Người dùng có thể xem thông tin cá nhân.
-- Thiết lập Welcome Email Job bằng Hangfire.
+- Admin có thể tạo danh mục mới.
 - Admin có thể cập nhật danh mục.
 - Hoàn thành bộ lọc công thức.
 - Hoàn thành sắp xếp kết quả tìm kiếm.
+- Hoàn thành cập nhật thông tin cá nhân.
 
 ---
 
@@ -188,10 +188,9 @@
 **Kết quả dự kiến:**
 
 - Hoàn thành CRUD các bước thực hiện và tự động đánh lại số thứ tự bước.
-- Hoàn thành cập nhật thông tin cá nhân.
-- Hoàn thành job tạo thumbnail và resize ảnh.
 - Admin có thể xóa danh mục sau khi kiểm tra điều kiện dữ liệu.
 - Hoàn thành cơ chế phân trang cho kết quả tìm kiếm.
+- Tích hợp đăng nhập Google OAuth 2.0.
 
 ---
 
@@ -204,18 +203,19 @@
 | **Nguyễn Trung Hiệp**   | Kiểm tra và tích hợp toàn bộ module `Recipe`   |
 | **Lê Thị Mai Anh**      | Kiểm tra và tích hợp toàn bộ module `Category` |
 | **Nguyễn Quang Trường** | `FR-OBS-003` – Distributed Tracing & Metrics   |
-| **Nguyễn Đức Hoàng**    | `FR-AUTH-04`Làm mới Access Token               |
+| **Nguyễn Đức Hoàng**    | `FR-AUTH-004` – Làm mới Access Token           |
 
 **Kết quả dự kiến:**
 
-- Hoàn thành Sitemap Generation Job bằng Hangfire.
-- Hoàn thiện Distributed Tracing và Metrics bằng OpenTelemetry.
-- Kiểm tra khả năng tích hợp giữa Authentication và các module nghiệp vụ.
 - Kiểm tra toàn bộ chức năng Recipe.
+- Kiểm tra và tích hợp toàn bộ module Category.
+- Hoàn thiện Distributed Tracing và Metrics bằng OpenTelemetry.
+- Hoàn thành cơ chế Refresh Token.
+- Kiểm tra khả năng tích hợp giữa Authentication và các module nghiệp vụ.
 - Xử lý lỗi phát sinh trong quá trình tích hợp.
 - Kiểm tra lại API, database, cache, storage và background jobs.
 - Chuẩn bị hệ thống cho giai đoạn kiểm thử và demo.
-
+  
 ---
 
 # Culinary Blog — Blog Ẩm thực và Nấu ăn

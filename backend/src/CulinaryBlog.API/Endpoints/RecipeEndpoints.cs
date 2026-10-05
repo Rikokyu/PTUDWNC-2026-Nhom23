@@ -40,7 +40,8 @@ public static class RecipeEndpoints
 			return recipe is null
 				? Results.BadRequest(new { error = "The specified category does not exist." })
 				: Results.Created($"/api/recipes/{recipe.Id}", recipe);
-		});
+		})
+		.RequireAuthorization();
 
 		group.MapPut("/{id:guid}", async (Guid id, UpdateRecipeRequest request, ISender sender, CancellationToken cancellationToken) =>
 		{
@@ -52,13 +53,15 @@ public static class RecipeEndpoints
 			var command = new UpdateRecipeCommand(id, request.Title, request.Description, request.CategoryId);
 			var recipe = await sender.Send(command, cancellationToken);
 			return recipe is null ? Results.NotFound() : Results.Ok(recipe);
-		});
+		})
+		.RequireAuthorization();
 
 		group.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
 		{
 			var deleted = await sender.Send(new DeleteRecipeCommand(id), cancellationToken);
 			return deleted ? Results.NoContent() : Results.NotFound();
-		});
+		})
+		.RequireAuthorization();
 
 		return app;
 	}

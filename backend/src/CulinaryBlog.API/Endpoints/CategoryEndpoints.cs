@@ -51,13 +51,15 @@ public static class CategoryEndpoints
 			var command = new UpdateCategoryCommand(id, request.Name, request.Description);
 			var category = await sender.Send(command, cancellationToken);
 			return category is null ? Results.NotFound() : Results.Ok(category);
-		});
+		})
+		.RequireAuthorization();
 
 		group.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
 		{
 			var deleted = await sender.Send(new DeleteCategoryCommand(id), cancellationToken);
 			return deleted ? Results.NoContent() : Results.NotFound();
-		});
+		})
+		.RequireAuthorization();
 
 		return app;
 	}

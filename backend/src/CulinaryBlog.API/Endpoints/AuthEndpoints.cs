@@ -14,8 +14,13 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth").WithTags("Auth");
 
-        group.MapPost("/register", async (RegisterDto request, IIdentityService identityService) =>
+        group.MapPost("/register", async (RegisterDto? request, IIdentityService identityService) =>
         {
+            if (request is null || string.IsNullOrWhiteSpace(request.DisplayName))
+            {
+                return Results.BadRequest(new { error = "Display name is required." });
+            }
+
             var result = await identityService.RegisterAsync(request.Email, request.Password, request.DisplayName);
             if (!result.IsSuccess)
             {

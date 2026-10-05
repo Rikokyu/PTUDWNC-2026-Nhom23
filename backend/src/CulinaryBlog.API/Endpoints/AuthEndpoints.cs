@@ -1,8 +1,10 @@
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.DTOs.Auth;
+using CulinaryBlog.Application.Features.Auth.Commands.Login;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using MediatR;
 
 namespace CulinaryBlog.API.Endpoints;
 
@@ -23,12 +25,13 @@ public static class AuthEndpoints
             return Results.Ok(new { userId = result.UserId, token = result.Token });
         });
 
-        group.MapPost("/login", async (LoginDto request, IIdentityService identityService) =>
+        group.MapPost("/login", async (LoginCommand request, ISender sender, CancellationToken cancellationToken) =>
         {
-            var result = await identityService.LoginAsync(request.Email, request.Password);
+            var result = await sender.Send(request, cancellationToken);
+
             if (!result.IsSuccess)
             {
-                return Results.BadRequest(new { errors = result.Errors });
+                return Results.Unauthorized();
             }
 
             return Results.Ok(new { userId = result.UserId, token = result.Token });

@@ -171,3 +171,7 @@ D:\PTUDWNC-2026-Nhom23\backend\src\CulinaryBlog.API\bin\Debug\net10.0\ru\Microso
 D:\PTUDWNC-2026-Nhom23\backend\src\CulinaryBlog.API\bin\Debug\net10.0\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 D:\PTUDWNC-2026-Nhom23\backend\src\CulinaryBlog.API\bin\Debug\net10.0\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 D:\PTUDWNC-2026-Nhom23\backend\src\CulinaryBlog.API\bin\Debug\net10.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
+D:\PTUDWNC-2026-Nhom23\backend\src\CulinaryBlog.API\bin\Debug\net10.0\MediatR.dll
+D:\PTUDWNC-2026-Nhom23\backend\src\CulinaryBlog.API\bin\Debug\net10.0\MediatR.Contracts.dll
+D:\PTUDWNC-2026-Nhom23\backend\src\CulinaryBlog.API\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+D:\PTUDWNC-2026-Nhom23\backend\src\CulinaryBlog.API\bin\Debug\net10.0\Microsoft.Bcl.Cryptography.dll

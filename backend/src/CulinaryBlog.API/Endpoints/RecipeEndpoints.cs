@@ -1,8 +1,11 @@
 using CulinaryBlog.Application.Common.Exceptions;
+using CulinaryBlog.Application.DTOs.Recipes;
+using CulinaryBlog.Application.Features.Recipes.Commands;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeBySlug;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipes;
 using CulinaryBlog.Domain.Enums;
 using MediatR;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace CulinaryBlog.API.Endpoints;
 
@@ -19,22 +22,184 @@ public static class RecipeEndpoints
         group
             .MapGet(
                 "",
-                GetRecipesAsync)
+                (HttpRequest request, ISender sender, CancellationToken cancellationToken) =>
+                    GetRecipesAsync(
+                        request,
+                        sender,
+                        cancellationToken,
+                        ownRecipesOnly: false,
+                        includeAllStatuses: false))
             .CacheOutput("RecipeList");
 
         group
             .MapGet(
                 "/{slug}",
-                GetRecipeBySlugAsync)
-            .CacheOutput("RecipeDetail");
+                GetRecipeBySlugAsync);
+
+        group.MapPost(
+            "",
+            async (
+                CreateRecipeRequest request,
+                ISender sender,
+                IOutputCacheStore outputCacheStore,
+                CancellationToken cancellationToken) =>
+            {
+                var result = await sender.Send(
+                    new CreateRecipeCommand(
+                        request.Title,
+                        request.Description,
+                        request.Instructions,
+                        request.CategoryId,
+                        request.PrepTimeMinutes,
+                        request.CookTimeMinutes,
+                        request.Servings,
+                        request.Difficulty,
+                        request.Nutrition,
+                        request.Ingredients ?? Array.Empty<RecipeIngredientInput>(),
+                        request.Steps ?? Array.Empty<RecipeStepInput>()),
+                    cancellationToken);
+
+                await outputCacheStore.EvictByTagAsync(
+                    "recipes",
+                    cancellationToken);
+
+                return Results.Created(
+                    $"/api/v1/recipes/{result.Slug}",
+                    new { data = result });
+            })
+            .RequireAuthorization(policy =>
+                policy.RequireRole("Author", "Admin"));
+
+        group.MapPatch(
+            "/{recipeId:guid}",
+            async (
+                Guid recipeId,
+                UpdateRecipeRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+            {
+                await sender.Send(
+                    new UpdateRecipeCommand(
+                        recipeId,
+                        request.Title,
+                        request.Description,
+                        request.Instructions,
+                        request.CategoryId,
+                        request.PrepTimeMinutes,
+                        request.CookTimeMinutes,
+                        request.Servings,
+                        request.Difficulty,
+                        request.Nutrition),
+                    cancellationToken);
+
+                return Results.NoContent();
+            });
+
+        group.MapPatch(
+            "/{recipeId:guid}/publish",
+            (Guid recipeId, ISender sender, CancellationToken cancellationToken) =>
+                SetStatusAsync(
+                    recipeId,
+                    RecipeStatus.Published,
+                    sender,
+                    cancellationToken));
+
+        group.MapPatch(
+            "/{recipeId:guid}/unpublish",
+            (Guid recipeId, ISender sender, CancellationToken cancellationToken) =>
+                SetStatusAsync(
+                    recipeId,
+                    RecipeStatus.Draft,
+                    sender,
+                    cancellationToken));
+
+        group.MapPatch(
+            "/{recipeId:guid}/archive",
+            (Guid recipeId, ISender sender, CancellationToken cancellationToken) =>
+                SetStatusAsync(
+                    recipeId,
+                    RecipeStatus.Archived,
+                    sender,
+                    cancellationToken));
+
+        group.MapDelete(
+            "/{recipeId:guid}",
+            async (
+                Guid recipeId,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+            {
+                await sender.Send(
+                    new DeleteRecipeCommand(recipeId),
+                    cancellationToken);
+                return Results.NoContent();
+            });
+
+        endpoints.MapGet(
+            "/api/v1/me/recipes",
+            async (
+                HttpRequest request,
+                ISender sender,
+                CulinaryBlog.Application.Common.Interfaces.ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            {
+                if (!currentUser.IsAuthenticated || !currentUser.UserId.HasValue)
+                {
+                    throw new ForbiddenException(
+                        "Sign in to view your recipes.");
+                }
+
+                return await GetRecipesAsync(
+                    request,
+                    sender,
+                    cancellationToken,
+                    ownRecipesOnly: true,
+                    includeAllStatuses: false);
+            });
+
+        endpoints.MapGet(
+            "/api/v1/admin/recipes",
+            async (
+                HttpRequest request,
+                ISender sender,
+                CulinaryBlog.Application.Common.Interfaces.ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            {
+                if (!currentUser.IsAdmin)
+                {
+                    throw new ForbiddenException(
+                        "Administrator access is required.");
+                }
+
+                return await GetRecipesAsync(
+                    request,
+                    sender,
+                    cancellationToken,
+                    ownRecipesOnly: false,
+                    includeAllStatuses: true);
+            });
 
         return endpoints;
+    }
+
+    private static async Task<IResult> SetStatusAsync(
+        Guid recipeId,
+        RecipeStatus status,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        await sender.Send(
+            new SetRecipeStatusCommand(recipeId, status),
+            cancellationToken);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> GetRecipesAsync(
         HttpRequest request,
         ISender sender,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool ownRecipesOnly,
+        bool includeAllStatuses)
     {
         var query =
             request.Query;
@@ -150,7 +315,9 @@ public static class RecipeEndpoints
                 categoryId,
                 difficulty,
                 maxCookTime,
-                sort);
+                sort,
+                ownRecipesOnly,
+                includeAllStatuses);
 
         var result =
             await sender.Send(
@@ -197,3 +364,27 @@ public static class RecipeEndpoints
                && result > 0;
     }
 }
+
+public sealed record CreateRecipeRequest(
+    string Title,
+    string Description,
+    Guid CategoryId,
+    int PrepTimeMinutes,
+    int CookTimeMinutes,
+    int Servings,
+    DifficultyLevel Difficulty,
+    string? Instructions = null,
+    RecipeNutritionDto? Nutrition = null,
+    IReadOnlyList<RecipeIngredientInput>? Ingredients = null,
+    IReadOnlyList<RecipeStepInput>? Steps = null);
+
+public sealed record UpdateRecipeRequest(
+    string Title,
+    string Description,
+    Guid CategoryId,
+    int PrepTimeMinutes,
+    int CookTimeMinutes,
+    int Servings,
+    DifficultyLevel Difficulty,
+    string? Instructions = null,
+    RecipeNutritionDto? Nutrition = null);

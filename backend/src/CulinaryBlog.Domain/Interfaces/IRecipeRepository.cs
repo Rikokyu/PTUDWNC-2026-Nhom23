@@ -16,9 +16,20 @@ public interface IRecipeRepository
             Guid? currentUserId,
             bool isAuthenticated,
             bool isAdmin,
+            bool ownRecipesOnly = false,
+            bool includeAllStatuses = false,
             CancellationToken cancellationToken = default);
 
     Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
+        CancellationToken cancellationToken = default);
+
+    Task<Recipe?> GetByIdWithDetailsAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> SlugExistsAsync(
+        string slug,
+        Guid? excludingRecipeId = null,
         CancellationToken cancellationToken = default);
 }

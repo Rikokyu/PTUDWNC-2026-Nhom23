@@ -28,7 +28,8 @@ builder.Services
                 policy
                     .Expire(
                         TimeSpan.FromMinutes(15))
-                    .SetVaryByQuery("*");
+                    .SetVaryByQuery("*")
+                    .Tag("recipes");
             });
 
         options.AddPolicy(

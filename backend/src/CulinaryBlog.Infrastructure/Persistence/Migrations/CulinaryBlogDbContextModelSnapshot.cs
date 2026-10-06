@@ -125,6 +125,11 @@ namespace CulinaryBlog.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<int>("PrepTimeMinutes")
                         .HasColumnType("integer");
 

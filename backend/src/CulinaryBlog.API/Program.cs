@@ -82,7 +82,7 @@ builder.Services.AddSwaggerGen(options =>
             Type = SecuritySchemeType.Http,
             Scheme = "bearer",
             BearerFormat = "JWT",
-            Description = "Paste the access token returned by POST /api/v1/auth/register."
+            Description = "Paste a valid JWT access token."
         });
 
     options.AddSecurityRequirement(document =>

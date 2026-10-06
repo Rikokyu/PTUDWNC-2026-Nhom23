@@ -1,13 +1,9 @@
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
-using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Interfaces;
-using CulinaryBlog.Infrastructure.Authentication;
-using CulinaryBlog.Infrastructure.Identity;
 using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Infrastructure.Persistence.Repositories;
 using CulinaryBlog.Infrastructure.Storage;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,12 +64,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        services.AddScoped<IIdentityService, IdentityService>();
-        services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
-        services.AddScoped<
-            IPasswordHasher<ApplicationUser>,
-            PasswordHasher<ApplicationUser>>();
 
         return services;
     }

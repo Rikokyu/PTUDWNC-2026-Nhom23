@@ -1,6 +1,5 @@
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Common.Interfaces;
-using CulinaryBlog.Application.Features.Auth.Commands.Register;
 using CulinaryBlog.Application.Features.Recipes.Commands.UploadRecipeImage;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
@@ -12,43 +11,6 @@ namespace CulinaryBlog.Application.Tests;
 
 public sealed class RegistrationAndImageUploadTests
 {
-    [Fact]
-    public void RegisterValidator_RejectsWeakInput()
-    {
-        var validator = new RegisterCommandValidator();
-
-        var errors = validator.Validate(new RegisterCommand(
-            "A",
-            "not-an-email",
-            "bad name",
-            "123"));
-
-        Assert.Equal(4, errors.Count);
-    }
-
-    [Fact]
-    public async Task RegisterHandler_ReturnsTokensAndAuthorUser()
-    {
-        var identity = new FakeIdentityService();
-        var jwt = new FakeJwtService();
-        var handler = new RegisterCommandHandler(identity, jwt);
-
-        var result = await handler.Handle(
-            new RegisterCommand(
-                "Nguyen Van Test",
-                "TEST@example.com",
-                "test_user",
-                "Password@1"),
-            CancellationToken.None);
-
-        Assert.Equal("access-token", result.AccessToken);
-        Assert.Equal("refresh-token", result.RefreshToken);
-        Assert.Equal("test@example.com", result.User.Email);
-        Assert.Equal("Author", Assert.Single(result.User.Roles));
-        Assert.NotNull(identity.CreatedUser);
-        Assert.Equal("refresh-token-hash", identity.RefreshTokenHash);
-    }
-
     [Fact]
     public async Task UploadImage_FirstValidImageBecomesPrimary()
     {
@@ -143,47 +105,6 @@ public sealed class RegistrationAndImageUploadTests
 
     private static byte[] ValidPngBytes() =>
         [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
-
-    private sealed class FakeIdentityService : IIdentityService
-    {
-        public ApplicationUser? CreatedUser { get; private set; }
-        public string? RefreshTokenHash { get; private set; }
-
-        public Task<ApplicationUser> RegisterAsync(
-            string fullName,
-            string email,
-            string userName,
-            string password,
-            string refreshTokenHash,
-            DateTime refreshTokenExpiresAt,
-            CancellationToken cancellationToken = default)
-        {
-            RefreshTokenHash = refreshTokenHash;
-            CreatedUser = new ApplicationUser
-            {
-                Id = Guid.NewGuid(),
-                DisplayName = fullName,
-                Email = email,
-                UserName = userName,
-                Role = "Author"
-            };
-
-            return Task.FromResult(CreatedUser);
-        }
-    }
-
-    private sealed class FakeJwtService : IJwtService
-    {
-        public AccessTokenResult GenerateAccessToken(ApplicationUser user) =>
-            new("access-token", DateTime.UtcNow.AddMinutes(15));
-
-        public string GenerateRefreshToken() => "refresh-token";
-        public string HashRefreshToken(string refreshToken) =>
-            "refresh-token-hash";
-
-        public DateTime GetRefreshTokenExpiration() =>
-            DateTime.UtcNow.AddDays(7);
-    }
 
     private sealed class FakeCurrentUser(Guid userId) : ICurrentUser
     {

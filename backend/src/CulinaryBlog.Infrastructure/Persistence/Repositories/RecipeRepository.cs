@@ -2,7 +2,6 @@ using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using CulinaryBlog.Infrastructure.Persistence;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Repositories;
 
@@ -35,7 +34,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 .AsNoTracking()
                 .Include(x => x.Category)
                 .Include(x => x.Images.Where(image =>
-                    image.IsPrimary));
+                    image.IsPrimary))
+                .Where(recipe => !recipe.Category.IsDeleted);
 
         // Authorization
         if (!isAdmin)
@@ -123,7 +123,62 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             .Include(x => x.Steps)
             .Include(x => x.Images)
             .FirstOrDefaultAsync(
-                x => x.Slug == slug,
+                x => x.Slug == slug
+                    && !x.Category.IsDeleted,
                 cancellationToken);
+    }
+
+    public Task<Recipe?> GetByIdWithImagesAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Recipes
+            .Include(recipe => recipe.Images)
+            .FirstOrDefaultAsync(
+                recipe => recipe.Id == id
+                    && !recipe.Category.IsDeleted,
+                cancellationToken);
+    }
+
+    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
+        GetPagedForCategoryAsync(
+            Guid categoryId,
+            int page,
+            int pageSize,
+            Guid? currentUserId,
+            bool isAuthenticated,
+            bool isAdmin,
+            CancellationToken cancellationToken = default)
+    {
+        IQueryable<Recipe> query = _context.Recipes
+            .AsNoTracking()
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Images.Where(image =>
+                image.IsPrimary))
+            .Where(recipe =>
+                recipe.CategoryId == categoryId
+                && !recipe.Category.IsDeleted);
+
+        if (!isAdmin)
+        {
+            query = isAuthenticated && currentUserId.HasValue
+                ? query.Where(recipe =>
+                    recipe.Status == RecipeStatus.Published
+                    || (recipe.Status == RecipeStatus.Draft
+                        && recipe.AuthorId == currentUserId.Value))
+                : query.Where(recipe =>
+                    recipe.Status == RecipeStatus.Published);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(recipe => recipe.CreatedAt)
+            .ThenBy(recipe => recipe.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 }

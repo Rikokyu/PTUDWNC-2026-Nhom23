@@ -115,6 +115,8 @@ uploads/
 # Generated storage files
 storage/
 **/storage/
+!backend/src/CulinaryBlog.Infrastructure/Storage/
+!backend/src/CulinaryBlog.Infrastructure/Storage/MinioFileStorageService.cs
 
 
 # ============================================================

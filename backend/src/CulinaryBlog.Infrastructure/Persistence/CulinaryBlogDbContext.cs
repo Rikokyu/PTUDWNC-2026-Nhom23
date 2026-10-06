@@ -29,6 +29,9 @@ public class CulinaryBlogDbContext : DbContext
     public DbSet<RecipeImage> RecipeImages =>
         Set<RecipeImage>();
 
+    public DbSet<RefreshToken> RefreshTokens =>
+        Set<RefreshToken>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {

@@ -21,4 +21,21 @@ public interface IRecipeRepository : IRepository<Recipe>
     Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
         CancellationToken cancellationToken = default);
+
+    Task<Recipe?> GetByIdWithDetailsForUpdateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    void AddImage(RecipeImage image);
+
+    Task<bool> SlugExistsAsync(
+        string slug,
+        CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<Recipe> Items, int TotalCount)> SearchAsync(
+        string searchTerm,
+        int page,
+        int pageSize,
+        string sort,
+        CancellationToken cancellationToken = default);
 }

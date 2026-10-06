@@ -9,6 +9,7 @@ public static class EndpointExtensions
     {
         endpoints.MapRecipeEndpoints();
         endpoints.MapCategoryEndpoints();
+        endpoints.MapAuthEndpoints();
         endpoints.MapHealthEndpoints();
 
         return endpoints;

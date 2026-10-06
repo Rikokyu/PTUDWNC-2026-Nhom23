@@ -10,6 +10,21 @@ public static class HealthEndpoints
 		this IEndpointRouteBuilder endpoints)
 	{
 		endpoints.MapGet(
+			"/health",
+			(HealthCheckService healthCheckService,
+				CancellationToken cancellationToken) =>
+				GetHealthAsync(
+					healthCheckService,
+					tag: null,
+					includeChecks: true,
+					cancellationToken))
+			.WithTags("Health")
+			.WithName("Health")
+			.Produces<HealthEndpointResponse>(StatusCodes.Status200OK)
+			.Produces<HealthEndpointResponse>(
+				StatusCodes.Status503ServiceUnavailable);
+
+		endpoints.MapGet(
 			"/health/live",
 			(HealthCheckService healthCheckService,
 				CancellationToken cancellationToken) =>
@@ -44,12 +59,14 @@ public static class HealthEndpoints
 
 	private static async Task<IResult> GetHealthAsync(
 		HealthCheckService healthCheckService,
-		string tag,
+		string? tag,
 		bool includeChecks,
 		CancellationToken cancellationToken)
 	{
 		var report = await healthCheckService.CheckHealthAsync(
-			check => check.Tags.Contains(tag),
+			tag is null
+				? null
+				: check => check.Tags.Contains(tag),
 			cancellationToken);
 
 		var checks = includeChecks

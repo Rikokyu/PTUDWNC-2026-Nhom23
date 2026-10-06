@@ -1,0 +1,17 @@
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: culinary-blog-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${Minio__AccessKey:?Set Minio__AccessKey in .env}
+      MINIO_ROOT_PASSWORD: ${Minio__SecretKey:?Set Minio__SecretKey in .env}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+
+volumes:
+  minio-data:

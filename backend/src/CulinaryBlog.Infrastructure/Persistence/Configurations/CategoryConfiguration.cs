@@ -23,7 +23,10 @@ public class CategoryConfiguration
             .IsRequired();
 
         builder.HasIndex(x => x.Slug)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
+
+        builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.Property(x => x.Description)
             .HasColumnType("text");

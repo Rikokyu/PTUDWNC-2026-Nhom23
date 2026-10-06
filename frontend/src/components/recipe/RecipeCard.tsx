@@ -7,7 +7,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeListDto }) {
       <h2>
         <Link href={`/recipes/${recipe.slug}`}>{recipe.title}</Link>
       </h2>
-      <p>{recipe.description}</p>
+      <p>{recipe.categoryName}</p>
     </article>
   );
 }

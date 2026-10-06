@@ -23,7 +23,10 @@ public class RecipeConfiguration
             .IsRequired();
 
         builder.HasIndex(x => x.Slug)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
+
+        builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.Property(x => x.Description)
             .IsRequired();
@@ -36,6 +39,9 @@ public class RecipeConfiguration
 
         builder.Property(x => x.Status)
             .HasConversion<int>();
+
+        builder.Property(x => x.UpdatedAt)
+            .IsConcurrencyToken();
 
         builder.HasIndex(x => x.CategoryId);
 

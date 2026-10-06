@@ -10,6 +10,8 @@ public class RecipeImage : BaseEntity
 
     public string OriginalUrl { get; set; } = string.Empty;
 
+    public string? ObjectKey { get; set; }
+
     public string? MediumUrl { get; set; }
 
     public string? ThumbnailUrl { get; set; }
@@ -19,4 +21,6 @@ public class RecipeImage : BaseEntity
     public bool IsPrimary { get; set; }
 
     public int OrderIndex { get; set; }
+
+    public bool IsDeleted { get; set; }
 }

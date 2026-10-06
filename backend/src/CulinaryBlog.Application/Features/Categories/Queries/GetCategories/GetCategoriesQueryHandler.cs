@@ -18,18 +18,17 @@ public sealed class GetCategoriesQueryHandler
 		GetCategoriesQuery request,
 		CancellationToken cancellationToken)
 	{
-		var categories = await _categoryRepository.GetAllAsync(cancellationToken);
+		var categories = await _categoryRepository.GetAllWithRecipeCountAsync(cancellationToken);
 
 		return categories
-			.OrderBy(category => category.OrderIndex)
-			.ThenBy(category => category.Name)
-			.Select(category => new CategoryDto(
-				category.Id,
-				category.Name,
-				category.Slug,
-				category.Description,
-				category.ImageUrl,
-				category.OrderIndex))
+			.Select(item => new CategoryDto(
+				item.Category.Id,
+				item.Category.Name,
+				item.Category.Slug,
+				item.Category.Description,
+				item.Category.ImageUrl,
+				item.Category.OrderIndex,
+				item.RecipeCount))
 			.ToList();
 	}
 }

@@ -6,4 +6,5 @@ public sealed record CategoryDto(
 	string Slug,
 	string? Description,
 	string? ImageUrl,
-	int OrderIndex);
+	int OrderIndex,
+	int RecipeCount = 0);

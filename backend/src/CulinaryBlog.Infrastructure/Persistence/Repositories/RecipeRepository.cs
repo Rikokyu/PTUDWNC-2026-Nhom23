@@ -86,6 +86,21 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             "title" =>
                 query.OrderBy(x => x.Title),
 
+            "-title" =>
+                query.OrderByDescending(x => x.Title),
+
+            "categoryName" =>
+                query.OrderBy(x => x.Category.Name),
+
+            "-categoryName" =>
+                query.OrderByDescending(x => x.Category.Name),
+
+            "prepTime" =>
+                query.OrderBy(x => x.PrepTimeMinutes),
+
+            "-prepTime" =>
+                query.OrderByDescending(x => x.PrepTimeMinutes),
+
             "cookTime" =>
                 query.OrderBy(x => x.CookTimeMinutes),
 
@@ -125,5 +140,74 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             .FirstOrDefaultAsync(
                 x => x.Slug == slug,
                 cancellationToken);
+    }
+
+    public Task<Recipe?> GetByIdWithDetailsForUpdateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Recipes
+            .AsSplitQuery()
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Author)
+            .Include(recipe => recipe.Ingredients)
+            .Include(recipe => recipe.Steps)
+            .Include(recipe => recipe.Images)
+            .FirstOrDefaultAsync(recipe => recipe.Id == id, cancellationToken);
+    }
+
+    public void AddImage(RecipeImage image)
+    {
+        _context.RecipeImages.Add(image);
+    }
+
+    public Task<bool> SlugExistsAsync(
+        string slug,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Recipes.AnyAsync(recipe => recipe.Slug == slug, cancellationToken);
+    }
+
+    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)> SearchAsync(
+        string searchTerm,
+        int page,
+        int pageSize,
+        string sort,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<Recipe> query = _context.Recipes
+            .AsNoTracking()
+            .Where(recipe => recipe.Status == RecipeStatus.Published)
+            .Where(recipe =>
+                EF.Functions.ToTsVector(
+                    "simple",
+                    EF.Functions.Unaccent(
+                        recipe.Title + " " + recipe.Description + " " + recipe.Instructions))
+                .Matches(EF.Functions.PlainToTsQuery(
+                    "simple",
+                    EF.Functions.Unaccent(searchTerm))))
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        query = sort switch
+        {
+            "createdAt" => query.OrderBy(recipe => recipe.CreatedAt),
+            "title" => query.OrderBy(recipe => recipe.Title),
+            "-title" => query.OrderByDescending(recipe => recipe.Title),
+            "cookTime" => query.OrderBy(recipe => recipe.CookTimeMinutes),
+            "-cookTime" => query.OrderByDescending(recipe => recipe.CookTimeMinutes),
+            "prepTime" => query.OrderBy(recipe => recipe.PrepTimeMinutes),
+            "-prepTime" => query.OrderByDescending(recipe => recipe.PrepTimeMinutes),
+            "categoryName" => query.OrderBy(recipe => recipe.Category.Name),
+            "-categoryName" => query.OrderByDescending(recipe => recipe.Category.Name),
+            _ => query.OrderByDescending(recipe => recipe.CreatedAt)
+        };
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 }

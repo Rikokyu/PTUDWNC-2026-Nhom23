@@ -12,11 +12,16 @@ public class RecipeImageConfiguration
     {
         builder.ToTable("RecipeImages");
 
+        builder.HasQueryFilter(image => !image.IsDeleted && !image.Recipe.IsDeleted);
+
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.OriginalUrl)
             .HasMaxLength(500)
             .IsRequired();
+
+        builder.Property(x => x.ObjectKey)
+            .HasMaxLength(512);
 
         builder.Property(x => x.MediumUrl)
             .HasMaxLength(500);

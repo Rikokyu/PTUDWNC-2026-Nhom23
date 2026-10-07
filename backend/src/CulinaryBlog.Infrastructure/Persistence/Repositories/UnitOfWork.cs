@@ -1,5 +1,6 @@
 using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Domain.Interfaces;
+using CulinaryBlog.Domain.Entities;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Repositories;
 
@@ -20,6 +21,9 @@ public class UnitOfWork : IUnitOfWork
     public IRecipeRepository Recipes { get; }
 
     public ICategoryRepository Categories { get; }
+
+    public void AddRecipeImage(RecipeImage image) =>
+        _context.RecipeImages.Add(image);
 
     public Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default)

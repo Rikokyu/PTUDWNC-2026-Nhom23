@@ -21,4 +21,18 @@ public interface IRecipeRepository : IRepository<Recipe>
     Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
         CancellationToken cancellationToken = default);
+
+    Task<Recipe?> GetByIdWithImagesAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
+        GetPagedForCategoryAsync(
+            Guid categoryId,
+            int page,
+            int pageSize,
+            Guid? currentUserId,
+            bool isAuthenticated,
+            bool isAdmin,
+            CancellationToken cancellationToken = default);
 }

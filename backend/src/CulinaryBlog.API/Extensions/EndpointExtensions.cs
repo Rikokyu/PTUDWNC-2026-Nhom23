@@ -8,6 +8,7 @@ public static class EndpointExtensions
         this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapRecipeEndpoints();
+        endpoints.MapRecipeImageEndpoints();
         endpoints.MapCategoryEndpoints();
         endpoints.MapHealthEndpoints();
 

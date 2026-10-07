@@ -14,6 +14,9 @@ public class CulinaryBlogDbContext : DbContext
     public DbSet<ApplicationUser> ApplicationUsers =>
         Set<ApplicationUser>();
 
+    public DbSet<RefreshToken> RefreshTokens =>
+        Set<RefreshToken>();
+
     public DbSet<Category> Categories =>
         Set<Category>();
 

@@ -2,6 +2,7 @@ using System.Text.Json;
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ApplicationNotFoundException = CulinaryBlog.Application.Common.Exceptions.NotFoundException;
 using ApplicationValidationException = CulinaryBlog.Application.Common.Exceptions.ValidationException;
 using DomainNotFoundException = CulinaryBlog.Domain.Exceptions.NotFoundException;
@@ -78,7 +79,7 @@ public class GlobalExceptionMiddleware
         {
             await WriteProblemAsync(
                 context,
-                StatusCodes.Status400BadRequest,
+                StatusCodes.Status422UnprocessableEntity,
                 "Validation failed",
                 ex.Message);
         }
@@ -86,7 +87,7 @@ public class GlobalExceptionMiddleware
         {
             await WriteProblemAsync(
                 context,
-                StatusCodes.Status400BadRequest,
+                StatusCodes.Status422UnprocessableEntity,
                 "Validation failed",
                 ex.Message);
         }
@@ -106,14 +107,28 @@ public class GlobalExceptionMiddleware
                 "Business rule conflict",
                 ex.Message);
         }
-            catch (ArgumentException ex)
-            {
-                await WriteProblemAsync(
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "A database constraint rejected {Method} {Path}.",
+                context.Request.Method,
+                context.Request.Path);
+
+            await WriteProblemAsync(
+                context,
+                StatusCodes.Status409Conflict,
+                "Database conflict",
+                "The requested change conflicts with existing data.");
+        }
+        catch (ArgumentException ex)
+        {
+            await WriteProblemAsync(
                 context,
                 StatusCodes.Status400BadRequest,
                 "Invalid request",
                 ex.Message);
-            }
+        }
         catch (DomainException ex)
         {
             await WriteProblemAsync(

@@ -116,30 +116,48 @@ public static class RecipeEndpoints
 
         group.MapPatch(
             "/{recipeId:guid}/publish",
-            (Guid recipeId, ISender sender, CancellationToken cancellationToken) =>
+            (
+                Guid recipeId,
+                ISender sender,
+                IOutputCacheStore outputCacheStore,
+                CancellationToken cancellationToken) =>
                 SetStatusAsync(
                     recipeId,
                     RecipeStatus.Published,
                     sender,
-                    cancellationToken));
+                    outputCacheStore,
+                    cancellationToken))
+            .RequireAuthorization();
 
         group.MapPatch(
             "/{recipeId:guid}/unpublish",
-            (Guid recipeId, ISender sender, CancellationToken cancellationToken) =>
+            (
+                Guid recipeId,
+                ISender sender,
+                IOutputCacheStore outputCacheStore,
+                CancellationToken cancellationToken) =>
                 SetStatusAsync(
                     recipeId,
                     RecipeStatus.Draft,
                     sender,
-                    cancellationToken));
+                    outputCacheStore,
+                    cancellationToken))
+            .RequireAuthorization();
 
         group.MapPatch(
             "/{recipeId:guid}/archive",
-            (Guid recipeId, ISender sender, CancellationToken cancellationToken) =>
+            (
+                Guid recipeId,
+                ISender sender,
+                IOutputCacheStore outputCacheStore,
+                CancellationToken cancellationToken) =>
                 SetStatusAsync(
                     recipeId,
                     RecipeStatus.Archived,
                     sender,
-                    cancellationToken));
+                    outputCacheStore,
+                    cancellationToken))
+            .RequireAuthorization();
 
         group.MapDelete(
             "/{recipeId:guid}",
@@ -205,12 +223,25 @@ public static class RecipeEndpoints
         Guid recipeId,
         RecipeStatus status,
         ISender sender,
+        IOutputCacheStore outputCacheStore,
         CancellationToken cancellationToken)
     {
-        await sender.Send(
+        var result = await sender.Send(
             new SetRecipeStatusCommand(recipeId, status),
             cancellationToken);
-        return Results.NoContent();
+
+        await outputCacheStore.EvictByTagAsync(
+            "recipes",
+            cancellationToken);
+        await outputCacheStore.EvictByTagAsync(
+            $"recipe:{result.Slug}",
+            cancellationToken);
+
+        var recipe = await sender.Send(
+            new GetRecipeBySlugQuery(result.Slug),
+            cancellationToken);
+
+        return Results.Ok(new { data = recipe });
     }
 
     private static async Task<IResult> GetRecipesAsync(

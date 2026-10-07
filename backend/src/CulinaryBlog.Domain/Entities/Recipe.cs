@@ -1,5 +1,6 @@
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
+using CulinaryBlog.Domain.Exceptions;
 
 namespace CulinaryBlog.Domain.Entities;
 
@@ -45,4 +46,38 @@ public class Recipe : BaseEntity
 
     public ICollection<RecipeImage> Images { get; set; }
         = new List<RecipeImage>();
+
+    public void Publish()
+    {
+        if (Status == RecipeStatus.Published)
+        {
+            return;
+        }
+
+        if (Status != RecipeStatus.Draft)
+        {
+            throw new ValidationException(
+                "Only draft recipes can be published.");
+        }
+
+        if (Steps.Count == 0)
+        {
+            throw new ValidationException(
+                "A recipe must have at least one step before publishing.");
+        }
+
+        Status = RecipeStatus.Published;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Unpublish()
+    {
+        if (Status == RecipeStatus.Draft)
+        {
+            return;
+        }
+
+        Status = RecipeStatus.Draft;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

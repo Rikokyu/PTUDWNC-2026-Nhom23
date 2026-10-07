@@ -14,7 +14,7 @@ namespace CulinaryBlog.Application.Features.Recipes.Commands;
 public sealed class RecipeCommandHandler :
     IRequestHandler<CreateRecipeCommand, RecipeMutationResult>,
     IRequestHandler<UpdateRecipeCommand, RecipeMutationResult>,
-    IRequestHandler<SetRecipeStatusCommand>,
+    IRequestHandler<SetRecipeStatusCommand, RecipeMutationResult>,
     IRequestHandler<DeleteRecipeCommand>,
     IRequestHandler<AddRecipeIngredientCommand, Guid>,
     IRequestHandler<UpdateRecipeIngredientCommand>,
@@ -152,7 +152,7 @@ public sealed class RecipeCommandHandler :
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 
-    public async Task Handle(
+    public async Task<RecipeMutationResult> Handle(
         SetRecipeStatusCommand request,
         CancellationToken cancellationToken)
     {
@@ -160,16 +160,37 @@ public sealed class RecipeCommandHandler :
             request.RecipeId,
             cancellationToken);
 
-        if (request.Status == RecipeStatus.Published
-            && (recipe.Ingredients.Count == 0 || recipe.Steps.Count == 0))
+        if (recipe.Status == request.Status)
         {
-            throw new ValidationException(
-                "A recipe needs at least one ingredient and one step before publishing.");
+            return new RecipeMutationResult(recipe.Id, recipe.Slug);
         }
 
-        recipe.Status = request.Status;
-        recipe.UpdatedAt = DateTime.UtcNow;
+        if (request.Status == RecipeStatus.Published)
+        {
+            if (recipe.Ingredients.Count == 0)
+            {
+                throw new ValidationException(
+                    "A recipe needs at least one ingredient before publishing.");
+            }
+
+            recipe.Publish();
+        }
+        else if (request.Status == RecipeStatus.Draft)
+        {
+            recipe.Unpublish();
+        }
+        else if (request.Status == RecipeStatus.Archived)
+        {
+            recipe.Status = RecipeStatus.Archived;
+            recipe.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            throw new ValidationException("Recipe status is invalid.");
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 
     public async Task Handle(

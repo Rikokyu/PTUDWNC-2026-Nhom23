@@ -49,7 +49,7 @@ public sealed record UpdateRecipeCommand(
 public sealed record SetRecipeStatusCommand(
     Guid RecipeId,
     RecipeStatus Status)
-    : IRequest;
+    : IRequest<RecipeMutationResult>;
 
 public sealed record DeleteRecipeCommand(Guid RecipeId) : IRequest;
 

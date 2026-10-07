@@ -16,7 +16,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        string? contentRootPath = null)
     {
         services.AddDbContext<CulinaryBlogDbContext>(options =>
         {
@@ -64,7 +65,14 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        var uploadRoot = Path.Combine(
+            contentRootPath ?? Directory.GetCurrentDirectory(),
+            "wwwroot",
+            "uploads");
+        var publicBasePath = configuration["FileStorage:PublicBasePath"]
+            ?? "/uploads";
+        services.AddScoped<IFileStorageService>(
+            _ => new LocalFileStorageService(uploadRoot, publicBasePath));
 
         return services;
     }

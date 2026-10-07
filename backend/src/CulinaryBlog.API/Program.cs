@@ -7,9 +7,17 @@ using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.OpenApi;
+using Hangfire;
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+var webRootPath = Path.Combine(
+    builder.Environment.ContentRootPath,
+    "wwwroot");
+Directory.CreateDirectory(Path.Combine(webRootPath, "uploads"));
+builder.Environment.WebRootPath = webRootPath;
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -28,7 +36,8 @@ builder.Services
 // Infrastructure
 builder.Services
     .AddInfrastructure(
-        builder.Configuration);
+        builder.Configuration,
+        builder.Environment.ContentRootPath);
 
 builder.Services.AddAuthorization();
 
@@ -105,12 +114,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-Directory.CreateDirectory(
-    Path.Combine(
-        app.Environment.ContentRootPath,
-        "wwwroot",
-        "uploads"));
 
 app.UseStaticFiles();
 

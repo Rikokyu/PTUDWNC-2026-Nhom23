@@ -111,6 +111,41 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         return (items, totalCount);
     }
 
+    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
+        GetPagedForCategoryAsync(
+            Guid categoryId,
+            int page,
+            int pageSize,
+            Guid? currentUserId,
+            bool isAuthenticated,
+            bool isAdmin,
+            CancellationToken cancellationToken = default)
+    {
+        var query = _context.Recipes
+            .AsNoTracking()
+            .Where(recipe =>
+                recipe.CategoryId == categoryId
+                && !recipe.IsDeleted
+                && !recipe.Category.IsDeleted
+                && (recipe.Status == RecipeStatus.Published
+                    || isAdmin
+                    || (isAuthenticated
+                        && currentUserId.HasValue
+                        && recipe.AuthorId == currentUserId.Value)))
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Images);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(recipe => recipe.CreatedAt)
+            .ThenBy(recipe => recipe.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
     public async Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
         CancellationToken cancellationToken = default)
@@ -127,6 +162,19 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             .FirstOrDefaultAsync(
                 x => x.Slug == slug
                     && !x.Category.IsDeleted,
+                cancellationToken);
+    }
+
+    public Task<Recipe?> GetByIdWithImagesAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Recipes
+            .Include(recipe => recipe.Images)
+            .FirstOrDefaultAsync(
+                recipe => recipe.Id == id
+                    && !recipe.IsDeleted
+                    && !recipe.Category.IsDeleted,
                 cancellationToken);
     }
 

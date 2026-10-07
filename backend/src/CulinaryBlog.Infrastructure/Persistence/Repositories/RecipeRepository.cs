@@ -150,10 +150,34 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         Guid? excludingRecipeId = null,
         CancellationToken cancellationToken = default)
     {
-        return _context.Recipes.AnyAsync(
-            recipe => recipe.Slug == slug
-                && (!excludingRecipeId.HasValue
-                    || recipe.Id != excludingRecipeId.Value),
-            cancellationToken);
+        IQueryable<Recipe> query = _context.Recipes
+            .AsNoTracking()
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Images.Where(image =>
+                image.IsPrimary))
+            .Where(recipe =>
+                recipe.CategoryId == categoryId
+                && !recipe.Category.IsDeleted);
+
+        // Admin privileges do not grant access to drafts in the category view.
+        // Only an authenticated recipe author may see their own drafts.
+        query = !isAdmin && isAuthenticated && currentUserId.HasValue
+            ? query.Where(recipe =>
+                recipe.Status == RecipeStatus.Published
+                || (recipe.Status == RecipeStatus.Draft
+                    && recipe.AuthorId == currentUserId.Value))
+            : query.Where(recipe =>
+                recipe.Status == RecipeStatus.Published);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(recipe => recipe.CreatedAt)
+            .ThenBy(recipe => recipe.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
     }
 }

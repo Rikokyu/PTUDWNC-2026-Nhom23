@@ -37,6 +37,11 @@ public class RecipeConfiguration
         builder.Property(x => x.Status)
             .HasConversion<int>();
 
+        builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
+
+        builder.HasQueryFilter(x => !x.IsDeleted);
+
         builder.HasMany(x => x.Ingredients)
             .WithOne(x => x.Recipe)
             .HasForeignKey(x => x.RecipeId)

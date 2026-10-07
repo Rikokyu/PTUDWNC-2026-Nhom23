@@ -28,5 +28,7 @@ public class RecipeIngredientConfiguration
 			.HasMaxLength(500);
 
 		builder.HasIndex(x => x.RecipeId);
+
+		builder.HasQueryFilter(x => !x.Recipe.IsDeleted);
 	}
 }

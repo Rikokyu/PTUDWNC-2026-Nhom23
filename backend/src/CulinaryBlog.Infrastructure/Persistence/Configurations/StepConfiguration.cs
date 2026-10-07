@@ -24,5 +24,7 @@ public class RecipeStepConfiguration
         builder.HasIndex(x =>
             new { x.RecipeId, x.StepNumber })
             .IsUnique();
+
+        builder.HasQueryFilter(x => !x.Recipe.IsDeleted);
     }
 }

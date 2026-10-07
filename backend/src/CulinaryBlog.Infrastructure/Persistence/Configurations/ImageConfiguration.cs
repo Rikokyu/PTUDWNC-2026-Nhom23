@@ -28,5 +28,7 @@ public class RecipeImageConfiguration
             .HasMaxLength(200);
 
         builder.HasIndex(x => x.RecipeId);
+
+        builder.HasQueryFilter(x => !x.Recipe.IsDeleted);
     }
 }

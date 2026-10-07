@@ -32,17 +32,7 @@ builder.Services
     .AddInfrastructure(
         builder.Configuration);
 
-builder.Services
-    .AddHealthChecks()
-    .AddCheck(
-        "self",
-        () => HealthCheckResult.Healthy(),
-        tags: new[] { "live" })
-    .AddCheck<PostgreSqlHealthCheck>(
-        "postgresql",
-        failureStatus: HealthStatus.Unhealthy,
-        tags: new[] { "ready" },
-        timeout: TimeSpan.FromSeconds(3));
+builder.Services.AddAuthorization();
 
 // Output Cache
 builder.Services
@@ -55,7 +45,8 @@ builder.Services
                 policy
                     .Expire(
                         TimeSpan.FromMinutes(15))
-                    .SetVaryByQuery("*");
+                    .SetVaryByQuery("*")
+                    .Tag("recipes");
             });
 
         options.AddPolicy(
@@ -104,6 +95,8 @@ var app =
 // Global exception middleware
 app.UseMiddleware<
     GlobalExceptionMiddleware>();
+
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {

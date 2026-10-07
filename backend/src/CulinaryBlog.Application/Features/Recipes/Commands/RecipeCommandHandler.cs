@@ -55,21 +55,16 @@ public sealed class RecipeCommandHandler :
             request.Description,
             request.PrepTimeMinutes,
             request.CookTimeMinutes,
-            request.Servings);
-        if (request.Title.Trim().Length < 5)
-        {
-            throw new ValidationException(
-                "title must be at least 5 characters long.");
-        }
-
+            request.Servings,
+            request.Difficulty);
         await EnsureCategoryExistsAsync(
             request.CategoryId,
             cancellationToken);
 
-        var ingredients = (request.Ingredients ?? Array.Empty<RecipeIngredientInput>())
+        var ingredients = request.Ingredients
             .Select((item, index) => CreateIngredient(item, index))
             .ToList();
-        var steps = (request.Steps ?? Array.Empty<RecipeStepInput>())
+        var steps = request.Steps
             .Select((item, index) => CreateStep(item, index + 1))
             .ToList();
         var slug = await CreateUniqueSlugAsync(
@@ -123,7 +118,8 @@ public sealed class RecipeCommandHandler :
             request.Description,
             request.PrepTimeMinutes,
             request.CookTimeMinutes,
-            request.Servings);
+            request.Servings,
+            request.Difficulty);
         await EnsureCategoryExistsAsync(
             request.CategoryId,
             cancellationToken);
@@ -426,8 +422,9 @@ public sealed class RecipeCommandHandler :
     {
         if (await _categories.GetByIdAsync(categoryId, cancellationToken) == null)
         {
-throw new ValidationException(
-    "Recipe category was not found.");        }
+            throw new ValidationException(
+                "Recipe category was not found.");
+        }
     }
 
     private async Task<string> CreateUniqueSlugAsync(
@@ -455,7 +452,6 @@ throw new ValidationException(
         var normalized = value
             .Trim()
             .ToLowerInvariant()
-            .Replace('đ', 'd')
             .Normalize(NormalizationForm.FormD);
         var slug = new StringBuilder();
 
@@ -485,24 +481,28 @@ throw new ValidationException(
         string description,
         int prepTimeMinutes,
         int cookTimeMinutes,
-        int servings)
+        int servings,
+        DifficultyLevel difficulty)
     {
         if (string.IsNullOrWhiteSpace(title) || title.Trim().Length > 200)
         {
             throw new ValidationException("title is required and must be at most 200 characters.");
         }
 
-        if (string.IsNullOrWhiteSpace(description)
-            || description.Trim().Length > 2000)
+        if (string.IsNullOrWhiteSpace(description))
         {
-            throw new ValidationException(
-                "description is required and must be at most 2000 characters.");
+            throw new ValidationException("description is required.");
         }
 
         if (prepTimeMinutes <= 0 || cookTimeMinutes < 0 || servings <= 0)
         {
             throw new ValidationException(
-                "prepTimeMinutes and servings must be positive; cookTimeMinutes must be non-negative.");
+                "prepTimeMinutes must be positive; cookTimeMinutes must be non-negative; servings must be positive.");
+        }
+
+        if (!Enum.IsDefined(difficulty))
+        {
+            throw new ValidationException("difficulty is invalid.");
         }
     }
 
@@ -514,9 +514,7 @@ throw new ValidationException(
         return new RecipeIngredient
         {
             Name = input.Name.Trim(),
-            Quantity = string.IsNullOrWhiteSpace(input.Quantity)
-                ? null
-                : input.Quantity.Trim(),
+            Quantity = input.Quantity?.Trim(),
             Unit = input.Unit?.Trim(),
             Notes = input.Notes?.Trim(),
             OrderIndex = orderIndex,
@@ -535,16 +533,33 @@ throw new ValidationException(
             throw new ValidationException("ingredient name is required and must be at most 200 characters.");
         }
 
-        if (quantity?.Trim().Length > 50)
+        if (quantity?.Trim().Length > 50
+            || unit?.Trim().Length > 50
+            || notes?.Trim().Length > 500)
         {
             throw new ValidationException(
-                "ingredient quantity must be at most 50 characters.");
+                "ingredient quantity and unit must be at most 50 characters; notes must be at most 500 characters.");
         }
 
-        if (unit?.Trim().Length > 50 || notes?.Trim().Length > 500)
+        if (string.IsNullOrWhiteSpace(quantity))
+        {
+            if (!string.IsNullOrWhiteSpace(unit)
+                || string.IsNullOrWhiteSpace(notes))
+            {
+                throw new ValidationException(
+                    "An ingredient without quantity must omit unit and provide notes.");
+            }
+        }
+        else if (!decimal.TryParse(
+                     quantity,
+                     NumberStyles.Number,
+                     CultureInfo.InvariantCulture,
+                     out var parsedQuantity)
+                 || parsedQuantity <= 0
+                 || string.IsNullOrWhiteSpace(unit))
         {
             throw new ValidationException(
-                "ingredient unit must be at most 50 characters and notes at most 500 characters.");
+                "quantity must be a positive number and requires a unit.");
         }
     }
 
@@ -552,11 +567,13 @@ throw new ValidationException(
         RecipeStepInput input,
         int stepNumber)
     {
-        ValidateStep(
-            input.Title,
-            input.Description,
-            input.TimerMinutes,
-            input.ImageUrl);
+        if (input.Title?.Trim().Length > 200)
+        {
+            throw new ValidationException(
+                "step title must be at most 200 characters.");
+        }
+
+        ValidateStep(input.Description, input.TimerMinutes);
         return new RecipeStep
         {
             StepNumber = stepNumber,
@@ -583,33 +600,6 @@ throw new ValidationException(
         }
     }
 
-    private static void ValidateStep(
-        string title,
-        string description,
-        int? timerMinutes,
-        string? imageUrl)
-    {
-        if (string.IsNullOrWhiteSpace(title) || title.Trim().Length > 200)
-        {
-            throw new ValidationException(
-                "step title is required and must be at most 200 characters.");
-        }
-
-        if (description.Trim().Length > 2000)
-        {
-            throw new ValidationException(
-                "step description must be at most 2000 characters.");
-        }
-
-        if (imageUrl?.Trim().Length > 500)
-        {
-            throw new ValidationException(
-                "step imageUrl must be at most 500 characters.");
-        }
-
-        ValidateStep(description, timerMinutes);
-    }
-
     private static RecipeNutrition? ToNutrition(RecipeNutritionDto? dto)
     {
         if (dto == null)
@@ -632,10 +622,10 @@ throw new ValidationException(
             throw new ValidationException("Nutrition values must be non-negative.");
         }
 
-        if (values.Any(value => value > 999999.99m))
+        if (values.Any(value => value > 99999999.99m))
         {
             throw new ValidationException(
-                "Nutrition values must fit the supported precision of 8 digits and 2 decimal places.");
+                "Nutrition values exceed the supported precision.");
         }
 
         return new RecipeNutrition

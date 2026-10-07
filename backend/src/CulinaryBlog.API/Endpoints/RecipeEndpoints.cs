@@ -63,12 +63,15 @@ public static class RecipeEndpoints
                     "recipes",
                     cancellationToken);
 
+                var createdRecipe = await sender.Send(
+                    new GetRecipeBySlugQuery(result.Slug),
+                    cancellationToken);
+
                 return Results.Created(
                     $"/api/v1/recipes/{result.Slug}",
-                    new { data = result });
+                    new { data = createdRecipe });
             })
-            .RequireAuthorization(policy =>
-                policy.RequireRole("Author", "Admin"));
+            .RequireAuthorization();
 
         group.MapPatch(
             "/{recipeId:guid}",

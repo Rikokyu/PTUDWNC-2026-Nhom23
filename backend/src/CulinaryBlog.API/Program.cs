@@ -17,6 +17,8 @@ builder.Services
     .AddInfrastructure(
         builder.Configuration);
 
+builder.Services.AddAuthorization();
+
 // Output Cache
 builder.Services
     .AddOutputCache(options =>
@@ -56,6 +58,8 @@ var app =
 // Global exception middleware
 app.UseMiddleware<
     GlobalExceptionMiddleware>();
+
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {

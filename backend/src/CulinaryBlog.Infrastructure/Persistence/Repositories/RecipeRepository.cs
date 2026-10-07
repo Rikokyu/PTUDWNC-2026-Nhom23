@@ -159,16 +159,15 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 recipe.CategoryId == categoryId
                 && !recipe.Category.IsDeleted);
 
-        if (!isAdmin)
-        {
-            query = isAuthenticated && currentUserId.HasValue
-                ? query.Where(recipe =>
-                    recipe.Status == RecipeStatus.Published
-                    || (recipe.Status == RecipeStatus.Draft
-                        && recipe.AuthorId == currentUserId.Value))
-                : query.Where(recipe =>
-                    recipe.Status == RecipeStatus.Published);
-        }
+        // Admin privileges do not grant access to drafts in the category view.
+        // Only an authenticated recipe author may see their own drafts.
+        query = !isAdmin && isAuthenticated && currentUserId.HasValue
+            ? query.Where(recipe =>
+                recipe.Status == RecipeStatus.Published
+                || (recipe.Status == RecipeStatus.Draft
+                    && recipe.AuthorId == currentUserId.Value))
+            : query.Where(recipe =>
+                recipe.Status == RecipeStatus.Published);
 
         var totalCount = await query.CountAsync(cancellationToken);
 

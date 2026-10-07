@@ -27,30 +27,31 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             Guid? currentUserId,
             bool isAuthenticated,
             bool isAdmin,
+            bool ownRecipesOnly = false,
+            bool includeAllStatuses = false,
             CancellationToken cancellationToken = default)
     {
         IQueryable<Recipe> query =
             _context.Recipes
                 .AsNoTracking()
+                .Where(x => !x.IsDeleted)
                 .Include(x => x.Category)
                 .Include(x => x.Images.Where(image =>
                     image.IsPrimary))
                 .Where(recipe => !recipe.Category.IsDeleted);
 
         // Authorization
-        if (!isAdmin)
+        if (ownRecipesOnly)
         {
-            if (isAuthenticated && currentUserId.HasValue)
-            {
-                query = query.Where(x =>
-                    x.Status == RecipeStatus.Published
-                    || x.AuthorId == currentUserId.Value);
-            }
-            else
-            {
-                query = query.Where(x =>
-                    x.Status == RecipeStatus.Published);
-            }
+            query = query.Where(x =>
+                isAuthenticated
+                && currentUserId.HasValue
+                && x.AuthorId == currentUserId.Value);
+        }
+        else if (!includeAllStatuses || !isAdmin)
+        {
+            query = query.Where(x =>
+                x.Status == RecipeStatus.Published);
         }
 
         // Category
@@ -117,6 +118,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         return await _context.Recipes
             .AsNoTracking()
             .AsSplitQuery()
+            .Where(x => !x.IsDeleted)
             .Include(x => x.Category)
             .Include(x => x.Author)
             .Include(x => x.Ingredients)
@@ -128,57 +130,30 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 cancellationToken);
     }
 
-    public Task<Recipe?> GetByIdWithImagesAsync(
+    public async Task<Recipe?> GetByIdWithDetailsAsync(
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        return _context.Recipes
-            .Include(recipe => recipe.Images)
+        return await _context.Recipes
+            .AsSplitQuery()
+            .Include(x => x.Category)
+            .Include(x => x.Ingredients)
+            .Include(x => x.Steps)
+            .Include(x => x.Images)
             .FirstOrDefaultAsync(
-                recipe => recipe.Id == id
-                    && !recipe.Category.IsDeleted,
+                x => x.Id == id && !x.IsDeleted,
                 cancellationToken);
     }
 
-    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
-        GetPagedForCategoryAsync(
-            Guid categoryId,
-            int page,
-            int pageSize,
-            Guid? currentUserId,
-            bool isAuthenticated,
-            bool isAdmin,
-            CancellationToken cancellationToken = default)
+    public Task<bool> SlugExistsAsync(
+        string slug,
+        Guid? excludingRecipeId = null,
+        CancellationToken cancellationToken = default)
     {
-        IQueryable<Recipe> query = _context.Recipes
-            .AsNoTracking()
-            .Include(recipe => recipe.Category)
-            .Include(recipe => recipe.Images.Where(image =>
-                image.IsPrimary))
-            .Where(recipe =>
-                recipe.CategoryId == categoryId
-                && !recipe.Category.IsDeleted);
-
-        if (!isAdmin)
-        {
-            query = isAuthenticated && currentUserId.HasValue
-                ? query.Where(recipe =>
-                    recipe.Status == RecipeStatus.Published
-                    || (recipe.Status == RecipeStatus.Draft
-                        && recipe.AuthorId == currentUserId.Value))
-                : query.Where(recipe =>
-                    recipe.Status == RecipeStatus.Published);
-        }
-
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var items = await query
-            .OrderByDescending(recipe => recipe.CreatedAt)
-            .ThenBy(recipe => recipe.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
-
-        return (items, totalCount);
+        return _context.Recipes.AnyAsync(
+            recipe => recipe.Slug == slug
+                && (!excludingRecipeId.HasValue
+                    || recipe.Id != excludingRecipeId.Value),
+            cancellationToken);
     }
 }

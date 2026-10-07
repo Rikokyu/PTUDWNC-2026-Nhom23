@@ -8,9 +8,9 @@ public static class EndpointExtensions
         this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapRecipeEndpoints();
+        endpoints.MapRecipeIngredientEndpoints();
+        endpoints.MapRecipeStepEndpoints();
         endpoints.MapRecipeImageEndpoints();
-        endpoints.MapCategoryEndpoints();
-        endpoints.MapHealthEndpoints();
 
         return endpoints;
     }

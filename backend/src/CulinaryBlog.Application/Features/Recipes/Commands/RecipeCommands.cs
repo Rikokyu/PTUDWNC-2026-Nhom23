@@ -42,8 +42,9 @@ public sealed record UpdateRecipeCommand(
     int CookTimeMinutes,
     int Servings,
     DifficultyLevel Difficulty,
+    uint RowVersion,
     RecipeNutritionDto? Nutrition)
-    : IRequest;
+    : IRequest<RecipeMutationResult>;
 
 public sealed record SetRecipeStatusCommand(
     Guid RecipeId,

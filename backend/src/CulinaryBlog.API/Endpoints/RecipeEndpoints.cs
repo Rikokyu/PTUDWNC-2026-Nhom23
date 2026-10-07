@@ -34,7 +34,9 @@ public static class RecipeEndpoints
         group
             .MapGet(
                 "/{slug}",
-                GetRecipeBySlugAsync);
+                GetRecipeBySlugAsync)
+            .CacheOutput("RecipeDetail")
+            .CacheOutput("RecipeSlug");
 
         group.MapPost(
             "",
@@ -73,15 +75,16 @@ public static class RecipeEndpoints
             })
             .RequireAuthorization();
 
-        group.MapPatch(
+        group.MapPut(
             "/{recipeId:guid}",
             async (
                 Guid recipeId,
                 UpdateRecipeRequest request,
                 ISender sender,
+                IOutputCacheStore outputCacheStore,
                 CancellationToken cancellationToken) =>
             {
-                await sender.Send(
+                var result = await sender.Send(
                     new UpdateRecipeCommand(
                         recipeId,
                         request.Title,
@@ -92,11 +95,24 @@ public static class RecipeEndpoints
                         request.CookTimeMinutes,
                         request.Servings,
                         request.Difficulty,
+                        request.RowVersion,
                         request.Nutrition),
                     cancellationToken);
 
-                return Results.NoContent();
-            });
+                await outputCacheStore.EvictByTagAsync(
+                    "recipes",
+                    cancellationToken);
+                await outputCacheStore.EvictByTagAsync(
+                    $"recipe:{result.Slug}",
+                    cancellationToken);
+
+                var updatedRecipe = await sender.Send(
+                    new GetRecipeBySlugQuery(result.Slug),
+                    cancellationToken);
+
+                return Results.Ok(new { data = updatedRecipe });
+            })
+            .RequireAuthorization();
 
         group.MapPatch(
             "/{recipeId:guid}/publish",
@@ -389,5 +405,6 @@ public sealed record UpdateRecipeRequest(
     int CookTimeMinutes,
     int Servings,
     DifficultyLevel Difficulty,
+    uint RowVersion,
     string? Instructions = null,
     RecipeNutritionDto? Nutrition = null);

@@ -9,6 +9,8 @@ public class Recipe : BaseEntity
 
     public string Slug { get; set; } = string.Empty;
 
+    public uint RowVersion { get; set; }
+
     public string Description { get; set; } = string.Empty;
 
     public string Instructions { get; set; } = string.Empty;

@@ -3,7 +3,7 @@ using CulinaryBlog.Domain.Enums;
 
 namespace CulinaryBlog.Domain.Interfaces;
 
-public interface IRecipeRepository
+public interface IRecipeRepository : IRepository<Recipe>
 {
     Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
         GetPagedAsync(

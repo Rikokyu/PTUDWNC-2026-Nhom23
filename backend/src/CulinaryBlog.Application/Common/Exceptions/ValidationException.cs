@@ -6,4 +6,9 @@ public class ValidationException : Exception
         : base(message)
     {
     }
+
+    public ValidationException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }

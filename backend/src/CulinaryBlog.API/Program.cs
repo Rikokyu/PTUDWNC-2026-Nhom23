@@ -1,4 +1,6 @@
 using CulinaryBlog.API.Extensions;
+using CulinaryBlog.API.Authorization;
+using CulinaryBlog.API.HealthChecks;
 using CulinaryBlog.API.Middleware;
 using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Application;
@@ -9,9 +11,19 @@ using Microsoft.AspNetCore.OutputCaching;
 var builder =
     WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 // Application
 builder.Services
     .AddApplicationServices();
+
+builder.Services
+    .AddJwtAuthentication(builder.Configuration);
+
+builder.Services
+    .AddFrontendCors(builder.Configuration);
 
 // Infrastructure
 builder.Services
@@ -54,8 +66,30 @@ builder.Services
 builder.Services
     .AddEndpointsApiExplorer();
 
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "Paste a valid JWT access token."
+        });
+
+    options.AddSecurityRequirement(document =>
+        new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(
+                "Bearer",
+                document,
+                null)] = []
+        });
+});
+
 builder.Services
-    .AddSwaggerGen();
+    .AddProblemDetails();
 
 var app =
     builder.Build();
@@ -72,10 +106,33 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+Directory.CreateDirectory(
+    Path.Combine(
+        app.Environment.ContentRootPath,
+        "wwwroot",
+        "uploads"));
+
+app.UseStaticFiles();
+
 // Output cache
 app.UseOutputCache();
 
 app.UseHttpsRedirection();
+
+app.UseCors("Frontend");
+app.UseAuthentication();
+if (builder.Configuration.GetValue("Hangfire:Enabled", true)
+    && (!app.Environment.IsDevelopment()
+        || builder.Configuration.GetValue<bool>("Hangfire:DashboardEnabled")))
+{
+    app.UseHangfireDashboard(
+        "/hangfire",
+        new DashboardOptions
+        {
+            Authorization = [new HangfireAdminAuthorizationFilter()]
+        });
+}
+app.UseAuthorization();
 
 // API endpoints
 app.MapApplicationEndpoints();

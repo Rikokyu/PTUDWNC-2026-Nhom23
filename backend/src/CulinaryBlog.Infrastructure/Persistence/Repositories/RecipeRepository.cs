@@ -2,16 +2,16 @@ using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using CulinaryBlog.Infrastructure.Persistence;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Repositories;
 
-public class RecipeRepository : IRecipeRepository
+public class RecipeRepository : Repository<Recipe>, IRecipeRepository
 {
     private readonly CulinaryBlogDbContext _context;
 
     public RecipeRepository(
         CulinaryBlogDbContext context)
+        : base(context)
     {
         _context = context;
     }
@@ -37,7 +37,8 @@ public class RecipeRepository : IRecipeRepository
                 .Where(x => !x.IsDeleted)
                 .Include(x => x.Category)
                 .Include(x => x.Images.Where(image =>
-                    image.IsPrimary));
+                    image.IsPrimary))
+                .Where(recipe => !recipe.Category.IsDeleted);
 
         // Authorization
         if (ownRecipesOnly)
@@ -124,7 +125,8 @@ public class RecipeRepository : IRecipeRepository
             .Include(x => x.Steps)
             .Include(x => x.Images)
             .FirstOrDefaultAsync(
-                x => x.Slug == slug,
+                x => x.Slug == slug
+                    && !x.Category.IsDeleted,
                 cancellationToken);
     }
 

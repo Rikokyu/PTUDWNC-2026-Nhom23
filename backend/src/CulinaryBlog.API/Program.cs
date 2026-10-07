@@ -6,9 +6,7 @@ using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.OpenApi;
-using Hangfire;
+using Microsoft.AspNetCore.OutputCaching;
 
 var builder =
     WebApplication.CreateBuilder(args);
@@ -58,6 +56,10 @@ builder.Services
                         TimeSpan.FromMinutes(60))
                     .Tag("recipes");
             });
+
+        options.AddPolicy(
+            "RecipeSlug",
+            new RecipeSlugOutputCachePolicy());
     });
 
 // Swagger
@@ -166,3 +168,32 @@ using (var scope =
 }
 
 app.Run();
+
+internal sealed class RecipeSlugOutputCachePolicy : IOutputCachePolicy
+{
+    public ValueTask CacheRequestAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask ServeFromCacheAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask ServeResponseAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken)
+    {
+        if (context.HttpContext.Request.RouteValues.TryGetValue(
+                "slug",
+                out var slug)
+            && slug is string slugValue
+            && !string.IsNullOrWhiteSpace(slugValue))
+        {
+            context.Tags.Add($"recipe:{slugValue}");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}

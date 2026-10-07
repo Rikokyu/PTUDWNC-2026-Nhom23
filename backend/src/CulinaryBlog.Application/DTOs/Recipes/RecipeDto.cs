@@ -29,6 +29,7 @@ public sealed record RecipeDetailDto(
     DifficultyLevel Difficulty,
     RecipeStatus Status,
     DateTime CreatedAt,
+    uint RowVersion,
     RecipeCategoryDto Category,
     RecipeAuthorDto? Author,
     IReadOnlyList<RecipeIngredientDto> Ingredients,

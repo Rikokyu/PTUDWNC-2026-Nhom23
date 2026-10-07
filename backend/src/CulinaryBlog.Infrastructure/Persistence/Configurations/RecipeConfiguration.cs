@@ -22,6 +22,9 @@ public class RecipeConfiguration
             .HasMaxLength(220)
             .IsRequired();
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.HasIndex(x => x.Slug)
             .IsUnique();
 

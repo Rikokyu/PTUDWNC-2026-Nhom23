@@ -34,9 +34,9 @@
 | **2312569** | Welcome Email Job                 | 1       |         | Thiết lập job gửi email chào mừng bằng Hangfire    |                 |
 |             | Image Resize / Thumbnail Job      | 2       |         | Tạo thumbnail và resize ảnh                        |                 |
 |             | Sitemap Generation Job            | 3       |         | Tạo sitemap tự động bằng Hangfire                  |                 |
-|             | Xem Danh sách Danh mục            | 4       |         | Hoàn thành API xem danh sách danh mục              |                 |
-|             | Xem Chi tiết Danh mục & Công thức | 4       |         | Xem chi tiết danh mục và danh sách công thức       |                 |
-|             | Tạo Danh mục Mới [Admin]          | 5       |         | Admin tạo được danh mục mới                        |                 |
+|             | Xem Danh sách Danh mục            | 4       |  80%    | Hoàn thành API xem danh sách danh mục              |                 |
+|             | Xem Chi tiết Danh mục & Công thức | 4       |  80%    | Xem chi tiết danh mục và danh sách công thức       |                 |
+|             | Tạo Danh mục Mới [Admin]          | 5       |  80%    | Admin tạo được danh mục mới                        |                 |
 |             | Cập nhật Danh mục [Admin]         | 5       |         | Admin cập nhật được danh mục                       |                 |
 |             | Xóa Danh mục [Admin]              | 6       |         | Admin xóa danh mục khi kiểm tra điều kiện dữ liệu  |                 |
 | --- | --- | --- | --- | --- | --- |

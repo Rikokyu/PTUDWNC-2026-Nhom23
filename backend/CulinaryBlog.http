@@ -1,0 +1,110 @@
+@baseUrl = http://localhost:55536
+@categoryId = 00000000-0000-0000-0000-000000000001
+@categorySlug = breakfast
+@recipeId = 00000000-0000-0000-0000-000000000002
+@recipeSlug = sample-draft-recipe
+@accessToken = replace-with-author-jwt
+@adminToken = replace-with-admin-jwt
+
+### Register
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "displayName": "Jamie Baker",
+  "email": "jamie.baker@example.com",
+  "password": "BakingIsFun123!"
+}
+
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jamie.baker@example.com",
+  "password": "BakingIsFun123!"
+}
+
+### List categories
+GET {{baseUrl}}/api/v1/categories
+
+### Get category by ID
+GET {{baseUrl}}/api/v1/categories/{{categoryId}}
+
+### Get category by slug
+GET {{baseUrl}}/api/v1/categories/{{categorySlug}}?page=1&pageSize=12
+
+### Create category (requires an administrator token)
+POST {{baseUrl}}/api/v1/categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Breakfast",
+  "description": "Breakfast recipes",
+  "imageUrl": null,
+  "orderIndex": 0
+}
+
+### Update category (requires an administrator token)
+PUT {{baseUrl}}/api/v1/categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Breakfast and Brunch",
+  "description": "Breakfast and brunch recipes",
+  "imageUrl": null,
+  "orderIndex": 1
+}
+
+### Delete category (requires an administrator token)
+DELETE {{baseUrl}}/api/v1/categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+
+### List recipes
+GET {{baseUrl}}/api/v1/recipes?page=1&pageSize=12&sort=-createdAt
+
+### Get recipe by ID
+GET {{baseUrl}}/api/v1/recipes/{{recipeId}}
+Authorization: Bearer {{accessToken}}
+
+### Get recipe by slug
+GET {{baseUrl}}/api/v1/recipes/{{recipeSlug}}
+Authorization: Bearer {{accessToken}}
+
+### Create a draft recipe
+POST {{baseUrl}}/api/v1/recipes
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Sample Draft Recipe",
+  "description": "A quick sample recipe.",
+  "instructions": "Mix the ingredients and cook until done.",
+  "categoryId": "{{categoryId}}",
+  "prepTimeMinutes": 10,
+  "cookTimeMinutes": 20,
+  "servings": 2,
+  "difficulty": 0
+}
+
+### Update a recipe
+PUT {{baseUrl}}/api/v1/recipes/{{recipeId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Updated Sample Recipe",
+  "description": "An updated sample recipe.",
+  "instructions": "Mix the ingredients and cook until done.",
+  "categoryId": "{{categoryId}}",
+  "prepTimeMinutes": 10,
+  "cookTimeMinutes": 20,
+  "servings": 2,
+  "difficulty": 0
+}
+
+### Delete a recipe
+DELETE {{baseUrl}}/api/v1/recipes/{{recipeId}}
+Authorization: Bearer {{accessToken}}

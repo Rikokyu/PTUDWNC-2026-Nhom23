@@ -1,7 +1,7 @@
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.DTOs.Recipes;
-using CulinaryBlog.Domain.Enums;
+using CulinaryBlog.Application.Features.Recipes;
 using CulinaryBlog.Domain.Interfaces;
 using MediatR;
 
@@ -39,8 +39,7 @@ public sealed class GetRecipeBySlugQueryHandler
                 $"Recipe with slug '{request.Slug}' was not found.");
         }
 
-        // Draft / Archived authorization
-        if (recipe.Status != RecipeStatus.Published)
+        if (recipe.Status != CulinaryBlog.Domain.Enums.RecipeStatus.Published)
         {
             var isOwner =
                 _currentUser.UserId.HasValue
@@ -55,95 +54,6 @@ public sealed class GetRecipeBySlugQueryHandler
             }
         }
 
-        var ingredients =
-            recipe.Ingredients
-                .OrderBy(x => x.OrderIndex)
-                .Select(x =>
-                    new RecipeIngredientDto(
-                        x.Id,
-                        x.Name,
-                        x.Quantity,
-                        x.Unit,
-                        x.Notes,
-                        x.OrderIndex))
-                .ToList();
-
-        var steps =
-            recipe.Steps
-                .OrderBy(x => x.StepNumber)
-                .Select(x =>
-                    new RecipeStepDto(
-                        x.Id,
-                        x.StepNumber,
-                        x.Title,
-                        x.Description,
-                        x.TimerMinutes,
-                        x.ImageUrl))
-                .ToList();
-
-        var images =
-            recipe.Images
-                .OrderByDescending(x => x.IsPrimary)
-                .ThenBy(x => x.OrderIndex)
-                .Select(x =>
-                    new RecipeImageDto(
-                        x.Id,
-                        x.OriginalUrl,
-                        x.MediumUrl,
-                        x.ThumbnailUrl,
-                        x.AltText,
-                        x.IsPrimary,
-                        x.OrderIndex))
-                .ToList();
-
-        RecipeAuthorDto? author = null;
-
-        if (recipe.Author != null)
-        {
-            author =
-                new RecipeAuthorDto(
-                    recipe.Author.Id,
-                    recipe.Author.DisplayName,
-                    recipe.Author.Email);
-        }
-
-        RecipeNutritionDto? nutrition = null;
-
-        if (recipe.Nutrition != null)
-        {
-            nutrition =
-                new RecipeNutritionDto(
-                    recipe.Nutrition.Calories,
-                    recipe.Nutrition.Protein,
-                    recipe.Nutrition.Carbs,
-                    recipe.Nutrition.Fat,
-                    recipe.Nutrition.Fiber,
-                    recipe.Nutrition.Sodium);
-        }
-
-        return new RecipeDetailDto(
-            recipe.Id,
-            recipe.Title,
-            recipe.Slug,
-            recipe.Description,
-            recipe.Instructions,
-            recipe.PrepTimeMinutes,
-            recipe.CookTimeMinutes,
-            recipe.Servings,
-            recipe.Difficulty,
-            recipe.Status,
-            recipe.CreatedAt,
-
-            new RecipeCategoryDto(
-                recipe.Category.Id,
-                recipe.Category.Name,
-                recipe.Category.Slug),
-
-            author,
-
-            ingredients,
-            steps,
-            images,
-            nutrition);
+        return RecipeDtoMapper.ToDetailDto(recipe);
     }
 }

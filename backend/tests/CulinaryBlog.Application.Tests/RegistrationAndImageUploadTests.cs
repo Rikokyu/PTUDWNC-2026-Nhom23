@@ -207,6 +207,18 @@ public sealed class RegistrationAndImageUploadTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult<Recipe?>(null);
 
+        public Task<Recipe?> GetByIdWithDetailsAsync(
+            Guid id,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<Recipe?>(id == recipe.Id ? recipe : null);
+
+        public Task<bool> SlugExistsAsync(
+            string slug,
+            Guid? excludingId = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(
+                recipe.Slug == slug && recipe.Id != excludingId);
+
         public Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
             GetPagedAsync(
                 int page,

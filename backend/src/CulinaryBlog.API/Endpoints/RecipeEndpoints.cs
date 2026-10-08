@@ -1,4 +1,9 @@
 using CulinaryBlog.Application.Common.Exceptions;
+using CulinaryBlog.Application.DTOs.Recipes;
+using CulinaryBlog.Application.Features.Recipes.Commands.CreateRecipe;
+using CulinaryBlog.Application.Features.Recipes.Commands.DeleteRecipe;
+using CulinaryBlog.Application.Features.Recipes.Commands.UpdateRecipe;
+using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeById;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeBySlug;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipes;
 using CulinaryBlog.Domain.Enums;
@@ -27,6 +32,50 @@ public static class RecipeEndpoints
                 "/{slug}",
                 GetRecipeBySlugAsync)
             .CacheOutput("RecipeDetail");
+
+        group
+            .MapGet(
+                "/{id:guid}",
+                GetRecipeByIdAsync)
+            .WithName("GetRecipeById")
+            .WithSummary("Get a recipe by ID")
+            .Produces<RecipeDetailDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapPost(
+                "",
+                CreateRecipeAsync)
+            .WithName("CreateRecipe")
+            .WithSummary("Create a draft recipe")
+            .RequireAuthorization()
+            .Produces<RecipeSummaryDto>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapPut(
+                "/{id:guid}",
+                UpdateRecipeAsync)
+            .WithName("UpdateRecipe")
+            .WithSummary("Update a recipe")
+            .RequireAuthorization()
+            .Produces<RecipeSummaryDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapDelete(
+                "/{id:guid}",
+                DeleteRecipeAsync)
+            .WithName("DeleteRecipe")
+            .WithSummary("Delete a recipe")
+            .RequireAuthorization()
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return endpoints;
     }
@@ -182,6 +231,74 @@ public static class RecipeEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> GetRecipeByIdAsync(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new GetRecipeByIdQuery(id),
+            cancellationToken);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> CreateRecipeAsync(
+        RecipeRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new CreateRecipeCommand(
+                request.Title,
+                request.Description,
+                request.Instructions,
+                request.CategoryId,
+                request.PrepTimeMinutes,
+                request.CookTimeMinutes,
+                request.Servings,
+                request.Difficulty),
+            cancellationToken);
+
+        return Results.Created(
+            $"/api/v1/recipes/{result.Id}",
+            result);
+    }
+
+    private static async Task<IResult> UpdateRecipeAsync(
+        Guid id,
+        RecipeRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new UpdateRecipeCommand(
+                id,
+                request.Title,
+                request.Description,
+                request.Instructions,
+                request.CategoryId,
+                request.PrepTimeMinutes,
+                request.CookTimeMinutes,
+                request.Servings,
+                request.Difficulty),
+            cancellationToken);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> DeleteRecipeAsync(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        await sender.Send(
+            new DeleteRecipeCommand(id),
+            cancellationToken);
+
+        return Results.NoContent();
+    }
+
     private static bool TryParsePositiveInt(
         string? value,
         int defaultValue,
@@ -196,4 +313,15 @@ public static class RecipeEndpoints
         return int.TryParse(value, out result)
                && result > 0;
     }
+
+    /// <summary>Recipe content fields used when creating or replacing a recipe.</summary>
+    public sealed record RecipeRequest(
+        string? Title,
+        string? Description,
+        string? Instructions,
+        Guid CategoryId,
+        int PrepTimeMinutes,
+        int CookTimeMinutes,
+        int Servings,
+        DifficultyLevel Difficulty);
 }

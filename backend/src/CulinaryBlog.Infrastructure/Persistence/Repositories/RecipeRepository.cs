@@ -32,6 +32,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         IQueryable<Recipe> query =
             _context.Recipes
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Include(x => x.Category)
                 .Include(x => x.Images.Where(image =>
                     image.IsPrimary))
@@ -128,6 +129,24 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 cancellationToken);
     }
 
+    public Task<Recipe?> GetByIdWithDetailsAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Recipes
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Author)
+            .Include(recipe => recipe.Ingredients)
+            .Include(recipe => recipe.Steps)
+            .Include(recipe => recipe.Images)
+            .FirstOrDefaultAsync(
+                recipe => recipe.Id == id
+                    && !recipe.Category.IsDeleted,
+                cancellationToken);
+    }
+
     public Task<Recipe?> GetByIdWithImagesAsync(
         Guid id,
         CancellationToken cancellationToken = default)
@@ -138,6 +157,18 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 recipe => recipe.Id == id
                     && !recipe.Category.IsDeleted,
                 cancellationToken);
+    }
+
+    public Task<bool> SlugExistsAsync(
+        string slug,
+        Guid? excludingId = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Recipes.AnyAsync(
+            recipe => recipe.Slug == slug
+                && (!excludingId.HasValue
+                    || recipe.Id != excludingId.Value),
+            cancellationToken);
     }
 
     public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
@@ -152,6 +183,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
     {
         IQueryable<Recipe> query = _context.Recipes
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(recipe => recipe.Category)
             .Include(recipe => recipe.Images.Where(image =>
                 image.IsPrimary))

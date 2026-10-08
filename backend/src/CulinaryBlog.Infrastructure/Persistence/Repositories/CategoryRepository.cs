@@ -22,6 +22,17 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
 			cancellationToken);
 	}
 
+	public Task<Category?> GetActiveByIdReadOnlyAsync(
+		Guid id,
+		CancellationToken cancellationToken = default)
+	{
+		return DbSet
+			.AsNoTracking()
+			.FirstOrDefaultAsync(
+				category => category.Id == id && !category.IsDeleted,
+				cancellationToken);
+	}
+
 	public Task<Category?> GetBySlugAsync(
 		string slug,
 		CancellationToken cancellationToken = default)

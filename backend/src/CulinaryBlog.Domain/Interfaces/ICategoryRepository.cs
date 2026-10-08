@@ -9,6 +9,10 @@ public interface ICategoryRepository : IRepository<Category>
 		Guid id,
 		CancellationToken cancellationToken = default);
 
+	Task<Category?> GetActiveByIdReadOnlyAsync(
+		Guid id,
+		CancellationToken cancellationToken = default);
+
 	Task<Category?> GetBySlugAsync(
 		string slug,
 		CancellationToken cancellationToken = default);

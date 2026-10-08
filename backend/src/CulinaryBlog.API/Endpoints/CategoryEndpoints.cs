@@ -4,6 +4,7 @@ using CulinaryBlog.Application.Features.Categories.Commands.CreateCategory;
 using CulinaryBlog.Application.Features.Categories.Commands.DeleteCategory;
 using CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
 using CulinaryBlog.Application.Features.Categories.Queries.GetCategories;
+using CulinaryBlog.Application.Features.Categories.Queries.GetCategoryById;
 using CulinaryBlog.Application.Features.Categories.Queries.GetCategoryBySlug;
 using MediatR;
 
@@ -27,6 +28,12 @@ public static class CategoryEndpoints
 			.Produces<CategoryDetailDto>(StatusCodes.Status200OK)
 			.ProducesProblem(StatusCodes.Status404NotFound)
 			.ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+		group.MapGet("/{id:guid}", GetCategoryByIdAsync)
+			.WithName("GetCategoryById")
+			.WithSummary("Get a category by ID")
+			.Produces<CategoryDto>(StatusCodes.Status200OK)
+			.ProducesProblem(StatusCodes.Status404NotFound);
 
 		group.MapPost("", CreateCategoryAsync)
 			.WithName("CreateCategory")
@@ -102,6 +109,18 @@ public static class CategoryEndpoints
 				slug.Trim(),
 				page,
 				pageSize),
+			cancellationToken);
+
+		return Results.Ok(result);
+	}
+
+	private static async Task<IResult> GetCategoryByIdAsync(
+		Guid id,
+		ISender sender,
+		CancellationToken cancellationToken)
+	{
+		var result = await sender.Send(
+			new GetCategoryByIdQuery(id),
 			cancellationToken);
 
 		return Results.Ok(result);

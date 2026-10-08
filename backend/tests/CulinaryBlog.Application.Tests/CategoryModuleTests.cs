@@ -238,6 +238,11 @@ public sealed class CategoryModuleTests
             CancellationToken cancellationToken = default) =>
             GetByIdAsync(id, cancellationToken);
 
+        public Task<Category?> GetActiveByIdReadOnlyAsync(
+            Guid id,
+            CancellationToken cancellationToken = default) =>
+            GetByIdAsync(id, cancellationToken);
+
         public Task<IReadOnlyList<Category>> GetAllAsync(
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<Category>>(

@@ -31,7 +31,9 @@ public static class RecipeIngredientEndpoints
 				return Results.Created(
 					$"/api/v1/recipes/{recipeId}/ingredients/{id}",
 					new { id });
-			});
+			})
+			.WithSummary("Add an ingredient to a recipe.")
+			.RequireAuthorization();
 
 		group.MapPatch(
 			"/{ingredientId:guid}",
@@ -52,7 +54,9 @@ public static class RecipeIngredientEndpoints
 						request.Notes),
 					cancellationToken);
 				return Results.NoContent();
-			});
+			})
+			.WithSummary("Update a recipe ingredient.")
+			.RequireAuthorization();
 
 		group.MapDelete(
 			"/{ingredientId:guid}",
@@ -66,7 +70,9 @@ public static class RecipeIngredientEndpoints
 					new DeleteRecipeIngredientCommand(recipeId, ingredientId),
 					cancellationToken);
 				return Results.NoContent();
-			});
+			})
+			.WithSummary("Delete a recipe ingredient.")
+			.RequireAuthorization();
 
 		return endpoints;
 	}

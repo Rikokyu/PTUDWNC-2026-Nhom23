@@ -30,7 +30,9 @@ public static class RecipeImageEndpoints
 				return Results.Created(
 					$"/api/v1/recipes/{recipeId}/images/{id}",
 					new { id });
-			});
+			})
+			.WithSummary("Add an image to a recipe.")
+			.RequireAuthorization();
 
 		group.MapPatch(
 			"/{imageId:guid}",
@@ -49,7 +51,9 @@ public static class RecipeImageEndpoints
 						request.IsPrimary),
 					cancellationToken);
 				return Results.NoContent();
-			});
+			})
+			.WithSummary("Update a recipe image.")
+			.RequireAuthorization();
 
 		group.MapDelete(
 			"/{imageId:guid}",
@@ -63,7 +67,9 @@ public static class RecipeImageEndpoints
 					new DeleteRecipeImageCommand(recipeId, imageId),
 					cancellationToken);
 				return Results.NoContent();
-			});
+			})
+			.WithSummary("Delete a recipe image.")
+			.RequireAuthorization();
 
 		return endpoints;
 	}

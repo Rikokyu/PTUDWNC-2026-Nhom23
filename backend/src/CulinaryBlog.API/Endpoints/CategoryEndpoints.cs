@@ -20,16 +20,19 @@ public static class CategoryEndpoints
 
 		group.MapGet("", GetCategoriesAsync)
 			.WithName("GetCategories")
+			.WithSummary("List active recipe categories.")
 			.Produces<IReadOnlyList<CategoryDto>>(StatusCodes.Status200OK);
 
 		group.MapGet("/{slug}", GetCategoryBySlugAsync)
 			.WithName("GetCategoryBySlug")
+			.WithSummary("Get a category and its paginated recipes.")
 			.Produces<CategoryDetailDto>(StatusCodes.Status200OK)
 			.ProducesProblem(StatusCodes.Status404NotFound)
 			.ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
 		group.MapPost("", CreateCategoryAsync)
 			.WithName("CreateCategory")
+			.WithSummary("Create a recipe category.")
 			.RequireAuthorization("Admin")
 			.Produces<CategoryDto>(StatusCodes.Status201Created)
 			.ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -39,6 +42,7 @@ public static class CategoryEndpoints
 
 		group.MapPut("/{id:guid}", UpdateCategoryAsync)
 			.WithName("UpdateCategory")
+			.WithSummary("Update a recipe category.")
 			.RequireAuthorization("Admin")
 			.Produces<CategoryDto>(StatusCodes.Status200OK)
 			.ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -49,6 +53,7 @@ public static class CategoryEndpoints
 
 		group.MapDelete("/{id:guid}", DeleteCategoryAsync)
 			.WithName("DeleteCategory")
+			.WithSummary("Soft-delete a recipe category.")
 			.RequireAuthorization("Admin")
 			.Produces(StatusCodes.Status204NoContent)
 			.ProducesProblem(StatusCodes.Status401Unauthorized)

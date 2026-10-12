@@ -20,6 +20,7 @@ public static class HealthEndpoints
 					cancellationToken))
 			.WithTags("Health")
 			.WithName("Liveness")
+			.WithSummary("Check API liveness.")
 			.Produces<HealthEndpointResponse>(StatusCodes.Status200OK)
 			.Produces<HealthEndpointResponse>(
 				StatusCodes.Status503ServiceUnavailable);
@@ -35,6 +36,7 @@ public static class HealthEndpoints
 					cancellationToken))
 			.WithTags("Health")
 			.WithName("Readiness")
+			.WithSummary("Check API and dependency readiness.")
 			.Produces<HealthEndpointResponse>(StatusCodes.Status200OK)
 			.Produces<HealthEndpointResponse>(
 				StatusCodes.Status503ServiceUnavailable);

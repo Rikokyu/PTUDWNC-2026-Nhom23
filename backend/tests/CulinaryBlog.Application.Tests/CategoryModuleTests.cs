@@ -28,10 +28,12 @@ public sealed class CategoryModuleTests
     {
         var validator = new CreateCategoryCommandValidator();
 
-        var errors = validator.Validate(
+        var result = validator.Validate(
             new CreateCategoryCommand("<b>x</b>", null, null));
 
-        Assert.Contains(errors, error => error.Contains("HTML"));
+        Assert.Contains(
+            result.Errors,
+            error => error.ErrorMessage.Contains("HTML", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -39,7 +41,7 @@ public sealed class CategoryModuleTests
     {
         var validator = new UpdateCategoryCommandValidator();
 
-        var errors = validator.Validate(
+        var result = validator.Validate(
             new UpdateCategoryCommand(
                 Guid.NewGuid(),
                 null,
@@ -47,7 +49,11 @@ public sealed class CategoryModuleTests
                 null,
                 null));
 
-        Assert.Contains(errors, error => error.Contains("At least one"));
+        Assert.Contains(
+            result.Errors,
+            error => error.ErrorMessage.Contains(
+                "At least one",
+                StringComparison.Ordinal));
     }
 
     [Fact]
@@ -199,6 +205,7 @@ public sealed class CategoryModuleTests
 
         public Guid? UserId { get; } = Guid.NewGuid();
         public bool IsAuthenticated { get; }
+        public bool IsAuthor => !IsAdmin;
         public bool IsAdmin { get; }
     }
 

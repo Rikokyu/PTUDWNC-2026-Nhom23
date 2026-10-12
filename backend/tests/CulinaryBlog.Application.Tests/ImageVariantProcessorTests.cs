@@ -26,7 +26,13 @@ public sealed class ImageVariantProcessorTests
         Assert.NotNull(thumbnailInfo);
         Assert.Equal(300, thumbnailInfo.Width);
         Assert.Equal(300, thumbnailInfo.Height);
-        Assert.Equal("Webp", mediumInfo.Metadata.DecodedImageFormat?.Name);
-        Assert.Equal("Webp", thumbnailInfo.Metadata.DecodedImageFormat?.Name);
+        Assert.Equal(
+            "Webp",
+            mediumInfo.Metadata.DecodedImageFormat?.Name,
+            ignoreCase: true);
+        Assert.Equal(
+            "Webp",
+            thumbnailInfo.Metadata.DecodedImageFormat?.Name,
+            ignoreCase: true);
     }
 }

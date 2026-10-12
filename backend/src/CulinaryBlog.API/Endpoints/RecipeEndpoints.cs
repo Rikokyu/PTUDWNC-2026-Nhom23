@@ -29,12 +29,16 @@ public static class RecipeEndpoints
                         cancellationToken,
                         ownRecipesOnly: false,
                         includeAllStatuses: false))
+            .WithSummary("List published recipes with filters and pagination.")
+            .WithDescription(
+                "Supports category, difficulty, cooking time, sorting, and pagination filters.")
             .CacheOutput("RecipeList");
 
         group
             .MapGet(
                 "/{slug}",
                 GetRecipeBySlugAsync)
+            .WithSummary("Get a recipe and its details by slug.")
             .CacheOutput("RecipeDetail")
             .CacheOutput("RecipeSlug");
 
@@ -73,6 +77,7 @@ public static class RecipeEndpoints
                     $"/api/v1/recipes/{result.Slug}",
                     new { data = createdRecipe });
             })
+            .WithSummary("Create a recipe.")
             .RequireAuthorization();
 
         group.MapPut(
@@ -112,6 +117,7 @@ public static class RecipeEndpoints
 
                 return Results.Ok(new { data = updatedRecipe });
             })
+            .WithSummary("Update a recipe.")
             .RequireAuthorization();
 
         group.MapPatch(
@@ -127,6 +133,7 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
+            .WithSummary("Publish a draft recipe.")
             .RequireAuthorization();
 
         group.MapPatch(
@@ -142,6 +149,7 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
+            .WithSummary("Return a published recipe to draft.")
             .RequireAuthorization();
 
         group.MapPatch(
@@ -157,6 +165,7 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
+            .WithSummary("Archive a recipe.")
             .RequireAuthorization();
 
         group.MapDelete(
@@ -170,7 +179,9 @@ public static class RecipeEndpoints
                     new DeleteRecipeCommand(recipeId),
                     cancellationToken);
                 return Results.NoContent();
-            });
+            })
+            .WithSummary("Delete a recipe.")
+            .RequireAuthorization();
 
         endpoints.MapGet(
             "/api/v1/me/recipes",
@@ -192,7 +203,9 @@ public static class RecipeEndpoints
                     cancellationToken,
                     ownRecipesOnly: true,
                     includeAllStatuses: false);
-            });
+            })
+            .WithSummary("List the authenticated user's recipes.")
+            .RequireAuthorization();
 
         endpoints.MapGet(
             "/api/v1/admin/recipes",
@@ -214,7 +227,9 @@ public static class RecipeEndpoints
                     cancellationToken,
                     ownRecipesOnly: false,
                     includeAllStatuses: true);
-            });
+            })
+            .WithSummary("List recipes available to administrators.")
+            .RequireAuthorization("Admin");
 
         return endpoints;
     }

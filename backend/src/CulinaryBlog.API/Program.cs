@@ -32,6 +32,8 @@ builder.Services
 
 builder.Services
     .AddFrontendCors(builder.Configuration);
+builder.Services
+    .AddApiRateLimiting();
 
 // Infrastructure
 builder.Services
@@ -77,6 +79,23 @@ builder.Services
 
 builder.Services.AddSwaggerGen(options =>
 {
+    options.SwaggerDoc(
+        "v1",
+        new OpenApiInfo
+        {
+            Title = "CulinaryBlog API",
+            Version = "v1",
+            Description = "Version 1 of the CulinaryBlog HTTP API."
+        });
+
+    var xmlDocumentationFile = Path.Combine(
+        AppContext.BaseDirectory,
+        $"{typeof(Program).Assembly.GetName().Name}.xml");
+    if (File.Exists(xmlDocumentationFile))
+    {
+        options.IncludeXmlComments(xmlDocumentationFile);
+    }
+
     options.AddSecurityDefinition(
         "Bearer",
         new OpenApiSecurityScheme
@@ -107,12 +126,13 @@ var app =
 app.UseMiddleware<
     GlobalExceptionMiddleware>();
 
-app.UseAuthorization();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "CulinaryBlog API v1"));
 }
 
 app.UseStaticFiles();
@@ -122,7 +142,9 @@ app.UseOutputCache();
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 if (builder.Configuration.GetValue("Hangfire:Enabled", true)
     && (!app.Environment.IsDevelopment()
@@ -154,7 +176,9 @@ using (var scope =
     try
     {
         await DatabaseSeeder
-            .SeedAsync(context);
+            .SeedAsync(
+                context,
+                app.Lifetime.ApplicationStopping);
     }
     catch (DbUpdateConcurrencyException ex)
     {

@@ -21,15 +21,33 @@ public sealed class ValidationBehavior<TRequest, TResponse>
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
-        var errors = _validators
+        var fieldErrors = _validators
+            .OfType<IFieldRequestValidator<TRequest>>()
+            .SelectMany(validator => validator.ValidateFields(request))
+            .GroupBy(error => error.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.SelectMany(error => error.Value)
+                    .Where(error => !string.IsNullOrWhiteSpace(error))
+                    .Distinct()
+                    .ToArray(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var generalErrors = _validators
+            .Where(validator => validator is not IFieldRequestValidator<TRequest>)
             .SelectMany(validator => validator.Validate(request))
             .Where(error => !string.IsNullOrWhiteSpace(error))
             .Distinct()
-            .ToList();
+            .ToArray();
 
-        if (errors.Count > 0)
+        if (generalErrors.Length > 0)
         {
-            throw new ValidationException(string.Join(" ", errors));
+            fieldErrors["request"] = generalErrors;
+        }
+
+        if (fieldErrors.Count > 0)
+        {
+            throw new ValidationException(fieldErrors);
         }
 
         return await next(cancellationToken);

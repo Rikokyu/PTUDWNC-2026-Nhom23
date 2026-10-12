@@ -3,6 +3,7 @@ using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Common.Behaviors;
 using CulinaryBlog.Application.Features.Categories.Commands.CreateCategory;
 using CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
+using CulinaryBlog.Application.Features.Auth.Commands.Register;
 using MediatR;
 
 namespace CulinaryBlog.API.Extensions;
@@ -36,6 +37,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<
             IRequestValidator<UpdateCategoryCommand>,
             UpdateCategoryCommandValidator>();
+
+        services.AddTransient<
+            IRequestValidator<RegisterCommand>,
+            RegisterCommandValidator>();
 
         services.AddScoped<
             ICurrentUser,

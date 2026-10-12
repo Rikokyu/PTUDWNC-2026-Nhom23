@@ -2,6 +2,22 @@ namespace CulinaryBlog.Domain.Entities;
 
 public class ApplicationUser : BaseEntity
 {
+    public static ApplicationUser Create(
+        string fullName,
+        string email,
+        string userName)
+    {
+        return new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = fullName.Trim(),
+            Email = email.Trim().ToLowerInvariant(),
+            UserName = userName.Trim(),
+            Role = string.Empty,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
     public string Email { get; set; } = string.Empty;
 
     public string UserName { get; set; } = string.Empty;

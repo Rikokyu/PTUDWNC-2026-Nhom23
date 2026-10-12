@@ -110,6 +110,7 @@ public sealed class RegistrationAndImageUploadTests
     {
         public Guid? UserId { get; } = userId;
         public bool IsAuthenticated => true;
+        public bool IsAuthor => true;
         public bool IsAdmin => false;
     }
 
@@ -218,6 +219,8 @@ public sealed class RegistrationAndImageUploadTests
                 Guid? currentUserId,
                 bool isAuthenticated,
                 bool isAdmin,
+                bool ownRecipesOnly = false,
+                bool includeAllStatuses = false,
                 CancellationToken cancellationToken = default) =>
             Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
 
@@ -231,5 +234,18 @@ public sealed class RegistrationAndImageUploadTests
                 bool isAdmin,
                 CancellationToken cancellationToken = default) =>
             Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
+
+        public Task<Recipe?> GetByIdWithDetailsAsync(
+            Guid id,
+            CancellationToken cancellationToken = default) =>
+            GetByIdWithImagesAsync(id, cancellationToken);
+
+        public Task<bool> SlugExistsAsync(
+            string slug,
+            Guid? excludingRecipeId = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(
+                string.Equals(recipe.Slug, slug, StringComparison.OrdinalIgnoreCase)
+                && recipe.Id != excludingRecipeId);
     }
 }

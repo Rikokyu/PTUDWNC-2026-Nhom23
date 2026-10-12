@@ -199,6 +199,7 @@ public sealed class CategoryModuleTests
 
         public Guid? UserId { get; } = Guid.NewGuid();
         public bool IsAuthenticated { get; }
+        public bool IsAuthor => IsAuthenticated && !IsAdmin;
         public bool IsAdmin { get; }
     }
 

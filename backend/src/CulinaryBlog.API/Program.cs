@@ -107,8 +107,6 @@ var app =
 app.UseMiddleware<
     GlobalExceptionMiddleware>();
 
-app.UseAuthorization();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

@@ -1,4 +1,6 @@
 using System.Text;
+using CulinaryBlog.API.Authentication;
+using CulinaryBlog.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -37,6 +39,8 @@ public static class AuthenticationExtensions
                         RoleClaimType = "role"
                     };
             });
+
+        services.AddSingleton<IJwtService, JwtService>();
 
         services
             .AddAuthorizationBuilder()

@@ -77,11 +77,7 @@ public class GlobalExceptionMiddleware
         }
         catch (ApplicationValidationException ex)
         {
-            await WriteProblemAsync(
-                context,
-                StatusCodes.Status422UnprocessableEntity,
-                "Validation failed",
-                ex.Message);
+            await WriteValidationProblemAsync(context, ex.Errors);
         }
         catch (DomainValidationException ex)
         {
@@ -151,6 +147,36 @@ public class GlobalExceptionMiddleware
                 "Internal server error",
                 "An unexpected error occurred.");
         }
+    }
+
+    private async Task WriteValidationProblemAsync(
+        HttpContext context,
+        IReadOnlyDictionary<string, string[]> errors)
+    {
+        if (context.Response.HasStarted)
+        {
+            return;
+        }
+
+        context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        var problem = new ValidationProblemDetails(
+            errors.ToDictionary(
+                error => error.Key,
+                error => error.Value,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            Status = StatusCodes.Status422UnprocessableEntity,
+            Title = "Validation failed",
+            Detail = "One or more fields are invalid.",
+            Instance = context.Request.Path.ToString()
+        };
+
+        await _problemDetailsService.WriteAsync(
+            new ProblemDetailsContext
+            {
+                HttpContext = context,
+                ProblemDetails = problem
+            });
     }
 
     private async Task WriteProblemAsync(

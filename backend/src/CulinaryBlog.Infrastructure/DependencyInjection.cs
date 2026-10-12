@@ -1,5 +1,8 @@
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
+using CulinaryBlog.Infrastructure.Email;
+using CulinaryBlog.Infrastructure.Identity;
+using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Interfaces;
 using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Infrastructure.Persistence.Repositories;
@@ -9,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Identity;
 
 namespace CulinaryBlog.Infrastructure;
 
@@ -24,6 +28,23 @@ public static class DependencyInjection
             options.UseNpgsql(
                 configuration.GetConnectionString("DefaultConnection"));
         });
+
+        services
+            .AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.User.AllowedUserNameCharacters =
+                    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                options.Password.RequiredLength = 8;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireDigit = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequireLowercase = false;
+            })
+            .AddUserStore<ApplicationUserStore>();
+
+        services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
+        services.AddScoped<IEmailService, MailKitEmailService>();
 
         if (configuration.GetValue("Hangfire:Enabled", true))
         {
@@ -49,12 +70,18 @@ public static class DependencyInjection
             services.AddScoped<
                 IImageResizeJobScheduler,
                 HangfireImageResizeJobScheduler>();
+            services.AddScoped<
+                IWelcomeEmailJobScheduler,
+                HangfireWelcomeEmailJobScheduler>();
         }
         else
         {
             services.AddScoped<
                 IImageResizeJobScheduler,
                 DisabledImageResizeJobScheduler>();
+            services.AddScoped<
+                IWelcomeEmailJobScheduler,
+                DisabledWelcomeEmailJobScheduler>();
         }
 
         services.AddScoped(

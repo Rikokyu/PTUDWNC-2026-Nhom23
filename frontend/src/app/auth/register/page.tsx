@@ -5,23 +5,62 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { User, Mail, Lock } from "lucide-react";
+import axios from "axios";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import {
+  registerAccount,
+  saveAuthSession,
+  type ValidationProblem,
+} from "@/lib/api/auth";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
+    setFieldErrors({});
+
+    if (password !== confirmPassword) {
+      setFieldErrors({ confirmPassword: ["Mật khẩu xác nhận không khớp."] });
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const session = await registerAccount({
+        fullName,
+        email,
+        userName,
+        password,
+      });
+      saveAuthSession(session);
       router.push("/dashboard");
-    }, 800);
+    } catch (error) {
+      if (axios.isAxiosError<ValidationProblem>(error)) {
+        const problem = error.response?.data;
+        setFieldErrors(problem?.errors ?? {});
+        setFormError(
+          problem?.detail ??
+            (error.response?.status === 409
+              ? "Email hoặc tên đăng nhập đã được sử dụng."
+              : "Không thể đăng ký tài khoản.")
+        );
+      } else {
+        setFormError("Không thể kết nối đến máy chủ.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -52,12 +91,23 @@ export default function RegisterPage() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
         <div className="bg-white py-8 px-6 shadow-subtle border border-slate-200 rounded-xl sm:px-10 space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {formError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+              >
+                {formError}
+              </div>
+            )}
+
             <Input
               label="Họ và tên *"
               placeholder="Nguyễn Văn A"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               leftIcon={<User className="w-4 h-4" />}
+              autoComplete="name"
+              error={fieldErrors.fullName?.[0]}
               required
             />
 
@@ -68,16 +118,45 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               leftIcon={<Mail className="w-4 h-4" />}
+              autoComplete="email"
+              error={fieldErrors.email?.[0]}
+              required
+            />
+
+            <Input
+              label="Tên đăng nhập *"
+              placeholder="nguyenvana"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              leftIcon={<User className="w-4 h-4" />}
+              autoComplete="username"
+              helperText="Chỉ gồm chữ cái và chữ số, tối thiểu 3 ký tự."
+              error={fieldErrors.userName?.[0]}
               required
             />
 
             <Input
               label="Mật khẩu *"
               type="password"
-              placeholder="Ít nhất 6 ký tự"
+              placeholder="Ít nhất 8 ký tự"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               leftIcon={<Lock className="w-4 h-4" />}
+              autoComplete="new-password"
+              helperText="Có ít nhất 1 chữ hoa, 1 chữ số và 1 ký tự đặc biệt."
+              error={fieldErrors.password?.[0]}
+              required
+            />
+
+            <Input
+              label="Xác nhận mật khẩu *"
+              type="password"
+              placeholder="Nhập lại mật khẩu"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              leftIcon={<Lock className="w-4 h-4" />}
+              autoComplete="new-password"
+              error={fieldErrors.confirmPassword?.[0]}
               required
             />
 

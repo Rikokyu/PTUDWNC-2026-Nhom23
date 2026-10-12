@@ -120,7 +120,7 @@
 - Hoàn thành chuyển đổi trạng thái Published/Draft.
 - Tích hợp đăng nhập Google OAuth 2.0.
 - Hoàn thành trang/API chi tiết danh mục và danh sách công thức thuộc danh mục.
-- Hoàn thành chức năng xóa file khỏi MinIO.
+- Hoàn thành chức năng xóa file khỏi MinIO bằng MinIO SDK với retry và xử lý lỗi tạm thời.
 
 ---
 

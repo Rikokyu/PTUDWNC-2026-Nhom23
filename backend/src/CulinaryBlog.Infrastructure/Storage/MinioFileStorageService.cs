@@ -133,6 +133,8 @@ public sealed class MinioFileStorageService : IFileStorageService
         string objectKey,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(objectKey);
+
         for (var attempt = 0; ; attempt++)
         {
             try

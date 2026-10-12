@@ -31,7 +31,9 @@ public static class RecipeStepEndpoints
 				return Results.Created(
 					$"/api/v1/recipes/{recipeId}/steps/{id}",
 					new { id });
-			});
+			})
+			.WithSummary("Add a preparation step to a recipe.")
+			.RequireAuthorization();
 
 		group.MapPatch(
 			"/{stepId:guid}",
@@ -52,7 +54,9 @@ public static class RecipeStepEndpoints
 						request.ImageUrl),
 					cancellationToken);
 				return Results.NoContent();
-			});
+			})
+			.WithSummary("Update a recipe preparation step.")
+			.RequireAuthorization();
 
 		group.MapDelete(
 			"/{stepId:guid}",
@@ -66,7 +70,9 @@ public static class RecipeStepEndpoints
 					new DeleteRecipeStepCommand(recipeId, stepId),
 					cancellationToken);
 				return Results.NoContent();
-			});
+			})
+			.WithSummary("Delete a recipe preparation step.")
+			.RequireAuthorization();
 
 		return endpoints;
 	}

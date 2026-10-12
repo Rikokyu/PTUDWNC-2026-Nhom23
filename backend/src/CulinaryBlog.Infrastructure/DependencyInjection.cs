@@ -1,5 +1,7 @@
 using CulinaryBlog.Application.Common.Interfaces;
+using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
+using CulinaryBlog.Infrastructure.Identity;
 using CulinaryBlog.Domain.Interfaces;
 using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Infrastructure.Persistence.Repositories;
@@ -9,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Identity;
 
 namespace CulinaryBlog.Infrastructure;
 
@@ -24,6 +27,11 @@ public static class DependencyInjection
             options.UseNpgsql(
                 configuration.GetConnectionString("DefaultConnection"));
         });
+
+        services.AddScoped<
+            IPasswordHasher<ApplicationUser>,
+            PasswordHasher<ApplicationUser>>();
+        services.AddScoped<IIdentityService, IdentityService>();
 
         if (configuration.GetValue("Hangfire:Enabled", true))
         {

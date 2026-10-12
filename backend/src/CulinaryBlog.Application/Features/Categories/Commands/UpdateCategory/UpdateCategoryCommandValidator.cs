@@ -1,48 +1,57 @@
-using CulinaryBlog.Application.Common.Interfaces;
-using CulinaryBlog.Application.Common.Validation;
+using System.Text.RegularExpressions;
+using FluentValidation;
 
 namespace CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
 
 public sealed class UpdateCategoryCommandValidator
-    : IRequestValidator<UpdateCategoryCommand>
+    : AbstractValidator<UpdateCategoryCommand>
 {
-    public IReadOnlyList<string> Validate(UpdateCategoryCommand request)
+    public UpdateCategoryCommandValidator()
     {
-        var errors = new List<string>();
+        RuleFor(command => command.Id)
+            .NotEmpty()
+            .WithMessage("A valid category id is required.");
 
-        if (request.Id == Guid.Empty)
-        {
-            errors.Add("A valid category id is required.");
-        }
+        RuleFor(command => command)
+            .Must(command =>
+                command.Name is not null
+                || command.Description is not null
+                || command.ImageUrl is not null
+                || command.OrderIndex.HasValue)
+            .WithMessage("At least one field must be supplied for update.");
 
-        if (request.Name is null
-            && request.Description is null
-            && request.ImageUrl is null
-            && !request.OrderIndex.HasValue)
-        {
-            errors.Add("At least one field must be supplied for update.");
-        }
+        RuleFor(command => command.Name)
+            .Must(name => !string.IsNullOrWhiteSpace(name))
+            .When(command => command.Name is not null)
+            .WithMessage("Name is required.")
+            .Must(name => name!.Trim().Length is >= 2 and <= 50)
+            .When(command => command.Name is not null)
+            .WithMessage("Name must contain between 2 and 50 characters.")
+            .Must(name => !Regex.IsMatch(
+                name!.Trim(),
+                "<[^>]+>",
+                RegexOptions.CultureInvariant))
+            .When(command => command.Name is not null)
+            .WithMessage("Name must not contain HTML.");
 
-        if (request.Name is not null)
-        {
-            CategoryValidationRules.ValidateName(
-                request.Name,
-                errors,
-                required: true);
-        }
+        RuleFor(command => command.Description)
+            .MaximumLength(2000);
 
-        CategoryValidationRules.ValidateDescription(
-            request.Description,
-            errors);
-        CategoryValidationRules.ValidateImageUrl(
-            request.ImageUrl,
-            errors);
+        RuleFor(command => command.ImageUrl)
+            .Must(IsHttpUrl)
+            .When(command => !string.IsNullOrWhiteSpace(command.ImageUrl))
+            .WithMessage(
+                "ImageUrl must be a valid HTTP or HTTPS URL no longer than 500 characters.");
 
-        if (request.OrderIndex < 0)
-        {
-            errors.Add("OrderIndex cannot be negative.");
-        }
-
-        return errors;
+        RuleFor(command => command.OrderIndex)
+            .GreaterThanOrEqualTo(0)
+            .When(command => command.OrderIndex.HasValue);
     }
+
+    private static bool IsHttpUrl(string? value) =>
+        value is not null
+        && value.Length <= 500
+        && Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp
+            || uri.Scheme == Uri.UriSchemeHttps);
 }

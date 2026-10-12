@@ -1,9 +1,13 @@
 using CulinaryBlog.API.CurrentUser;
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Common.Behaviors;
+using CulinaryBlog.Application.Features.Auth.Commands.Login;
+using CulinaryBlog.Application.Features.Auth.Commands.Register;
 using CulinaryBlog.Application.Features.Categories.Commands.CreateCategory;
 using CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
+using FluentValidation;
 using MediatR;
+using System.Threading.RateLimiting;
 
 namespace CulinaryBlog.API.Extensions;
 
@@ -27,14 +31,20 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient(
             typeof(IPipelineBehavior<,>),
-            typeof(ValidationBehavior<,>));
+            typeof(FluentValidationBehavior<,>));
+        services.AddTransient<
+            IValidator<RegisterCommand>,
+            RegisterCommandValidator>();
+        services.AddTransient<
+            IValidator<LoginCommand>,
+            LoginCommandValidator>();
 
         services.AddTransient<
-            IRequestValidator<CreateCategoryCommand>,
+            IValidator<CreateCategoryCommand>,
             CreateCategoryCommandValidator>();
 
         services.AddTransient<
-            IRequestValidator<UpdateCategoryCommand>,
+            IValidator<UpdateCategoryCommand>,
             UpdateCategoryCommandValidator>();
 
         services.AddScoped<
@@ -65,4 +75,56 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddApiRateLimiting(
+        this IServiceCollection services)
+    {
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode =
+                StatusCodes.Status429TooManyRequests;
+            options.OnRejected = async (context, cancellationToken) =>
+            {
+                context.HttpContext.Response.ContentType =
+                    "application/problem+json";
+                await context.HttpContext.Response.WriteAsJsonAsync(
+                    new
+                    {
+                        type = "https://httpstatuses.com/429",
+                        title = "Too many requests",
+                        status = StatusCodes.Status429TooManyRequests,
+                        detail = "Please wait before sending another request."
+                    },
+                    cancellationToken);
+            };
+            options.AddPolicy(
+                "Auth",
+                context => RateLimitPartition.GetFixedWindowLimiter(
+                    GetClientAddress(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(5),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+            options.GlobalLimiter =
+                PartitionedRateLimiter.Create<HttpContext, string>(
+                    context => RateLimitPartition.GetFixedWindowLimiter(
+                        GetClientAddress(context),
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 120,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0,
+                            AutoReplenishment = true
+                        }));
+        });
+
+        return services;
+    }
+
+    private static string GetClientAddress(HttpContext context) =>
+        context.Connection.RemoteIpAddress?.MapToIPv6().ToString()
+        ?? "unknown";
 }

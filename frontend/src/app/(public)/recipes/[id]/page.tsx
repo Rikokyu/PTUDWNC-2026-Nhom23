@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 export default async function RecipeDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { slug } = await params;
+  const { id: slug } = await params;
   if (!slug) notFound();
 
   return (

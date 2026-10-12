@@ -4,6 +4,7 @@ using CulinaryBlog.API.Middleware;
 using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text.Json.Serialization;
@@ -109,13 +110,34 @@ builder.Services
             });
     });
 
-// Swagger
+// API versioning + Swagger
 builder.Services
     .AddEndpointsApiExplorer();
 
 builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+    });
+
+builder.Services
+    .AddVersionedApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VV";
+        options.SubstituteApiVersionInUrl = true;
+    });
+
+builder.Services
     .AddSwaggerGen(options =>
     {
+        options.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Title = "Culinary Blog API",
+            Version = "v1",
+            Description = "Public API for the Culinary Blog application."
+        });
         options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
             Name = "Authorization",
@@ -131,17 +153,72 @@ builder.Services
 builder.Services
     .AddProblemDetails();
 
+var allowedOrigins = builder.Configuration
+    .GetSection(builder.Environment.IsDevelopment()
+        ? "Cors:Development:AllowedOrigins"
+        : "Cors:Production:AllowedOrigins")
+    .Get<string[]>()
+    ?? builder.Configuration
+        .GetSection("Cors:AllowedOrigins")
+        .Get<string[]>()
+    ?? (builder.Environment.IsDevelopment()
+        ? new[] { "http://localhost:3000", "http://127.0.0.1:3000" }
+        : Array.Empty<string>());
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+        else
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+    });
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+        double? retryAfterSeconds = context.Lease.TryGetMetadata(
+            "RetryAfter",
+            out var retryAfterValue)
+            && retryAfterValue is TimeSpan retryAfterSpan
+                ? retryAfterSpan.TotalSeconds
+                : null;
+
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new
+            {
+                type = "https://httpstatuses.com/429",
+                title = "Too many requests",
+                status = StatusCodes.Status429TooManyRequests,
+                detail = "Too many requests. Please try again later.",
+                retryAfter = retryAfterSeconds ?? 60d
+            },
+            cancellationToken: token);
+    };
+
     options.AddPolicy("AuthLogin", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
+                PermitLimit = builder.Configuration.GetValue<int>("RateLimiting:AuthLogin:PermitLimit", 10),
+                Window = TimeSpan.FromSeconds(builder.Configuration.GetValue<int>("RateLimiting:AuthLogin:WindowSeconds", 60)),
+                QueueLimit = builder.Configuration.GetValue<int>("RateLimiting:AuthLogin:QueueLimit", 0),
                 AutoReplenishment = true
             }));
 });
@@ -205,6 +282,8 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseStatusCodePages();
 
+app.UseCors("Frontend");
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -212,7 +291,10 @@ app.UseRateLimiter();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Culinary Blog API v1");
+    });
 }
 
 // Output cache

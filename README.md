@@ -40,10 +40,10 @@
 |             | Cập nhật Danh mục [Admin]         | 5    |         | Admin cập nhật được danh mục                       |                 |
 |             | Xóa Danh mục [Admin]              | 6    |         | Admin xóa danh mục khi kiểm tra điều kiện dữ liệu  |                 |
 | ---         | ---                               | ---  | ---     | ---                                                | ---             |
-| **2312789** | Health Check Endpoints            | 1    |         | Thiết lập Health Check cho hệ thống                |                 |
-|             | Structured Logging                | 2    |         | Thiết lập structured logging cho backend           |                 |
-|             | Upload File lên MinIO             | 2    |         | Tích hợp chức năng tải file lên MinIO              |                 |
-|             | Xóa File khỏi MinIO               | 3    |         | Hoàn thành chức năng xóa file khỏi MinIO           |                 |
+| **2312789** | Health Check Endpoints            | 1    | 100%    | Thiết lập Health Check cho hệ thống                | Hoàn thành      |
+|             | Structured Logging                | 2    | 100%    | Thiết lập structured logging cho backend           | Hoàn thành      |
+|             | Upload File lên MinIO             | 2    | 100%    | Tích hợp chức năng tải file lên MinIO              | Hoàn thành      |
+|             | Xóa File khỏi MinIO               | 3    | 100%    | Hoàn thành chức năng xóa file khỏi MinIO           | Hoàn thành      |
 |             | Tìm kiếm Toàn văn bản (FTS)       | 4    |         | Tìm kiếm toàn văn bằng PostgreSQL Full-Text Search |                 |
 |             | Bộ lọc Công thức nâng cao         | 5    |         | Hoàn thành bộ lọc công thức                        |                 |
 |             | Sắp xếp Kết quả                   | 5    |         | Hoàn thành sắp xếp kết quả tìm kiếm                |                 |
@@ -88,8 +88,8 @@
 | ----------------------- | ------------------------------------------- |
 | **Nguyễn Trung Hiệp**   | `FR-RCP-003` – Tạo Công thức Nấu ăn Mới     |
 | **Lê Thị Mai Anh**      | `FR-JOB-002` – Image Resize / Thumbnail Job |
-| **Nguyễn Quang Trường** | `FR-FILE-001` – Upload File lên MinIO       |
-|                         | `FR-OBS-002` – Structured Logging           |
+| **Nguyễn Quang Trường** | `FR-FILE-001` – Upload File lên MinIO       | ✅ Hoàn thành |
+|                         | `FR-OBS-002` – Structured Logging           | ✅ Hoàn thành |
 | **Nguyễn Đức Hoàng**    | `FR-AUTH-002` – Đăng nhập Email/Mật khẩu    |
 
 **Kết quả dự kiến:**
@@ -111,7 +111,7 @@
 | **Nguyễn Trung Hiệp**   | `FR-RCP-004` – Cập nhật Công thức                |
 |                         | `FR-RCP-005` – Xuất bản / Hủy Xuất bản Công thức |
 | **Lê Thị Mai Anh**      | `FR-JOB-003` – Sitemap Generation Job            |
-| **Nguyễn Quang Trường** | `FR-FILE-002` – Xóa File khỏi MinIO              |
+| **Nguyễn Quang Trường** | `FR-FILE-002` – Xóa File khỏi MinIO              | ✅ Hoàn thành |
 | **Nguyễn Đức Hoàng**    | `FR-AUTH-005` – Đăng xuất                        |
 
 **Kết quả dự kiến:**

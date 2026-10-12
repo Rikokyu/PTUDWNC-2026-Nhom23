@@ -37,6 +37,9 @@ public class RecipeConfiguration
         builder.Property(x => x.Status)
             .HasConversion<int>();
 
+        builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
+
         builder.HasIndex(x => x.CategoryId);
 
         builder.HasIndex(x => new

@@ -23,6 +23,8 @@ public class Recipe : BaseEntity
 
     public RecipeStatus Status { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public Guid CategoryId { get; set; }
 
     public Category Category { get; set; } = null!;

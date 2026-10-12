@@ -37,6 +37,8 @@ public sealed class GetRecipesQueryHandler
                 _currentUser.UserId,
                 _currentUser.IsAuthenticated,
                 _currentUser.IsAdmin,
+                request.OwnRecipesOnly,
+                request.IncludeAllStatuses,
                 cancellationToken);
 
         var items =

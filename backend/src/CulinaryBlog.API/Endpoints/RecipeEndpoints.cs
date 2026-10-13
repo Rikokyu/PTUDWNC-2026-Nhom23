@@ -4,6 +4,8 @@ using CulinaryBlog.Application.Features.Recipes.Commands;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeBySlug;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipes;
 using CulinaryBlog.Domain.Enums;
+using Asp.Versioning;
+using Asp.Versioning.Builder;
 using MediatR;
 using Microsoft.AspNetCore.OutputCaching;
 
@@ -12,12 +14,16 @@ namespace CulinaryBlog.API.Endpoints;
 public static class RecipeEndpoints
 {
     public static IEndpointRouteBuilder MapRecipeEndpoints(
-        this IEndpointRouteBuilder endpoints)
+        this IEndpointRouteBuilder endpoints,
+        ApiVersionSet versionSet)
     {
         var group =
             endpoints
                 .MapGroup("/api/v1/recipes")
-                .WithTags("Recipes");
+                .WithApiVersionSet(versionSet)
+                .MapToApiVersion(new ApiVersion(1, 0))
+                .WithTags("Recipes")
+                .RequireRateLimiting("Api");
 
         group
             .MapGet(

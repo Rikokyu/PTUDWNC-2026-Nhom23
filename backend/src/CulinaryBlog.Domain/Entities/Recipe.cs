@@ -80,4 +80,32 @@ public class Recipe : BaseEntity
         Status = RecipeStatus.Draft;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void Archive()
+    {
+        if (Status == RecipeStatus.Archived)
+        {
+            return;
+        }
+
+        if (Status is not (RecipeStatus.Draft or RecipeStatus.Published))
+        {
+            throw new ValidationException(
+                "Only draft or published recipes can be archived.");
+        }
+
+        Status = RecipeStatus.Archived;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SoftDelete()
+    {
+        if (IsDeleted)
+        {
+            return;
+        }
+
+        IsDeleted = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

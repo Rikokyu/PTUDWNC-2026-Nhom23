@@ -170,13 +170,23 @@ public static class RecipeEndpoints
             async (
                 Guid recipeId,
                 ISender sender,
+                IOutputCacheStore outputCacheStore,
                 CancellationToken cancellationToken) =>
             {
-                await sender.Send(
+                var result = await sender.Send(
                     new DeleteRecipeCommand(recipeId),
                     cancellationToken);
+
+                await outputCacheStore.EvictByTagAsync(
+                    "recipes",
+                    cancellationToken);
+                await outputCacheStore.EvictByTagAsync(
+                    $"recipe:{result.Slug}",
+                    cancellationToken);
+
                 return Results.NoContent();
-            });
+            })
+            .RequireAuthorization();
 
         endpoints.MapGet(
             "/api/v1/me/recipes",

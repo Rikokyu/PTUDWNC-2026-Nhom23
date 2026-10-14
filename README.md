@@ -23,8 +23,8 @@
 | **2312610** | Xem Danh sách Công thức           | 1    | 100%    | Hoàn thành API xem danh sách công thức             | Hoàn thành        |
 |             | Xem Chi tiết Công thức            | 1    | 100%    | Hoàn thành API xem chi tiết công thức              | Hoàn thành        |
 |             | Tạo Công thức Nấu ăn Mới          | 2    | 90%     | Tạo công thức ở trạng thái Draft                   | Hoàn thành 1 phần |
-|             | Cập nhật Công thức                | 3    |         | Cập nhật có phân quyền và xử lý concurrency        |                   |
-|             | Xuất bản / Hủy Xuất bản Công thức | 3    |         | Chuyển đổi trạng thái Published/Draft              |                   |
+|             | Cập nhật Công thức                | 3    | 100%    | Cập nhật có phân quyền và xử lý concurrency        | Hoàn thành        |
+|             | Xuất bản / Hủy Xuất bản Công thức | 3    | 100%    | Chuyển đổi trạng thái Published/Draft              | Hoàn thành        |
 |             | Lưu trữ Công thức (Archive)       | 4    |         | Chuyển công thức sang trạng thái Archived          |                   |
 |             | Xóa Công thức                     | 4    |         | Xóa công thức và dữ liệu liên quan                 |                   |
 |             | Quản lý Ảnh Công thức             | 5    |         | Tải lên, đặt ảnh chính và xóa ảnh công thức        |                   |

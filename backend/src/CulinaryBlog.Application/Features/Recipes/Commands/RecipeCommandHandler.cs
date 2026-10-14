@@ -15,7 +15,7 @@ public sealed class RecipeCommandHandler :
     IRequestHandler<CreateRecipeCommand, RecipeMutationResult>,
     IRequestHandler<UpdateRecipeCommand, RecipeMutationResult>,
     IRequestHandler<SetRecipeStatusCommand, RecipeMutationResult>,
-    IRequestHandler<DeleteRecipeCommand>,
+    IRequestHandler<DeleteRecipeCommand, RecipeMutationResult>,
     IRequestHandler<AddRecipeIngredientCommand, Guid>,
     IRequestHandler<UpdateRecipeIngredientCommand>,
     IRequestHandler<DeleteRecipeIngredientCommand>,
@@ -181,8 +181,7 @@ public sealed class RecipeCommandHandler :
         }
         else if (request.Status == RecipeStatus.Archived)
         {
-            recipe.Status = RecipeStatus.Archived;
-            recipe.UpdatedAt = DateTime.UtcNow;
+            recipe.Archive();
         }
         else
         {
@@ -193,16 +192,16 @@ public sealed class RecipeCommandHandler :
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 
-    public async Task Handle(
+    public async Task<RecipeMutationResult> Handle(
         DeleteRecipeCommand request,
         CancellationToken cancellationToken)
     {
         var recipe = await GetOwnedRecipeAsync(
             request.RecipeId,
             cancellationToken);
-        recipe.IsDeleted = true;
-        recipe.UpdatedAt = DateTime.UtcNow;
+        recipe.SoftDelete();
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 
     public async Task<Guid> Handle(

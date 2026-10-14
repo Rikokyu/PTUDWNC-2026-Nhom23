@@ -28,7 +28,7 @@ GET /api/v1/categories
 
 ## GET /api/v1/categories/{slug}
 
-Trả thông tin category và recipe phân trang. `page` mặc định 1; `pageSize` mặc định 12, tối đa 50. Guest chỉ thấy Published; Author thấy thêm recipe của mình theo quy tắc repository; Admin có thể xem toàn bộ trạng thái.
+Trả thông tin category và recipe phân trang. `page` mặc định 1; `pageSize` mặc định 12, tối đa 50. Guest và Admin chỉ thấy recipe Published; Author thấy recipe Published và Draft do chính mình tạo. Admin không được xem Draft chỉ nhờ quyền Admin.
 
 ```http
 GET /api/v1/categories/mon-chinh?page=1&pageSize=12

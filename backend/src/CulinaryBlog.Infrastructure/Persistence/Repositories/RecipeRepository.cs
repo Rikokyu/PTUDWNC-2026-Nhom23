@@ -198,10 +198,11 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         Guid? excludingRecipeId = null,
         CancellationToken cancellationToken = default)
     {
-        return _context.Recipes.AnyAsync(
-            recipe => recipe.Slug == slug
-                && (!excludingRecipeId.HasValue
-                    || recipe.Id != excludingRecipeId.Value),
-            cancellationToken);
+        return _context.Recipes
+            .AnyAsync(
+                recipe => recipe.Slug == slug
+                    && (!excludingRecipeId.HasValue
+                        || recipe.Id != excludingRecipeId.Value),
+                cancellationToken);
     }
 }

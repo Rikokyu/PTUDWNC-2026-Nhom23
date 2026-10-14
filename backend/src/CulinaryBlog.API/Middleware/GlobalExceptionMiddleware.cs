@@ -91,6 +91,14 @@ public class GlobalExceptionMiddleware
                 "Validation failed",
                 ex.Message);
         }
+        catch (CulinaryBlog.Domain.Exceptions.UnauthorizedException ex)
+        {
+            await WriteProblemAsync(
+                context,
+                StatusCodes.Status401Unauthorized,
+                "Unauthorized",
+                ex.Message);
+        }
         catch (ConflictException ex)
         {
             await WriteProblemAsync(

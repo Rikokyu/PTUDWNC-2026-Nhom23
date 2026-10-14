@@ -56,7 +56,9 @@ public static class RecipeImageEndpoints
 						request.IsPrimary),
 					cancellationToken);
 				return Results.NoContent();
-			});
+			})
+			.WithSummary("Update a recipe image.")
+			.RequireAuthorization();
 
 		group.MapDelete(
 			"/{imageId:guid}",
@@ -70,7 +72,9 @@ public static class RecipeImageEndpoints
 					new DeleteRecipeImageCommand(recipeId, imageId),
 					cancellationToken);
 				return Results.NoContent();
-			});
+			})
+			.WithSummary("Delete a recipe image.")
+			.RequireAuthorization();
 
 		return endpoints;
 	}

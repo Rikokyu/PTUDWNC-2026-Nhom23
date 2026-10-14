@@ -34,6 +34,8 @@ builder.Services
 
 builder.Services
     .AddFrontendCors(builder.Configuration);
+builder.Services
+    .AddApiRateLimiting();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -127,11 +129,21 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc(
         "v1",
-        new Microsoft.OpenApi.OpenApiInfo
+        new OpenApiInfo
         {
             Title = "CulinaryBlog API",
-            Version = "v1"
+            Version = "v1",
+            Description = "Version 1 of the CulinaryBlog HTTP API."
         });
+
+    var xmlDocumentationFile = Path.Combine(
+        AppContext.BaseDirectory,
+        $"{typeof(Program).Assembly.GetName().Name}.xml");
+    if (File.Exists(xmlDocumentationFile))
+    {
+        options.IncludeXmlComments(xmlDocumentationFile);
+    }
+
     options.AddSecurityDefinition(
         "Bearer",
         new OpenApiSecurityScheme
@@ -182,6 +194,12 @@ app.UseStaticFiles();
 // Output cache
 app.UseOutputCache();
 
+app.UseHttpsRedirection();
+
+app.UseRouting();
+app.UseCors("Frontend");
+app.UseRateLimiter();
+app.UseAuthentication();
 if (builder.Configuration.GetValue("Hangfire:Enabled", true)
     && (!app.Environment.IsDevelopment()
         || builder.Configuration.GetValue<bool>("Hangfire:DashboardEnabled")))
@@ -211,7 +229,9 @@ using (var scope =
     try
     {
         await DatabaseSeeder
-            .SeedAsync(context);
+            .SeedAsync(
+                context,
+                app.Lifetime.ApplicationStopping);
     }
     catch (DbUpdateConcurrencyException ex)
     {

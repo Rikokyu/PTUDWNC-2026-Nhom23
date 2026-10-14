@@ -69,8 +69,14 @@ public static class ServiceCollectionExtensions
                 "Frontend",
                 policy => policy
                     .WithOrigins(allowedOrigins)
-                    .AllowAnyHeader()
-                    .AllowAnyMethod());
+                    .WithHeaders(
+                        "Authorization",
+                        "Content-Type",
+                        "If-Match",
+                        "If-None-Match",
+                        "api-version")
+                    .AllowAnyMethod()
+                    .WithExposedHeaders("ETag", "Retry-After"));
         });
 
         return services;

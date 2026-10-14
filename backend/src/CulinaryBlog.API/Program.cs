@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.OpenApi;
 using Hangfire;
+using Asp.Versioning;
+using System.Threading.RateLimiting;
 
 var builder =
     WebApplication.CreateBuilder(args);
@@ -34,6 +36,52 @@ builder.Services
     .AddFrontendCors(builder.Configuration);
 builder.Services
     .AddApiRateLimiting();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = (context, _) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        return ValueTask.CompletedTask;
+    };
+
+    options.AddPolicy(
+        "Auth",
+        context => CreateIpPartition(context, 10));
+    options.AddPolicy(
+        "Api",
+        context => CreateIpPartition(context, 100));
+    options.AddPolicy(
+        "Upload",
+        context => CreateIpPartition(context, 5));
+});
+
+RateLimitPartition<string> CreateIpPartition(
+    HttpContext context,
+    int permitLimit) =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+        options.ApiVersionReader = new HeaderApiVersionReader("api-version");
+    })
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+    });
 
 // Infrastructure
 builder.Services
@@ -135,6 +183,12 @@ if (app.Environment.IsDevelopment())
             "CulinaryBlog API v1"));
 }
 
+app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors("Frontend");
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseStaticFiles();
 
 // Output cache
@@ -157,7 +211,6 @@ if (builder.Configuration.GetValue("Hangfire:Enabled", true)
             Authorization = [new HangfireAdminAuthorizationFilter()]
         });
 }
-app.UseAuthorization();
 
 // API endpoints
 app.MapApplicationEndpoints();

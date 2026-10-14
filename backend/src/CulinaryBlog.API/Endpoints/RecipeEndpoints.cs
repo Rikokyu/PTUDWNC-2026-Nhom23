@@ -4,6 +4,8 @@ using CulinaryBlog.Application.Features.Recipes.Commands;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeBySlug;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipes;
 using CulinaryBlog.Domain.Enums;
+using Asp.Versioning;
+using Asp.Versioning.Builder;
 using MediatR;
 using Microsoft.AspNetCore.OutputCaching;
 
@@ -12,12 +14,16 @@ namespace CulinaryBlog.API.Endpoints;
 public static class RecipeEndpoints
 {
     public static IEndpointRouteBuilder MapRecipeEndpoints(
-        this IEndpointRouteBuilder endpoints)
+        this IEndpointRouteBuilder endpoints,
+        ApiVersionSet versionSet)
     {
         var group =
             endpoints
                 .MapGroup("/api/v1/recipes")
-                .WithTags("Recipes");
+                .WithApiVersionSet(versionSet)
+                .MapToApiVersion(new ApiVersion(1, 0))
+                .WithTags("Recipes")
+                .RequireRateLimiting("Api");
 
         group
             .MapGet(
@@ -29,16 +35,12 @@ public static class RecipeEndpoints
                         cancellationToken,
                         ownRecipesOnly: false,
                         includeAllStatuses: false))
-            .WithSummary("List published recipes with filters and pagination.")
-            .WithDescription(
-                "Supports category, difficulty, cooking time, sorting, and pagination filters.")
             .CacheOutput("RecipeList");
 
         group
             .MapGet(
                 "/{slug}",
                 GetRecipeBySlugAsync)
-            .WithSummary("Get a recipe and its details by slug.")
             .CacheOutput("RecipeDetail")
             .CacheOutput("RecipeSlug");
 
@@ -77,7 +79,6 @@ public static class RecipeEndpoints
                     $"/api/v1/recipes/{result.Slug}",
                     new { data = createdRecipe });
             })
-            .WithSummary("Create a recipe.")
             .RequireAuthorization();
 
         group.MapPut(
@@ -117,7 +118,6 @@ public static class RecipeEndpoints
 
                 return Results.Ok(new { data = updatedRecipe });
             })
-            .WithSummary("Update a recipe.")
             .RequireAuthorization();
 
         group.MapPatch(
@@ -133,7 +133,6 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
-            .WithSummary("Publish a draft recipe.")
             .RequireAuthorization();
 
         group.MapPatch(
@@ -149,7 +148,6 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
-            .WithSummary("Return a published recipe to draft.")
             .RequireAuthorization();
 
         group.MapPatch(
@@ -165,7 +163,6 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
-            .WithSummary("Archive a recipe.")
             .RequireAuthorization();
 
         group.MapDelete(
@@ -173,14 +170,22 @@ public static class RecipeEndpoints
             async (
                 Guid recipeId,
                 ISender sender,
+                IOutputCacheStore outputCacheStore,
                 CancellationToken cancellationToken) =>
             {
-                await sender.Send(
+                var result = await sender.Send(
                     new DeleteRecipeCommand(recipeId),
                     cancellationToken);
+
+                await outputCacheStore.EvictByTagAsync(
+                    "recipes",
+                    cancellationToken);
+                await outputCacheStore.EvictByTagAsync(
+                    $"recipe:{result.Slug}",
+                    cancellationToken);
+
                 return Results.NoContent();
             })
-            .WithSummary("Delete a recipe.")
             .RequireAuthorization();
 
         endpoints.MapGet(
@@ -203,9 +208,7 @@ public static class RecipeEndpoints
                     cancellationToken,
                     ownRecipesOnly: true,
                     includeAllStatuses: false);
-            })
-            .WithSummary("List the authenticated user's recipes.")
-            .RequireAuthorization();
+            });
 
         endpoints.MapGet(
             "/api/v1/admin/recipes",
@@ -227,9 +230,7 @@ public static class RecipeEndpoints
                     cancellationToken,
                     ownRecipesOnly: false,
                     includeAllStatuses: true);
-            })
-            .WithSummary("List recipes available to administrators.")
-            .RequireAuthorization("Admin");
+            });
 
         return endpoints;
     }

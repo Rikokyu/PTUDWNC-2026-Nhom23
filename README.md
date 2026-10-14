@@ -23,8 +23,8 @@
 | **2312610** | Xem Danh sách Công thức           | 1    | 100%    | Hoàn thành API xem danh sách công thức             | Hoàn thành        |
 |             | Xem Chi tiết Công thức            | 1    | 100%    | Hoàn thành API xem chi tiết công thức              | Hoàn thành        |
 |             | Tạo Công thức Nấu ăn Mới          | 2    | 90%     | Tạo công thức ở trạng thái Draft                   | Hoàn thành 1 phần |
-|             | Cập nhật Công thức                | 3    |         | Cập nhật có phân quyền và xử lý concurrency        |                   |
-|             | Xuất bản / Hủy Xuất bản Công thức | 3    |         | Chuyển đổi trạng thái Published/Draft              |                   |
+|             | Cập nhật Công thức                | 3    | 100%    | Cập nhật có phân quyền và xử lý concurrency        | Hoàn thành        |
+|             | Xuất bản / Hủy Xuất bản Công thức | 3    | 100%    | Chuyển đổi trạng thái Published/Draft              | Hoàn thành        |
 |             | Lưu trữ Công thức (Archive)       | 4    |         | Chuyển công thức sang trạng thái Archived          |                   |
 |             | Xóa Công thức                     | 4    |         | Xóa công thức và dữ liệu liên quan                 |                   |
 |             | Quản lý Ảnh Công thức             | 5    |         | Tải lên, đặt ảnh chính và xóa ảnh công thức        |                   |
@@ -451,6 +451,7 @@ Recipe có token phiên bản `RowVersion` do backend cập nhật mỗi khi cô
 ### 8.1. Quy ước chung
 
 - API nghiệp vụ có tiền tố `/api/v1`; JSON dùng camelCase; upload ảnh dùng `multipart/form-data`.
+- Backend khai báo API version `1.0`; client có thể chọn version bằng header `api-version` (mặc định `1.0`). Đường dẫn `/api/v1` hiện tại được giữ nguyên.
 - Thành công trả `{ "data": ... }`; danh sách phân trang thêm `meta` gồm `page`, `pageSize`, `total`, `totalPages`. `204` không có body.
 - Lỗi dùng Problem Details, gồm status, mô tả và mã lỗi để frontend xử lý: `400` cho JSON/tệp không hợp lệ; `401` cho xác thực thất bại; `403` thiếu quyền; `404` không có tài nguyên hoặc đã xóa; `409` xung đột phiên bản/dữ liệu duy nhất/danh mục còn công thức; `422` dữ liệu hoặc điều kiện nghiệp vụ không hợp lệ.
 - Khi thay đổi công thức đã tồn tại hoặc dữ liệu con, client gửi phiên bản công thức qua `If-Match`; thiếu hoặc sai định dạng trả `400`, phiên bản cũ trả `409`. Backend cập nhật phiên bản trong cùng giao dịch; response thành công trả ETag mới. CORS cho phép `If-Match` và cho frontend đọc ETag.

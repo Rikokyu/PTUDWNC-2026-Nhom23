@@ -51,7 +51,8 @@ public sealed record SetRecipeStatusCommand(
     RecipeStatus Status)
     : IRequest<RecipeMutationResult>;
 
-public sealed record DeleteRecipeCommand(Guid RecipeId) : IRequest;
+public sealed record DeleteRecipeCommand(Guid RecipeId)
+    : IRequest<RecipeMutationResult>;
 
 public sealed record AddRecipeIngredientCommand(
     Guid RecipeId,

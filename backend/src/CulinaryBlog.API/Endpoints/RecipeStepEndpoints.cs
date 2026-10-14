@@ -1,4 +1,6 @@
 using CulinaryBlog.Application.Features.Recipes.Commands;
+using Asp.Versioning;
+using Asp.Versioning.Builder;
 using MediatR;
 
 namespace CulinaryBlog.API.Endpoints;
@@ -6,11 +8,15 @@ namespace CulinaryBlog.API.Endpoints;
 public static class RecipeStepEndpoints
 {
 	public static IEndpointRouteBuilder MapRecipeStepEndpoints(
-		this IEndpointRouteBuilder endpoints)
+		this IEndpointRouteBuilder endpoints,
+		ApiVersionSet versionSet)
 	{
 		var group = endpoints
 			.MapGroup("/api/v1/recipes/{recipeId:guid}/steps")
-			.WithTags("Recipe Steps");
+			.WithApiVersionSet(versionSet)
+			.MapToApiVersion(new ApiVersion(1, 0))
+			.WithTags("Recipe Steps")
+			.RequireRateLimiting("Api");
 
 		group.MapPost(
 			"",

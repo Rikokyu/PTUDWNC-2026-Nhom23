@@ -57,7 +57,9 @@ public sealed class GetCategoryBySlugQueryHandler
             category.Id,
             request.Page,
             request.PageSize,
-            _currentUser.UserId,
+            _currentUser.IsAuthor || _currentUser.IsAdmin
+                ? _currentUser.UserId
+                : null,
             _currentUser.IsAuthenticated,
             _currentUser.IsAdmin,
             cancellationToken);

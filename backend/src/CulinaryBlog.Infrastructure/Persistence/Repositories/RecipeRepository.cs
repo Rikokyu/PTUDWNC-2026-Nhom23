@@ -48,7 +48,16 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 && currentUserId.HasValue
                 && x.AuthorId == currentUserId.Value);
         }
-        else if (!includeAllStatuses || !isAdmin)
+        else if (isAdmin && includeAllStatuses)
+        {
+        }
+        else if (isAuthenticated && currentUserId.HasValue)
+        {
+            query = query.Where(x =>
+                x.Status == RecipeStatus.Published
+                || x.AuthorId == currentUserId.Value);
+        }
+        else
         {
             query = query.Where(x =>
                 x.Status == RecipeStatus.Published);

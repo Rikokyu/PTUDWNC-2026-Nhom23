@@ -77,6 +77,12 @@ public class Recipe : BaseEntity
             return;
         }
 
+        if (Status != RecipeStatus.Published)
+        {
+            throw new ValidationException(
+                "Only published recipes can be unpublished.");
+        }
+
         Status = RecipeStatus.Draft;
         UpdatedAt = DateTime.UtcNow;
     }

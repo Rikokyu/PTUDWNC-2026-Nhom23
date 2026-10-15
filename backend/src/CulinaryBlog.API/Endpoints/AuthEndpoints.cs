@@ -16,12 +16,14 @@ public static class AuthEndpoints
     {
         var group = endpoints
             .MapGroup("/api/auth")
-            .WithTags("Authentication");
+            .WithTags("Authentication")
+            .RequireRateLimiting("Auth");
 
         MapEndpoints(group, "Auth");
         MapEndpoints(
             endpoints.MapGroup("/api/v1/auth")
                 .WithTags("Authentication")
+                .RequireRateLimiting("Auth")
                 .WithDescription("Version 1 authentication routes."),
             "V1Auth");
 
@@ -38,7 +40,6 @@ public static class AuthEndpoints
             .WithDescription(
                 "Creates an account after validating the email and password.")
             .AllowAnonymous()
-            .RequireRateLimiting("Auth")
             .Produces(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
@@ -49,7 +50,6 @@ public static class AuthEndpoints
             .WithDescription(
                 "Returns a JWT access token and a refresh token.")
             .AllowAnonymous()
-            .RequireRateLimiting("Auth")
             .Produces(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized);

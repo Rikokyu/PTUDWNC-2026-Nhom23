@@ -21,6 +21,7 @@ public static class HealthEndpoints
 			.WithTags("Health")
 			.WithName("Liveness")
 			.WithSummary("Check API liveness.")
+			.RequireRateLimiting("Api")
 			.Produces<HealthEndpointResponse>(StatusCodes.Status200OK)
 			.Produces<HealthEndpointResponse>(
 				StatusCodes.Status503ServiceUnavailable);
@@ -37,6 +38,7 @@ public static class HealthEndpoints
 			.WithTags("Health")
 			.WithName("Readiness")
 			.WithSummary("Check API and dependency readiness.")
+			.RequireRateLimiting("Api")
 			.Produces<HealthEndpointResponse>(StatusCodes.Status200OK)
 			.Produces<HealthEndpointResponse>(
 				StatusCodes.Status503ServiceUnavailable);

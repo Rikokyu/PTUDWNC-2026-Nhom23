@@ -1,6 +1,8 @@
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Common.Interfaces;
+using CulinaryBlog.Application.Features.Recipes.Commands;
 using CulinaryBlog.Application.Features.Recipes.Commands.UploadRecipeImage;
+using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipes;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Interfaces;
@@ -89,6 +91,127 @@ public sealed class RegistrationAndImageUploadTests
                 CancellationToken.None));
     }
 
+    [Fact]
+    public async Task RecipeList_DoesNotPassPrivateOwnerScopeForNonAuthors()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeRecipeRepository(
+            CreateRecipe(userId));
+        var handler = new GetRecipesQueryHandler(
+            repository,
+            new FakeCurrentUser(userId, isAuthor: false));
+
+        await handler.Handle(
+            new GetRecipesQuery(
+                1,
+                12,
+                null,
+                null,
+                null,
+                "-createdAt"),
+            CancellationToken.None);
+
+        Assert.Null(repository.LastPagedCurrentUserId);
+    }
+
+    [Fact]
+    public async Task RecipeList_PassesOwnerScopeForAuthors()
+    {
+        var userId = Guid.NewGuid();
+        var repository = new FakeRecipeRepository(
+            CreateRecipe(userId));
+        var handler = new GetRecipesQueryHandler(
+            repository,
+            new FakeCurrentUser(userId));
+
+        await handler.Handle(
+            new GetRecipesQuery(
+                1,
+                12,
+                null,
+                null,
+                null,
+                "-createdAt"),
+            CancellationToken.None);
+
+        Assert.Equal(userId, repository.LastPagedCurrentUserId);
+    }
+
+    [Fact]
+    public async Task UpdateRecipe_RejectsNonOwner()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        var repository = new FakeRecipeRepository(recipe);
+        var handler = new RecipeCommandHandler(
+            repository,
+            new FakeCategoryStore(),
+            repository,
+            new FakeUnitOfWork(repository),
+            new FakeCurrentUser(Guid.NewGuid()));
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            handler.Handle(
+                UpdateCommand(recipe, recipe.RowVersion),
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateRecipe_AllowsAdminToUpdateAnotherAuthorsRecipe()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        var repository = new FakeRecipeRepository(recipe);
+        var unitOfWork = new FakeUnitOfWork(repository);
+        var handler = new RecipeCommandHandler(
+            repository,
+            new FakeCategoryStore(),
+            repository,
+            unitOfWork,
+            new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true));
+
+        await handler.Handle(
+            UpdateCommand(recipe, recipe.RowVersion),
+            CancellationToken.None);
+
+        Assert.Equal(1, unitOfWork.SaveCount);
+    }
+
+    [Fact]
+    public async Task UpdateRecipe_RejectsStaleRowVersion()
+    {
+        var ownerId = Guid.NewGuid();
+        var recipe = CreateRecipe(ownerId);
+        recipe.RowVersion = 5;
+        var repository = new FakeRecipeRepository(recipe);
+        var handler = new RecipeCommandHandler(
+            repository,
+            new FakeCategoryStore(),
+            repository,
+            new FakeUnitOfWork(repository),
+            new FakeCurrentUser(ownerId));
+
+        await Assert.ThrowsAsync<
+            CulinaryBlog.Domain.Exceptions.BusinessRuleException>(() =>
+            handler.Handle(
+                UpdateCommand(recipe, rowVersion: 4),
+                CancellationToken.None));
+    }
+
+    private static UpdateRecipeCommand UpdateCommand(
+        Recipe recipe,
+        uint rowVersion) =>
+        new(
+            recipe.Id,
+            "Updated recipe",
+            "Updated description",
+            null,
+            recipe.CategoryId,
+            10,
+            20,
+            2,
+            DifficultyLevel.Easy,
+            rowVersion,
+            null);
+
     private static Recipe CreateRecipe(Guid authorId) =>
         new()
         {
@@ -106,12 +229,15 @@ public sealed class RegistrationAndImageUploadTests
     private static byte[] ValidPngBytes() =>
         [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
 
-    private sealed class FakeCurrentUser(Guid userId) : ICurrentUser
+    private sealed class FakeCurrentUser(
+        Guid userId,
+        bool isAuthor = true,
+        bool isAdmin = false) : ICurrentUser
     {
         public Guid? UserId { get; } = userId;
         public bool IsAuthenticated => true;
-        public bool IsAuthor => true;
-        public bool IsAdmin => false;
+        public bool IsAuthor { get; } = isAuthor;
+        public bool IsAdmin { get; } = isAdmin;
     }
 
     private sealed class FakeFileStorageService : IFileStorageService
@@ -164,9 +290,37 @@ public sealed class RegistrationAndImageUploadTests
         }
     }
 
+    private sealed class FakeCategoryStore : IRepository<Category>
+    {
+        public Task<Category?> GetByIdAsync(
+            Guid id,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<Category?>(new Category { Id = id });
+
+        public Task<IReadOnlyList<Category>> GetAllAsync(
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<Category>>([]);
+
+        public Task<bool> ExistsAsync(
+            Guid id,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
+        public Task AddAsync(
+            Category entity,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public void Update(Category entity) { }
+        public void Delete(Category entity) { }
+        public void Remove(Category entity) { }
+    }
+
     private sealed class FakeRecipeRepository(Recipe recipe)
         : IRecipeRepository
     {
+        public Guid? LastPagedCurrentUserId { get; private set; }
+
         public Task<Recipe?> GetByIdWithImagesAsync(
             Guid id,
             CancellationToken cancellationToken = default) =>
@@ -221,8 +375,11 @@ public sealed class RegistrationAndImageUploadTests
                 bool isAdmin,
                 bool ownRecipesOnly = false,
                 bool includeAllStatuses = false,
-                CancellationToken cancellationToken = default) =>
-            Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
+                CancellationToken cancellationToken = default)
+        {
+                LastPagedCurrentUserId = currentUserId;
+                return Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
+        }
 
         public Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
             GetPagedForCategoryAsync(

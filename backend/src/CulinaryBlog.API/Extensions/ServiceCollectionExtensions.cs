@@ -91,6 +91,7 @@ public static class ServiceCollectionExtensions
                 StatusCodes.Status429TooManyRequests;
             options.OnRejected = async (context, cancellationToken) =>
             {
+                context.HttpContext.Response.Headers.RetryAfter = "60";
                 context.HttpContext.Response.ContentType =
                     "application/problem+json";
                 await context.HttpContext.Response.WriteAsJsonAsync(
@@ -110,21 +111,32 @@ public static class ServiceCollectionExtensions
                     _ => new FixedWindowRateLimiterOptions
                     {
                         PermitLimit = 10,
-                        Window = TimeSpan.FromMinutes(5),
+                        Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0,
                         AutoReplenishment = true
                     }));
-            options.GlobalLimiter =
-                PartitionedRateLimiter.Create<HttpContext, string>(
-                    context => RateLimitPartition.GetFixedWindowLimiter(
-                        GetClientAddress(context),
-                        _ => new FixedWindowRateLimiterOptions
-                        {
-                            PermitLimit = 120,
-                            Window = TimeSpan.FromMinutes(1),
-                            QueueLimit = 0,
-                            AutoReplenishment = true
-                        }));
+            options.AddPolicy(
+                "Api",
+                context => RateLimitPartition.GetFixedWindowLimiter(
+                    GetClientAddress(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 100,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+            options.AddPolicy(
+                "Upload",
+                context => RateLimitPartition.GetFixedWindowLimiter(
+                    GetClientAddress(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
         });
 
         return services;

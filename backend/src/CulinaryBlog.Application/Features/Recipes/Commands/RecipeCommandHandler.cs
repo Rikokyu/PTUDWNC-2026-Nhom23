@@ -167,12 +167,6 @@ public sealed class RecipeCommandHandler :
 
         if (request.Status == RecipeStatus.Published)
         {
-            if (recipe.Ingredients.Count == 0)
-            {
-                throw new ValidationException(
-                    "A recipe needs at least one ingredient before publishing.");
-            }
-
             recipe.Publish();
         }
         else if (request.Status == RecipeStatus.Draft)

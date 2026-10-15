@@ -98,6 +98,11 @@ export interface CategoryApiDto {
   recipeCount: number;
 }
 
+export interface CategoryDetailApiDto {
+  category: CategoryApiDto;
+  recipes: PaginatedResult<RecipeApiSummaryDto>;
+}
+
 export interface RecipeListDto {
   id: string;
   title: string;
@@ -155,6 +160,8 @@ export interface RecipeFilters {
   page?: number;
   pageSize?: number;
   categoryId?: string;
-  difficulty?: Difficulty;
+  difficulty?: Difficulty | "Expert";
+  maxCookTime?: number;
+  sort?: "-createdAt" | "createdAt" | "title" | "cookTime" | "-cookTime";
   search?: string;
 }

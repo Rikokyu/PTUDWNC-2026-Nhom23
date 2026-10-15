@@ -41,8 +41,7 @@ public static class RecipeEndpoints
             .MapGet(
                 "/{slug}",
                 GetRecipeBySlugAsync)
-            .CacheOutput("RecipeDetail")
-            .CacheOutput("RecipeSlug");
+            .CacheOutput("RecipeDetail");
 
         group.MapPost(
             "",

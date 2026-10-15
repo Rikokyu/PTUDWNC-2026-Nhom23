@@ -34,7 +34,9 @@ public sealed class GetRecipesQueryHandler
                 request.Difficulty,
                 request.MaxCookTime,
                 request.Sort,
-                _currentUser.UserId,
+                _currentUser.IsAuthor || _currentUser.IsAdmin
+                    ? _currentUser.UserId
+                    : null,
                 _currentUser.IsAuthenticated,
                 _currentUser.IsAdmin,
                 request.OwnRecipesOnly,

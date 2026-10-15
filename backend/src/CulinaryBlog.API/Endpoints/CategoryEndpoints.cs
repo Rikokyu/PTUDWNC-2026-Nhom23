@@ -16,7 +16,8 @@ public static class CategoryEndpoints
 	{
 		var group = endpoints
 			.MapGroup("/api/v1/categories")
-			.WithTags("Categories");
+			.WithTags("Categories")
+			.RequireRateLimiting("Api");
 
 		group.MapGet("", GetCategoriesAsync)
 			.WithName("GetCategories")

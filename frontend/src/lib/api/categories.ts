@@ -1,22 +1,15 @@
 import apiClient from "./axios";
-import { MockCategory, MOCK_CATEGORIES } from "@/lib/mockData";
+import type { CategoryApiDto, CategoryDetailApiDto } from "@/types/api";
 
 export const categoryApi = {
-  getAll: async (): Promise<MockCategory[]> => {
-    try {
-      const response = await apiClient.get<MockCategory[]>("/api/v1/categories");
-      return response.data;
-    } catch {
-      // Fallback to mock categories when backend API is offline
-      return MOCK_CATEGORIES;
-    }
+  getAll: async (): Promise<CategoryApiDto[]> => {
+    const response = await apiClient.get<CategoryApiDto[]>("/api/v1/categories");
+    return response.data;
   },
-  getBySlug: async (slug: string): Promise<MockCategory | undefined> => {
-    try {
-      const response = await apiClient.get<MockCategory>(`/api/v1/categories/${slug}`);
-      return response.data;
-    } catch {
-      return MOCK_CATEGORIES.find((c) => c.slug === slug);
-    }
+  getBySlug: async (slug: string): Promise<CategoryDetailApiDto> => {
+    const response = await apiClient.get<CategoryDetailApiDto>(
+      `/api/v1/categories/${encodeURIComponent(slug)}`,
+    );
+    return response.data;
   },
 };

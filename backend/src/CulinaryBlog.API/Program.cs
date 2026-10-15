@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.OpenApi;
 using Hangfire;
 using Asp.Versioning;
-using System.Threading.RateLimiting;
 
 var builder =
     WebApplication.CreateBuilder(args);
@@ -36,39 +35,6 @@ builder.Services
     .AddFrontendCors(builder.Configuration);
 builder.Services
     .AddApiRateLimiting();
-
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.OnRejected = (context, _) =>
-    {
-        context.HttpContext.Response.Headers.RetryAfter = "60";
-        return ValueTask.CompletedTask;
-    };
-
-    options.AddPolicy(
-        "Auth",
-        context => CreateIpPartition(context, 10));
-    options.AddPolicy(
-        "Api",
-        context => CreateIpPartition(context, 100));
-    options.AddPolicy(
-        "Upload",
-        context => CreateIpPartition(context, 5));
-});
-
-RateLimitPartition<string> CreateIpPartition(
-    HttpContext context,
-    int permitLimit) =>
-    RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = permitLimit,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0,
-            AutoReplenishment = true
-        });
 
 builder.Services
     .AddApiVersioning(options =>
@@ -97,28 +63,11 @@ builder.Services
     {
         options.AddPolicy(
             "RecipeList",
-            policy =>
-            {
-                policy
-                    .Expire(
-                        TimeSpan.FromMinutes(15))
-                    .SetVaryByQuery("*")
-                    .Tag("recipes");
-            });
+            new RecipeListOutputCachePolicy());
 
         options.AddPolicy(
             "RecipeDetail",
-            policy =>
-            {
-                policy
-                    .Expire(
-                        TimeSpan.FromMinutes(60))
-                    .Tag("recipes");
-            });
-
-        options.AddPolicy(
-            "RecipeSlug",
-            new RecipeSlugOutputCachePolicy());
+            new RecipeDetailOutputCachePolicy());
     });
 
 // Swagger
@@ -167,6 +116,12 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services
     .AddProblemDetails();
 
+builder.Services
+    .AddHealthChecks()
+    .AddCheck<PostgreSqlHealthCheck>(
+        "postgresql",
+        tags: ["ready"]);
+
 var app =
     builder.Build();
 
@@ -194,12 +149,6 @@ app.UseStaticFiles();
 // Output cache
 app.UseOutputCache();
 
-app.UseHttpsRedirection();
-
-app.UseRouting();
-app.UseCors("Frontend");
-app.UseRateLimiter();
-app.UseAuthentication();
 if (builder.Configuration.GetValue("Hangfire:Enabled", true)
     && (!app.Environment.IsDevelopment()
         || builder.Configuration.GetValue<bool>("Hangfire:DashboardEnabled")))
@@ -249,12 +198,25 @@ using (var scope =
 
 app.Run();
 
-internal sealed class RecipeSlugOutputCachePolicy : IOutputCachePolicy
+internal sealed class RecipeListOutputCachePolicy : IOutputCachePolicy
 {
     public ValueTask CacheRequestAsync(
         OutputCacheContext context,
-        CancellationToken cancellationToken) =>
-        ValueTask.CompletedTask;
+        CancellationToken cancellationToken)
+    {
+        var isPublicRequest =
+            context.HttpContext.User.Identity?.IsAuthenticated != true;
+
+        context.EnableOutputCaching = true;
+        context.AllowCacheLookup = isPublicRequest;
+        context.AllowCacheStorage = isPublicRequest;
+        context.ResponseExpirationTimeSpan =
+            TimeSpan.FromMinutes(15);
+        context.CacheVaryByRules.QueryKeys =
+            new Microsoft.Extensions.Primitives.StringValues("*");
+
+        return ValueTask.CompletedTask;
+    }
 
     public ValueTask ServeFromCacheAsync(
         OutputCacheContext context,
@@ -265,6 +227,40 @@ internal sealed class RecipeSlugOutputCachePolicy : IOutputCachePolicy
         OutputCacheContext context,
         CancellationToken cancellationToken)
     {
+        context.Tags.Add("recipes");
+        return ValueTask.CompletedTask;
+    }
+}
+
+internal sealed class RecipeDetailOutputCachePolicy : IOutputCachePolicy
+{
+    public ValueTask CacheRequestAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken)
+    {
+        var isPublicRequest =
+            context.HttpContext.User.Identity?.IsAuthenticated != true;
+
+        context.EnableOutputCaching = true;
+        context.AllowCacheLookup = isPublicRequest;
+        context.AllowCacheStorage = isPublicRequest;
+        context.ResponseExpirationTimeSpan =
+            TimeSpan.FromMinutes(60);
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask ServeFromCacheAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask ServeResponseAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken)
+    {
+        context.Tags.Add("recipes");
+
         if (context.HttpContext.Request.RouteValues.TryGetValue(
                 "slug",
                 out var slug)

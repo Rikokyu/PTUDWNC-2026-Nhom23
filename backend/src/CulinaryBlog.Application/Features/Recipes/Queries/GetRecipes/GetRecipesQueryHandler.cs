@@ -40,7 +40,7 @@ public sealed class GetRecipesQueryHandler
                 _currentUser.IsAuthenticated,
                 _currentUser.IsAdmin,
                 request.OwnRecipesOnly,
-                request.IncludeAllStatuses,
+                request.IncludeAllStatuses || _currentUser.IsAdmin,
                 cancellationToken);
 
         var items =

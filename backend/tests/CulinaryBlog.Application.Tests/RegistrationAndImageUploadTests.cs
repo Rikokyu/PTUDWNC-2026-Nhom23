@@ -138,6 +138,28 @@ public sealed class RegistrationAndImageUploadTests
     }
 
     [Fact]
+    public async Task RecipeList_AdminIncludesAllStatusesByDefault()
+    {
+        var repository = new FakeRecipeRepository(
+            CreateRecipe(Guid.NewGuid()));
+        var handler = new GetRecipesQueryHandler(
+            repository,
+            new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true));
+
+        await handler.Handle(
+            new GetRecipesQuery(
+                1,
+                12,
+                null,
+                null,
+                null,
+                "-createdAt"),
+            CancellationToken.None);
+
+        Assert.True(repository.LastPagedIncludeAllStatuses);
+    }
+
+    [Fact]
     public async Task UpdateRecipe_RejectsNonOwner()
     {
         var recipe = CreateRecipe(Guid.NewGuid());
@@ -320,6 +342,7 @@ public sealed class RegistrationAndImageUploadTests
         : IRecipeRepository
     {
         public Guid? LastPagedCurrentUserId { get; private set; }
+        public bool LastPagedIncludeAllStatuses { get; private set; }
 
         public Task<Recipe?> GetByIdWithImagesAsync(
             Guid id,
@@ -378,6 +401,7 @@ public sealed class RegistrationAndImageUploadTests
                 CancellationToken cancellationToken = default)
         {
                 LastPagedCurrentUserId = currentUserId;
+                LastPagedIncludeAllStatuses = includeAllStatuses;
                 return Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
         }
 

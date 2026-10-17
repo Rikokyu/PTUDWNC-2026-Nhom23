@@ -19,6 +19,9 @@ export default function CategoriesPage() {
           Khám phá công thức theo từng chủ đề ẩm thực phong phú, từ món chính gia đình đến món chay và đồ uống.
         </p>
       </div>
+      <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Danh mục dưới đây là dữ liệu minh họa; trang danh mục chưa kết nối API.
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {MOCK_CATEGORIES.map((category) => (

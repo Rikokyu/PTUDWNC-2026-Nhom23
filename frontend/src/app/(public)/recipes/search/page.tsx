@@ -47,6 +47,9 @@ function SearchContent() {
           Nhập tên món ăn, loại nguyên liệu hoặc phương pháp chế biến bạn muốn tìm.
         </p>
       </div>
+      <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Kết quả tìm kiếm hiện dùng dữ liệu minh họa, chưa truy vấn API.
+      </p>
 
       <div className="max-w-2xl space-y-4">
         <SearchBar

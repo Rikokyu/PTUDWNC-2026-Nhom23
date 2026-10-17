@@ -35,7 +35,7 @@ export default function HomePage() {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-light text-brand-hover text-xs font-semibold border border-brand-border/40">
                 {/* Pastel Purple micro detail (<2% color budget) */}
                 <span className="w-2 h-2 rounded-full bg-pastel-purple animate-pulse" />
-                <span>Nền Tảng Nấu Ăn & Chia Sẻ Công Thức #1</span>
+                <span>Giao diện minh họa · nội dung mẫu</span>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-content-primary tracking-tight leading-[1.15]">
@@ -221,7 +221,7 @@ export default function HomePage() {
                 Món Ăn Mới Nhất
               </h2>
               <p className="text-xs text-content-tertiary mt-1">
-                Các công thức mới được chia sẻ bởi cộng đồng bếp Culinary Blog
+                Các công thức hiển thị là dữ liệu minh họa, chưa tải từ API
               </p>
             </div>
           </div>

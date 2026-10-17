@@ -1,5 +1,6 @@
 import apiClient from "./axios";
 import type {
+  CreateRecipeRequest,
   PaginatedResult,
   RecipeApiDetailDto,
   RecipeApiSummaryDto,
@@ -23,5 +24,12 @@ export const recipeApi = {
       `/api/v1/recipes/${encodeURIComponent(slug)}`,
     );
     return response.data;
+  },
+  create: async (request: CreateRecipeRequest): Promise<RecipeApiDetailDto> => {
+    const response = await apiClient.post<{ data: RecipeApiDetailDto }>(
+      "/api/v1/recipes",
+      request,
+    );
+    return response.data.data;
   },
 };

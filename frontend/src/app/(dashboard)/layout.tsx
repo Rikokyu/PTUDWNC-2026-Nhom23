@@ -7,14 +7,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const dummyUser = {
-    name: "Minh Thư",
-    email: "minhthu@culinary.vn",
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
-      <Navbar user={dummyUser} />
+      <Navbar />
       <div className="flex-1 max-w-[1280px] w-full mx-auto flex">
         <Sidebar />
         <main className="flex-1 p-6 lg:p-8 min-w-0">

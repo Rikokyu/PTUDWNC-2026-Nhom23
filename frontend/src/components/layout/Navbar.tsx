@@ -3,10 +3,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, Plus, Menu, X, ChefHat, User, Bookmark, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { authApi } from "@/lib/api/auth";
+import { getApiErrorMessage } from "@/lib/api/error";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export interface NavbarProps {
   user?: {
@@ -18,8 +21,27 @@ export interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const authUser = useAuthStore((state) => state.user);
+  const clearSession = useAuthStore((state) => state.clearSession);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const currentUser = user ?? (authUser
+    ? { name: authUser.displayName, email: authUser.email }
+    : null);
+
+  async function handleLogout() {
+    setLogoutError(null);
+    try {
+      await authApi.logout();
+      clearSession();
+      setUserDropdownOpen(false);
+      router.push("/");
+    } catch (error) {
+      setLogoutError(getApiErrorMessage(error));
+    }
+  }
 
   const navLinks = [
     { label: "Trang chủ", href: "/" },
@@ -93,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
             </kbd>
           </Link>
 
-          {user ? (
+          {currentUser ? (
             <div className="flex items-center gap-3">
               <Link href="/dashboard/recipes/new">
                 <Button
@@ -113,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                   className="flex items-center gap-2 p-1 rounded-full border border-slate-200 hover:border-brand transition-colors focus:outline-none"
                 >
                   <div className="w-8 h-8 rounded-full bg-brand-light text-brand-hover flex items-center justify-center font-bold text-xs uppercase">
-                    {user.name.charAt(0)}
+                    {currentUser.name.charAt(0)}
                   </div>
                 </button>
 
@@ -125,10 +147,10 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                   >
                     <div className="px-4 py-2.5 border-b border-slate-100">
                       <p className="text-xs font-semibold text-content-primary truncate">
-                        {user.name}
+                        {currentUser.name}
                       </p>
                       <p className="text-[11px] text-content-tertiary truncate">
-                        {user.email}
+                        {currentUser.email}
                       </p>
                     </div>
 
@@ -160,8 +182,13 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                     </div>
 
                     <div className="border-t border-slate-100 pt-1">
+                      {logoutError && (
+                        <p role="alert" className="px-4 py-2 text-xs text-rose-700">
+                          {logoutError}
+                        </p>
+                      )}
                       <button
-                        onClick={() => setUserDropdownOpen(false)}
+                        onClick={() => void handleLogout()}
                         className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors text-left"
                       >
                         <LogOut className="w-4 h-4" />
@@ -229,7 +256,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
             ))}
           </div>
 
-          {user && (
+          {currentUser ? (
             <div className="pt-3 border-t border-slate-100 space-y-2">
               <Link
                 href="/dashboard/recipes/new"
@@ -238,6 +265,15 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                 <Button variant="primary" size="md" className="w-full justify-center" leftIcon={<Plus className="w-4 h-4" />}>
                   Đăng công thức mới
                 </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="flex gap-2 border-t border-slate-100 pt-3">
+              <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="outline" size="sm">Đăng nhập</Button>
+              </Link>
+              <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="primary" size="sm">Đăng ký</Button>
               </Link>
             </div>
           )}

@@ -1,29 +1,51 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { MOCK_CATEGORIES } from "@/lib/mockData";
-import { Plus, Trash2, ArrowLeft, Image as ImageIcon, CheckCircle2 } from "lucide-react";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { useCategories } from "@/hooks/useCategories";
+import { recipeApi } from "@/lib/api/recipes";
+import { getApiErrorMessage } from "@/lib/api/error";
+import { recipeKeys } from "@/hooks/useRecipes";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function NewRecipePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const categoriesQuery = useCategories();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Form State
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const [categorySlug, setCategorySlug] = useState("mon-chinh");
+  const [categoryId, setCategoryId] = useState("");
   const [difficulty, setDifficulty] = useState("Easy");
   const [prepTime, setPrepTime] = useState(15);
   const [cookTime, setCookTime] = useState(20);
   const [servings, setServings] = useState(4);
-  const [imageUrl, setImageUrl] = useState("");
+  const [instructions, setInstructions] = useState("");
+
+  useEffect(() => {
+    if (!accessToken) {
+      router.replace("/auth/login");
+    }
+  }, [accessToken, router]);
+
+  useEffect(() => {
+    if (!categoryId && categoriesQuery.data?.length) {
+      setCategoryId(categoriesQuery.data[0].id);
+    }
+  }, [categoryId, categoriesQuery.data]);
 
   // Dynamic Ingredients State
   const [ingredients, setIngredients] = useState([
@@ -52,16 +74,53 @@ export default function NewRecipePage() {
     setSteps(steps.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+    if (!accessToken) {
+      router.replace("/auth/login");
+      return;
+    }
+    const validIngredients = ingredients.filter((ingredient) => ingredient.name.trim());
+    const validSteps = steps.filter((step) => step.description.trim());
+    if (!categoryId || validIngredients.length === 0 || validSteps.length === 0) {
+      setSubmitError("Hãy chọn danh mục, nhập ít nhất một nguyên liệu và một bước hướng dẫn.");
+      return;
+    }
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const created = await recipeApi.create({
+        title: title.trim(),
+        description: summary.trim(),
+        categoryId,
+        prepTimeMinutes: prepTime,
+        cookTimeMinutes: cookTime,
+        servings,
+        difficulty: difficulty === "Easy" ? 1 : difficulty === "Hard" ? 3 : 2,
+        instructions:
+          instructions.trim() ||
+          validSteps.map((step, index) => `${index + 1}. ${step.description.trim()}`).join("\n"),
+        ingredients: validIngredients.map((ingredient) => ({
+          name: ingredient.name.trim(),
+          quantity: String(ingredient.quantity),
+          unit: ingredient.unit.trim() || null,
+          notes: null,
+        })),
+        steps: validSteps.map((step, index) => ({
+          title: `Bước ${index + 1}`,
+          description: step.description.trim(),
+          timerMinutes: step.durationMinutes || null,
+          imageUrl: null,
+        })),
+      });
       setSubmittedSuccess(true);
-      setTimeout(() => {
-        router.push("/recipes");
-      }, 1500);
-    }, 1000);
+      await queryClient.invalidateQueries({ queryKey: recipeKeys.all() });
+      router.push(`/recipes/${encodeURIComponent(created.slug)}`);
+    } catch (error) {
+      setSubmitError(getApiErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -89,9 +148,23 @@ export default function NewRecipePage() {
         <div className="p-4 rounded-xl bg-brand-light border border-brand-border text-brand-hover flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 shrink-0" />
           <span className="text-sm font-semibold">
-            Đăng công thức thành công! Đang chuyển hướng về danh sách công thức...
+            Đăng công thức thành công! Đang mở công thức vừa tạo...
           </span>
         </div>
+      )}
+
+      {submitError && (
+        <ErrorState
+          title="Không thể tạo công thức"
+          message={submitError}
+        />
+      )}
+      {categoriesQuery.isError && (
+        <ErrorState
+          title="Không tải được danh mục"
+          message="Không thể tạo công thức khi chưa lấy được danh mục từ API."
+          onRetry={() => void categoriesQuery.refetch()}
+        />
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -126,9 +199,13 @@ export default function NewRecipePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Danh mục ẩm thực *"
-              value={categorySlug}
-              onChange={(e) => setCategorySlug(e.target.value)}
-              options={MOCK_CATEGORIES.map((c) => ({ label: c.name, value: c.slug }))}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              options={(categoriesQuery.data ?? []).map((category) => ({
+                label: category.name,
+                value: category.id,
+              }))}
+              disabled={categoriesQuery.isLoading || categoriesQuery.isError}
             />
             <Select
               label="Độ khó *"
@@ -142,7 +219,7 @@ export default function NewRecipePage() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Input
               label="Thời gian chuẩn bị (Phút)"
               type="number"
@@ -166,13 +243,23 @@ export default function NewRecipePage() {
             />
           </div>
 
-          <Input
-            label="Đường dẫn ảnh hoàn thiện (Image URL)"
-            placeholder="https://images.unsplash.com/photo-..."
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            leftIcon={<ImageIcon className="w-4 h-4" />}
-          />
+          <p className="text-xs text-content-tertiary">
+            Tải ảnh công thức chưa được hỗ trợ bởi API tạo công thức hiện tại.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-6">
+          <label className="block space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-content-secondary">
+              Hướng dẫn tổng quát (không bắt buộc)
+            </span>
+            <textarea
+              rows={4}
+              value={instructions}
+              onChange={(event) => setInstructions(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-content-primary focus:border-brand focus:outline-none"
+            />
+          </label>
         </div>
 
         {/* SECTION 2: INGREDIENTS BUILDER */}

@@ -5,6 +5,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { RecipeCard } from "@/components/common/RecipeCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MOCK_CATEGORIES, MOCK_RECIPES } from "@/lib/mockData";
+import { notFound } from "next/navigation";
 
 export default function CategoryDetailPage({
   params,
@@ -13,7 +14,10 @@ export default function CategoryDetailPage({
 }) {
   const { slug } = use(params);
 
-  const category = MOCK_CATEGORIES.find((c) => c.slug === slug) || MOCK_CATEGORIES[0];
+  const category = MOCK_CATEGORIES.find((c) => c.slug === slug);
+  if (!category) {
+    notFound();
+  }
   const categoryRecipes = MOCK_RECIPES.filter((r) => r.categorySlug === category.slug);
 
   return (
@@ -36,6 +40,9 @@ export default function CategoryDetailPage({
           Tổng số {categoryRecipes.length} công thức sẵn có
         </p>
       </div>
+      <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Nội dung danh mục và công thức trên trang này là dữ liệu minh họa.
+      </p>
 
       {categoryRecipes.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

@@ -568,6 +568,18 @@ Các tình huống phải kiểm tra trước khi coi 5 điểm góp ý đã x�
 | Bước nấu    | Client không cần số bước; xóa bước giữa vẫn liên tục; thêm/xóa đồng thời không tạo trùng số hoặc ghi đè phiên bản                           |
 | Nguyên liệu | `0.5` và đơn vị chuỗi được lưu đúng; “vừa đủ” đúng cặp null; lượng âm, 0, số quá giới hạn, thiếu đơn vị hoặc chuỗi lượng bị từ chối         |
 
+## Chạy Frontend (Lab 6)
+
+Frontend hiện dùng Next.js App Router, React, TypeScript, Tailwind CSS và các component UI dùng chung trong `frontend/src/components/ui`. Axios gọi API, TanStack Query quản lý truy vấn, Zustand quản lý UI và phiên đăng nhập trong bộ nhớ; các thư viện này đã có trong `frontend/package.json`, không cần cài thêm bộ UI hoặc state trùng lặp.
+
+```powershell
+Copy-Item frontend\.env.example frontend\.env.local
+npm --prefix frontend install
+npm --prefix frontend run dev
+```
+
+Mặc định frontend gọi backend tại `http://localhost:5080`; có thể đổi bằng `NEXT_PUBLIC_API_BASE_URL`. Chỉ bật `NEXT_PUBLIC_USE_DEMO_DATA=true` khi muốn xem dữ liệu mẫu cho danh sách/chi tiết nếu API lỗi; giao diện sẽ ghi rõ dữ liệu không đến từ máy chủ. Login/register và tạo công thức gọi API thật, access token chỉ tồn tại trong bộ nhớ trình duyệt và cần đăng nhập lại sau khi tải lại trang. Các trang chủ/danh mục hiện vẫn dùng mock data và đã được đánh dấu; upload ảnh chưa có trong contract endpoint tạo công thức hiện tại.
+
 ## Tài liệu tham chiếu
 
 - [PDF đặc tả gốc](./SRS_Culinary_Blog_v1.0.0.pdf): nguồn phạm vi chức năng và công nghệ.

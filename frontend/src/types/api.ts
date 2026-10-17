@@ -3,6 +3,44 @@ export type Difficulty = "Easy" | "Medium" | "Hard";
 export type ApiDifficultyLevel = 1 | 2 | 3 | 4;
 export type ApiRecipeStatus = 0 | 1 | 2;
 
+export interface AuthUserDto {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+}
+
+export interface AuthSessionDto {
+  accessToken: string;
+  accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
+  user: AuthUserDto;
+}
+
+export interface CreateRecipeRequest {
+  title: string;
+  description: string;
+  categoryId: string;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  difficulty: ApiDifficultyLevel;
+  instructions: string;
+  ingredients: Array<{
+    name: string;
+    quantity: string | null;
+    unit: string | null;
+    notes: string | null;
+  }>;
+  steps: Array<{
+    title: string;
+    description: string;
+    timerMinutes: number | null;
+    imageUrl: string | null;
+  }>;
+}
+
 export interface RecipeApiSummaryDto {
   id: string;
   title: string;

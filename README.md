@@ -22,11 +22,11 @@
 | ----------- | --------------------------------- | ---- | ------- | -------------------------------------------------- | ----------------- |
 | **2312610** | Xem Danh sách Công thức           | 1    | 100%    | Hoàn thành API xem danh sách công thức             | Hoàn thành        |
 |             | Xem Chi tiết Công thức            | 1    | 100%    | Hoàn thành API xem chi tiết công thức              | Hoàn thành        |
-|             | Tạo Công thức Nấu ăn Mới          | 2    | 90%     | Tạo công thức ở trạng thái Draft                   | Hoàn thành 1 phần |
+|             | Tạo Công thức Nấu ăn Mới          | 2    | 100%     | Tạo công thức ở trạng thái Draft                   | Hoàn thành  |
 |             | Cập nhật Công thức                | 3    | 100%    | Cập nhật có phân quyền và xử lý concurrency        | Hoàn thành        |
 |             | Xuất bản / Hủy Xuất bản Công thức | 3    | 100%    | Chuyển đổi trạng thái Published/Draft              | Hoàn thành        |
-|             | Lưu trữ Công thức (Archive)       | 4    |         | Chuyển công thức sang trạng thái Archived          |                   |
-|             | Xóa Công thức                     | 4    |         | Xóa công thức và dữ liệu liên quan                 |                   |
+|             | Lưu trữ Công thức (Archive)       | 4    | 100%        | Chuyển công thức sang trạng thái Archived          | Hoàn thành                  |
+|             | Xóa Công thức                     | 4    | 100%        | Xóa công thức và dữ liệu liên quan                 | Hoàn thành                  |
 |             | Quản lý Ảnh Công thức             | 5    |         | Tải lên, đặt ảnh chính và xóa ảnh công thức        |                   |
 |             | Quản lý Nguyên liệu (CRUD)        | 5    |         | Hoàn thành CRUD nguyên liệu                        |                   |
 |             | Quản lý Các bước Thực hiện (CRUD) | 6    |         | CRUD bước nấu và tự động đánh lại số thứ tự        |                   |

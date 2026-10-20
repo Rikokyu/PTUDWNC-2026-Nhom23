@@ -1,12 +1,15 @@
 "use client";
 
+import { ErrorState } from "@/components/legacy-ui/ErrorState";
+
 export default function GlobalError({ reset }: { reset: () => void }) {
   return (
-    <main>
-      <h1>Da xay ra loi</h1>
-      <button type="button" onClick={reset}>
-        Thu lai
-      </button>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <ErrorState
+        title="Đã xảy ra lỗi"
+        message="Trang gặp sự cố ngoài dự kiến. Vui lòng thử tải lại."
+        onRetry={reset}
+      />
     </main>
   );
 }

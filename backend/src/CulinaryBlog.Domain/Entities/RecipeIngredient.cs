@@ -17,6 +17,4 @@ public class RecipeIngredient : BaseEntity
     public string? Notes { get; set; }
 
     public int OrderIndex { get; set; }
-
-    public bool IsDeleted { get; set; }
 }

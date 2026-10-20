@@ -12,8 +12,6 @@ public class RecipeStepConfiguration
     {
         builder.ToTable("RecipeSteps");
 
-        builder.HasQueryFilter(step => !step.IsDeleted && !step.Recipe.IsDeleted);
-
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Title)
@@ -25,7 +23,6 @@ public class RecipeStepConfiguration
 
         builder.HasIndex(x =>
             new { x.RecipeId, x.StepNumber })
-            .IsUnique()
-            .HasFilter("\"IsDeleted\" = false");
+            .IsUnique();
     }
 }

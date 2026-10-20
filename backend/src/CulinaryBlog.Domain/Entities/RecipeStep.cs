@@ -17,6 +17,4 @@ public class RecipeStep : BaseEntity
     public int? TimerMinutes { get; set; }
 
     public string? ImageUrl { get; set; }
-
-    public bool IsDeleted { get; set; }
 }

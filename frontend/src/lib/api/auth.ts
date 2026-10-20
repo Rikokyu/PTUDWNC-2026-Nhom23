@@ -1,90 +1,35 @@
-import { apiClient, apiRequest } from "@/lib/api/client";
-
-export type AuthUser = {
-  id: string;
-  email: string;
-  displayName: string;
-  avatarUrl: string | null;
-  bio: string | null;
-  roles: string[];
-  emailConfirmed: boolean;
-};
-
-type TokenResponse = {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-};
-
-type LoginRequest = {
-  email: string;
-  password: string;
-};
-
-type RegisterRequest = {
-  email: string;
-  displayName: string;
-  password: string;
-};
-
-type RegisterResponse = {
-  userId: string;
-  email: string;
-  displayName: string;
-};
-
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
-
-function setTokens(access: string | null, refresh: string | null) {
-  accessToken = access;
-  refreshToken = refresh;
-  if (access) {
-    apiClient.defaults.headers.common.Authorization = `Bearer ${access}`;
-  } else {
-    delete apiClient.defaults.headers.common.Authorization;
-  }
-}
+import apiClient from "./axios";
+import type { AuthSessionDto } from "@/types/api";
+import { useAuthStore } from "@/store/useAuthStore";
+import { AUTH_CHANGED } from "@/lib/auth/session";
 
 export const authApi = {
-  async login(credentials: LoginRequest): Promise<AuthUser> {
-    const tokens = await apiRequest<TokenResponse>({
-      method: "POST",
-      url: "/api/v1/auth/login",
-      data: credentials,
-    });
-
-    setTokens(tokens.accessToken, tokens.refreshToken);
-    try {
-      return await apiRequest<AuthUser>({
-        method: "GET",
-        url: "/api/v1/auth/me",
-      });
-    } catch (error) {
-      setTokens(null, null);
-      throw error;
-    }
+  login: async (email: string, password: string): Promise<AuthSessionDto> => {
+    const response = await apiClient.post<AuthSessionDto>(
+      "/api/v1/auth/login",
+      { email, password },
+    );
+    return response.data;
   },
-
-  register(details: RegisterRequest) {
-    return apiRequest<RegisterResponse>({
-      method: "POST",
-      url: "/api/v1/auth/register",
-      data: details,
-    });
+  register: async (
+    displayName: string,
+    email: string,
+    password: string,
+  ): Promise<AuthSessionDto> => {
+    const response = await apiClient.post<AuthSessionDto>(
+      "/api/v1/auth/register",
+      { displayName, email, password },
+    );
+    return response.data;
   },
-
-  async logout() {
-    try {
-      if (accessToken) {
-        await apiRequest<void>({
-          method: "POST",
-          url: "/api/v1/auth/logout",
-          data: { refreshToken },
-        });
-      }
-    } finally {
-      setTokens(null, null);
-    }
+  logout: async (): Promise<void> => {
+    await apiClient.post("/api/v1/auth/logout");
   },
 };
+
+export function saveAuthSession(session: AuthSessionDto): void {
+  localStorage.setItem("refreshToken", session.refreshToken);
+  localStorage.setItem("accessTokenExpiresAt", session.accessTokenExpiresAt);
+  useAuthStore.getState().setSession(session.accessToken, session.user);
+  window.dispatchEvent(new Event(AUTH_CHANGED));
+}

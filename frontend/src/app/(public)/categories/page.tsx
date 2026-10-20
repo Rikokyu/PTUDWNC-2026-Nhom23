@@ -15,8 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { categoryApi } from "@/lib/api/categories";
-import type { CategoryDto } from "@/types/api";
+import { categoryApi } from "@/lib/api/custom-categories";
+import type { CategoryDto } from "@/types/custom-api";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);

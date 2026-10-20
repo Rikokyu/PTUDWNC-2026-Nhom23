@@ -1,17 +1,29 @@
 services:
-  minio:
-    image: quay.io/minio/minio:latest
-    container_name: culinary-blog-minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${Minio__AccessKey:?Set Minio__AccessKey in .env}
-      MINIO_ROOT_PASSWORD: ${Minio__SecretKey:?Set Minio__SecretKey in .env}
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio-data:/data
+  postgres:
+    image: postgres:16-alpine
+    container_name: culinary-blog-postgres
     restart: unless-stopped
+    environment:
+      POSTGRES_DB: culinary_blog
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5433:5432"
+    volumes:
+      - culinary_blog_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d culinary_blog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: culinary-blog-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
-  minio-data:
+  culinary_blog_pgdata:

@@ -1,5 +1,7 @@
 import { apiRequest } from "@/lib/api/client";
-import type { PaginatedResult, RecipeListDto, RecipeSearchFilters } from "@/types/api";
+import { normalizePage } from "./custom-recipes";
+import type { RecipeApiSummaryDto } from "@/types/api";
+import type { PaginatedResult, RecipeSearchFilters } from "@/types/custom-api";
 
 export async function searchRecipes(filters: RecipeSearchFilters) {
   const params = new URLSearchParams();
@@ -11,9 +13,9 @@ export async function searchRecipes(filters: RecipeSearchFilters) {
   if (filters.sortBy) params.set("sortBy", filters.sortBy);
   if (filters.sortOrder) params.set("sortOrder", filters.sortOrder);
 
-  return apiRequest<PaginatedResult<RecipeListDto>>({
+  return apiRequest<PaginatedResult<RecipeApiSummaryDto>>({
     method: "GET",
     url: "/api/v1/recipes/search",
     params: Object.fromEntries(params.entries()),
-  });
+  }).then(normalizePage);
 }

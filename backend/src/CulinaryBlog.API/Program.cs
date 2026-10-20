@@ -1,23 +1,29 @@
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Security.Claims;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Json;
 using CulinaryBlog.API.Extensions;
+using CulinaryBlog.API.Authorization;
 using CulinaryBlog.API.HealthChecks;
 using CulinaryBlog.API.Middleware;
 using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Text.Json.Serialization;
-using System.Security.Claims;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.OpenApi;
-using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Http.Features;
-using Serilog;
-using Serilog.Events;
-using Serilog.Formatting.Json;
+using Hangfire;
+using Asp.Versioning;
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+var webRootPath = Path.Combine(
+    builder.Environment.ContentRootPath,
+    "wwwroot");
+Directory.CreateDirectory(Path.Combine(webRootPath, "uploads"));
+builder.Environment.WebRootPath = webRootPath;
 
 builder.Host.UseSerilog((context, services, loggerConfiguration) =>
 {
@@ -48,14 +54,99 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) =>
     }
 });
 
+
+
 // Application
 builder.Services
     .AddApplicationServices();
 
+builder.Services
+    .AddJwtAuthentication(builder.Configuration);
+
+builder.Services
+    .AddFrontendCors(builder.Configuration);
+builder.Services
+    .AddApiRateLimiting();
+
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+        options.ApiVersionReader = new HeaderApiVersionReader("api-version");
+    })
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+    });
+
 // Infrastructure
 builder.Services
     .AddInfrastructure(
-        builder.Configuration);
+        builder.Configuration,
+        builder.Environment.ContentRootPath);
+
+builder.Services.AddAuthorization();
+
+// Output Cache
+builder.Services
+    .AddOutputCache(options =>
+    {
+        options.AddPolicy(
+            "RecipeList",
+            new RecipeListOutputCachePolicy());
+
+        options.AddPolicy(
+            "RecipeDetail",
+            new RecipeDetailOutputCachePolicy());
+    });
+
+// Swagger
+builder.Services
+    .AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc(
+        "v1",
+        new OpenApiInfo
+        {
+            Title = "CulinaryBlog API",
+            Version = "v1",
+            Description = "Version 1 of the CulinaryBlog HTTP API."
+        });
+
+    var xmlDocumentationFile = Path.Combine(
+        AppContext.BaseDirectory,
+        $"{typeof(Program).Assembly.GetName().Name}.xml");
+    if (File.Exists(xmlDocumentationFile))
+    {
+        options.IncludeXmlComments(xmlDocumentationFile);
+    }
+
+    options.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "Paste a valid JWT access token."
+        });
+
+    options.AddSecurityRequirement(document =>
+        new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(
+                "Bearer",
+                document,
+                null)] = []
+        });
+});
+
+builder.Services
+    .AddProblemDetails();
 
 builder.Services
     .AddHealthChecks()
@@ -84,160 +175,7 @@ builder.Services.AddHttpClient("MinioHealthCheck", client =>
     client.Timeout = TimeSpan.FromSeconds(3);
 });
 
-// Output Cache
-builder.Services
-    .AddOutputCache(options =>
-    {
-        options.AddPolicy(
-            "RecipeList",
-            policy =>
-            {
-                policy
-                    .Expire(
-                        TimeSpan.FromMinutes(15))
-                    .Tag("recipes")
-                    .SetVaryByQuery("*");
-            });
 
-        options.AddPolicy(
-            "RecipeDetail",
-            policy =>
-            {
-                policy
-                    .Expire(
-                        TimeSpan.FromMinutes(60))
-                    .Tag("recipes");
-            });
-    });
-
-// API versioning + Swagger
-builder.Services
-    .AddEndpointsApiExplorer();
-
-builder.Services
-    .AddApiVersioning(options =>
-    {
-        options.DefaultApiVersion = new ApiVersion(1, 0);
-        options.AssumeDefaultVersionWhenUnspecified = true;
-        options.ReportApiVersions = true;
-    });
-
-builder.Services
-    .AddVersionedApiExplorer(options =>
-    {
-        options.GroupNameFormat = "'v'VV";
-        options.SubstituteApiVersionInUrl = true;
-    });
-
-builder.Services
-    .AddSwaggerGen(options =>
-    {
-        options.SwaggerDoc("v1", new OpenApiInfo
-        {
-            Title = "Culinary Blog API",
-            Version = "v1",
-            Description = "Public API for the Culinary Blog application."
-        });
-        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-        {
-            Name = "Authorization",
-            Type = SecuritySchemeType.Http,
-            Scheme = "bearer",
-            BearerFormat = "JWT",
-            In = ParameterLocation.Header,
-            Description = "JWT access token"
-        });
-        options.OperationFilter<AuthorizeOperationFilter>();
-    });
-
-builder.Services
-    .AddProblemDetails();
-
-var allowedOrigins = builder.Configuration
-    .GetSection(builder.Environment.IsDevelopment()
-        ? "Cors:Development:AllowedOrigins"
-        : "Cors:Production:AllowedOrigins")
-    .Get<string[]>()
-    ?? builder.Configuration
-        .GetSection("Cors:AllowedOrigins")
-        .Get<string[]>()
-    ?? (builder.Environment.IsDevelopment()
-        ? new[] { "http://localhost:3000", "http://127.0.0.1:3000" }
-        : Array.Empty<string>());
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Frontend", policy =>
-    {
-        if (allowedOrigins.Length > 0)
-        {
-            policy.WithOrigins(allowedOrigins)
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        }
-        else
-        {
-            policy.SetIsOriginAllowed(_ => true)
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        }
-    });
-});
-
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.OnRejected = async (context, token) =>
-    {
-        context.HttpContext.Response.ContentType = "application/problem+json";
-        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-
-        double? retryAfterSeconds = context.Lease.TryGetMetadata(
-            "RetryAfter",
-            out var retryAfterValue)
-            && retryAfterValue is TimeSpan retryAfterSpan
-                ? retryAfterSpan.TotalSeconds
-                : null;
-
-        await context.HttpContext.Response.WriteAsJsonAsync(
-            new
-            {
-                type = "https://httpstatuses.com/429",
-                title = "Too many requests",
-                status = StatusCodes.Status429TooManyRequests,
-                detail = "Too many requests. Please try again later.",
-                retryAfter = retryAfterSeconds ?? 60d
-            },
-            cancellationToken: token);
-    };
-
-    options.AddPolicy("AuthLogin", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = builder.Configuration.GetValue<int>("RateLimiting:AuthLogin:PermitLimit", 10),
-                Window = TimeSpan.FromSeconds(builder.Configuration.GetValue<int>("RateLimiting:AuthLogin:WindowSeconds", 60)),
-                QueueLimit = builder.Configuration.GetValue<int>("RateLimiting:AuthLogin:QueueLimit", 0),
-                AutoReplenishment = true
-            }));
-});
-
-builder.Services.ConfigureHttpJsonOptions(options =>
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-
-var maxFileSizeBytes = builder.Configuration.GetValue<long>(
-    "FileUpload:MaxFileSizeBytes",
-    5 * 1024 * 1024);
-if (maxFileSizeBytes <= 0)
-{
-    throw new InvalidOperationException("FileUpload:MaxFileSizeBytes must be positive.");
-}
-
-builder.Services.Configure<FormOptions>(options =>
-    options.MultipartBodyLengthLimit = maxFileSizeBytes + 64 * 1024);
 
 var app =
     builder.Build();
@@ -271,7 +209,8 @@ app.UseSerilogRequestLogging(options =>
             "ElapsedMilliseconds",
             httpContext.Items["ElapsedMilliseconds"]);
 
-        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? httpContext.User.FindFirstValue("sub");
         if (!string.IsNullOrWhiteSpace(userId))
         {
             diagnosticContext.Set("UserId", userId);
@@ -280,29 +219,40 @@ app.UseSerilogRequestLogging(options =>
 });
 
 // Global exception middleware
-app.UseMiddleware<GlobalExceptionMiddleware>();
-
-app.UseStatusCodePages();
-
-app.UseCors("Frontend");
-
-app.UseAuthentication();
-app.UseAuthorization();
-app.UseRateLimiter();
+app.UseMiddleware<
+    GlobalExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Culinary Blog API v1");
-    });
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "CulinaryBlog API v1"));
 }
+
+app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors("Frontend");
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseStaticFiles();
 
 // Output cache
 app.UseOutputCache();
 
-app.UseHttpsRedirection();
+if (builder.Configuration.GetValue("Hangfire:Enabled", true)
+    && (!app.Environment.IsDevelopment()
+        || builder.Configuration.GetValue<bool>("Hangfire:DashboardEnabled")))
+{
+    app.UseHangfireDashboard(
+        "/hangfire",
+        new DashboardOptions
+        {
+            Authorization = [new HangfireAdminAuthorizationFilter()]
+        });
+}
 
 // API endpoints
 app.MapApplicationEndpoints();
@@ -321,7 +271,9 @@ using (var scope =
     try
     {
         await DatabaseSeeder
-            .SeedAsync(context);
+            .SeedAsync(
+                context,
+                app.Lifetime.ApplicationStopping);
     }
     catch (DbUpdateConcurrencyException ex)
     {
@@ -338,3 +290,79 @@ using (var scope =
 }
 
 app.Run();
+
+internal sealed class RecipeListOutputCachePolicy : IOutputCachePolicy
+{
+    public ValueTask CacheRequestAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken)
+    {
+        var isPublicRequest =
+            context.HttpContext.User.Identity?.IsAuthenticated != true;
+
+        context.EnableOutputCaching = true;
+        context.AllowCacheLookup = isPublicRequest;
+        context.AllowCacheStorage = isPublicRequest;
+        context.ResponseExpirationTimeSpan =
+            TimeSpan.FromMinutes(15);
+        context.CacheVaryByRules.QueryKeys =
+            new Microsoft.Extensions.Primitives.StringValues("*");
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask ServeFromCacheAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask ServeResponseAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken)
+    {
+        context.Tags.Add("recipes");
+        return ValueTask.CompletedTask;
+    }
+}
+
+internal sealed class RecipeDetailOutputCachePolicy : IOutputCachePolicy
+{
+    public ValueTask CacheRequestAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken)
+    {
+        var isPublicRequest =
+            context.HttpContext.User.Identity?.IsAuthenticated != true;
+
+        context.EnableOutputCaching = true;
+        context.AllowCacheLookup = isPublicRequest;
+        context.AllowCacheStorage = isPublicRequest;
+        context.ResponseExpirationTimeSpan =
+            TimeSpan.FromMinutes(60);
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask ServeFromCacheAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask ServeResponseAsync(
+        OutputCacheContext context,
+        CancellationToken cancellationToken)
+    {
+        context.Tags.Add("recipes");
+
+        if (context.HttpContext.Request.RouteValues.TryGetValue(
+                "slug",
+                out var slug)
+            && slug is string slugValue
+            && !string.IsNullOrWhiteSpace(slugValue))
+        {
+            context.Tags.Add($"recipe:{slugValue}");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}

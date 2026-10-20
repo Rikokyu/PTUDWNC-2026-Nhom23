@@ -1,120 +1,95 @@
 using CulinaryBlog.Application.Common.Exceptions;
+using CulinaryBlog.Application.Common.Authorization;
+using CulinaryBlog.Application.Common.Helpers;
+using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.DTOs.Categories;
+using CulinaryBlog.Application.Features.Categories.Queries.GetCategories;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Interfaces;
 using MediatR;
-using ConflictException = CulinaryBlog.Domain.Exceptions.ConflictException;
+using Microsoft.Extensions.Caching.Memory;
+using DomainConflictException = CulinaryBlog.Domain.Exceptions.ConflictException;
 
 namespace CulinaryBlog.Application.Features.Categories.Commands.CreateCategory;
 
 public sealed class CreateCategoryCommandHandler
-	: IRequestHandler<CreateCategoryCommand, CategoryDto>
+    : IRequestHandler<CreateCategoryCommand, CategoryDto>
 {
-	private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMemoryCache _cache;
+    private readonly ICurrentUser _currentUser;
 
-	public CreateCategoryCommandHandler(IUnitOfWork unitOfWork)
-	{
-		_unitOfWork = unitOfWork;
-	}
+    public CreateCategoryCommandHandler(
+        IUnitOfWork unitOfWork,
+        IMemoryCache cache,
+        ICurrentUser currentUser)
+    {
+        _unitOfWork = unitOfWork;
+        _cache = cache;
+        _currentUser = currentUser;
+    }
 
-	public async Task<CategoryDto> Handle(
-		CreateCategoryCommand request,
-		CancellationToken cancellationToken)
-	{
-		var name = request.Name.Trim();
-		Validate(name, request.Description, request.ImageUrl, request.OrderIndex);
-		var slug = CreateSlug(name);
-		var categories = await _unitOfWork.Categories.GetAllAsync(cancellationToken);
+    public async Task<CategoryDto> Handle(
+        CreateCategoryCommand request,
+        CancellationToken cancellationToken)
+    {
+        AuthorizationGuard.EnsureAdmin(_currentUser);
 
-		if (categories.Any(category =>
-				string.Equals(category.Name, name, StringComparison.OrdinalIgnoreCase)
-				|| string.Equals(category.Slug, slug, StringComparison.OrdinalIgnoreCase)))
-		{
-			throw new ConflictException("A category with this name already exists.");
-		}
+        var name = request.Name.Trim();
 
-		var category = new Category
-		{
-			Id = Guid.NewGuid(),
-			Name = name,
-			Slug = slug,
-			Description = NormalizeOptional(request.Description),
-			ImageUrl = NormalizeOptional(request.ImageUrl),
-			OrderIndex = request.OrderIndex,
-			CreatedAt = DateTime.UtcNow
-		};
+        if (await _unitOfWork.Categories.NameExistsAsync(
+                name,
+                cancellationToken: cancellationToken))
+        {
+            throw new DomainConflictException(
+                $"Category name '{name}' already exists.");
+        }
 
-		await _unitOfWork.Categories.AddAsync(category, cancellationToken);
-		await _unitOfWork.SaveChangesAsync(cancellationToken);
-		return ToDto(category);
-	}
+        var baseSlug = SlugHelper.Generate(name);
 
-	internal static string CreateSlug(string value)
-	{
-		var normalized = value.Normalize(System.Text.NormalizationForm.FormD);
-		var slug = new System.Text.StringBuilder(normalized.Length);
-		var pendingSeparator = false;
+        if (string.IsNullOrWhiteSpace(baseSlug))
+        {
+            throw new ValidationException(
+                "Name must contain at least one letter or number.");
+        }
 
-		foreach (var character in normalized)
-		{
-			if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(character)
-				== System.Globalization.UnicodeCategory.NonSpacingMark)
-			{
-				continue;
-			}
+        var slug = baseSlug;
+        var suffix = 2;
 
-			if (char.IsLetterOrDigit(character))
-			{
-				if (pendingSeparator && slug.Length > 0)
-				{
-					slug.Append('-');
-				}
+        while (await _unitOfWork.Categories.SlugExistsAsync(
+                   slug,
+                   cancellationToken))
+        {
+            slug = $"{baseSlug}-{suffix++}";
+        }
 
-				slug.Append(char.ToLowerInvariant(character));
-				pendingSeparator = false;
-			}
-			else
-			{
-				pendingSeparator = true;
-			}
-		}
+        var category = Category.Create(
+            name,
+            slug,
+            NormalizeOptional(request.Description),
+            NormalizeOptional(request.ImageUrl),
+            request.OrderIndex);
 
-		return slug.ToString();
-	}
+        await _unitOfWork.Categories.AddAsync(
+            category,
+            cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-	internal static CategoryDto ToDto(Category category) =>
-		new(category.Id, category.Name, category.Slug, category.Description,
-			category.ImageUrl, category.OrderIndex);
+        _cache.Remove(GetCategoriesQueryHandler.CacheKey);
 
-	private static void Validate(
-		string name,
-		string? description,
-		string? imageUrl,
-		int orderIndex)
-	{
-		if (name.Length is < 2 or > 100)
-		{
-			throw new ValidationException("name must be 2-100 characters.");
-		}
+        return ToDto(category);
+    }
 
-		if (description?.Length > 2000)
-		{
-			throw new ValidationException("description cannot exceed 2000 characters.");
-		}
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-		if (imageUrl is not null
-			&& (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri)
-				|| uri.Scheme is not ("http" or "https")))
-		{
-			throw new ValidationException("imageUrl must be a valid HTTP or HTTPS URL.");
-		}
-
-		if (orderIndex < 0)
-		{
-			throw new ValidationException("orderIndex cannot be negative.");
-		}
-	}
-
-	private static string? NormalizeOptional(string? value) =>
-		string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static CategoryDto ToDto(Category category) =>
+        new(
+            category.Id,
+            category.Name,
+            category.Slug,
+            category.Description,
+            category.ImageUrl,
+            category.OrderIndex,
+            RecipeCount: 0);
 }

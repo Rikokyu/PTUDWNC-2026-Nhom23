@@ -15,21 +15,30 @@ public class CategoryConfiguration
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Name)
-            .HasMaxLength(100)
+            .HasMaxLength(50)
             .IsRequired();
+
+        builder.HasIndex(x => x.Name)
+            .IsUnique();
 
         builder.Property(x => x.Slug)
             .HasMaxLength(120)
             .IsRequired();
 
         builder.HasIndex(x => x.Slug)
-            .IsUnique()
-            .HasFilter("\"IsDeleted\" = false");
-
-        builder.HasQueryFilter(x => !x.IsDeleted);
+            .IsUnique();
 
         builder.Property(x => x.Description)
             .HasColumnType("text");
+
+        builder.Property(x => x.ImageUrl)
+            .HasMaxLength(500);
+
+        builder.Property(x => x.OrderIndex)
+            .HasDefaultValue(0);
+
+        builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
 
         builder.HasMany(x => x.Recipes)
             .WithOne(x => x.Category)

@@ -1,8 +1,8 @@
 using CulinaryBlog.Application.Common.Exceptions;
-using CulinaryBlog.Application.Common.Models;
 using CulinaryBlog.Application.DTOs.Categories;
+using CulinaryBlog.Application.Common.Interfaces;
+using CulinaryBlog.Application.Common.Models;
 using CulinaryBlog.Application.DTOs.Recipes;
-using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Interfaces;
 using MediatR;
 
@@ -13,13 +13,16 @@ public sealed class GetCategoryBySlugQueryHandler
 {
     private readonly ICategoryRepository _categoryRepository;
     private readonly IRecipeRepository _recipeRepository;
+    private readonly ICurrentUser _currentUser;
 
     public GetCategoryBySlugQueryHandler(
         ICategoryRepository categoryRepository,
-        IRecipeRepository recipeRepository)
+        IRecipeRepository recipeRepository,
+        ICurrentUser currentUser)
     {
         _categoryRepository = categoryRepository;
         _recipeRepository = recipeRepository;
+        _currentUser = currentUser;
     }
 
     public async Task<CategoryDetailDto> Handle(
@@ -36,34 +39,10 @@ public sealed class GetCategoryBySlugQueryHandler
                 $"Category with slug '{request.Slug}' was not found.");
         }
 
-        var result = await _recipeRepository.GetPagedAsync(
-            request.Page,
-            request.PageSize,
-            category.Id,
-            difficulty: null,
-            maxCookTime: null,
-            sort: "-createdAt",
-            currentUserId: null,
-            isAuthenticated: false,
-            isAdmin: false,
-            cancellationToken);
-        var recipes = result.Items.Select(recipe => new RecipeSummaryDto(
-            recipe.Id,
-            recipe.Title,
-            recipe.Slug,
-            recipe.Images
-                .OrderByDescending(image => image.IsPrimary)
-                .ThenBy(image => image.OrderIndex)
-                .Select(image => image.ThumbnailUrl ?? image.MediumUrl ?? image.OriginalUrl)
-                .FirstOrDefault(),
-            recipe.Category.Name,
-            recipe.CategoryId,
-            recipe.PrepTimeMinutes,
-            recipe.CookTimeMinutes,
-            recipe.Servings,
-            recipe.Difficulty,
-            recipe.Status,
-            recipe.CreatedAt)).ToList();
+        var recipeCount = await _categoryRepository
+            .GetPublishedRecipeCountAsync(
+                category.Id,
+                cancellationToken);
 
         var categoryDto = new CategoryDto(
             category.Id,
@@ -72,13 +51,46 @@ public sealed class GetCategoryBySlugQueryHandler
             category.Description,
             category.ImageUrl,
             category.OrderIndex,
-            result.TotalCount);
+            recipeCount);
+
+        var recipes = await _recipeRepository.GetPagedForCategoryAsync(
+            category.Id,
+            request.Page,
+            request.PageSize,
+            _currentUser.IsAuthor || _currentUser.IsAdmin
+                ? _currentUser.UserId
+                : null,
+            _currentUser.IsAuthenticated,
+            _currentUser.IsAdmin,
+            cancellationToken);
+
+        var recipeDtos = recipes.Items
+            .Select(recipe => new RecipeSummaryDto(
+                recipe.Id,
+                recipe.Title,
+                recipe.Slug,
+                recipe.Images
+                    .OrderByDescending(image => image.IsPrimary)
+                    .ThenBy(image => image.OrderIndex)
+                    .Select(image => image.ThumbnailUrl
+                        ?? image.MediumUrl
+                        ?? image.OriginalUrl)
+                    .FirstOrDefault(),
+                recipe.Category.Name,
+                recipe.CategoryId,
+                recipe.PrepTimeMinutes,
+                recipe.CookTimeMinutes,
+                recipe.Servings,
+                recipe.Difficulty,
+                recipe.Status,
+                recipe.CreatedAt))
+            .ToList();
 
         return new CategoryDetailDto(
             categoryDto,
             new PagedResult<RecipeSummaryDto>(
-                recipes,
-                result.TotalCount,
+                recipeDtos,
+                recipes.TotalCount,
                 request.Page,
                 request.PageSize));
     }

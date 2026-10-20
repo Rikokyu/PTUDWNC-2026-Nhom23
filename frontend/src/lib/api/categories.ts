@@ -1,13 +1,15 @@
-import { apiClient } from "@/lib/api/client";
-import type { CategoryDetailDto, CategoryDto } from "@/types/api";
+import apiClient from "./axios";
+import type { CategoryApiDto, CategoryDetailApiDto } from "@/types/api";
 
 export const categoryApi = {
-  getList: () =>
-    apiClient.get<CategoryDto[]>("/api/v1/categories").then((response) => response.data),
-  getBySlug: (slug: string, page = 1, pageSize = 9) =>
-    apiClient
-      .get<CategoryDetailDto>(`/api/v1/categories/${encodeURIComponent(slug)}`, {
-        params: { page, pageSize },
-      })
-      .then((response) => response.data),
+  getAll: async (): Promise<CategoryApiDto[]> => {
+    const response = await apiClient.get<CategoryApiDto[]>("/api/v1/categories");
+    return response.data;
+  },
+  getBySlug: async (slug: string): Promise<CategoryDetailApiDto> => {
+    const response = await apiClient.get<CategoryDetailApiDto>(
+      `/api/v1/categories/${encodeURIComponent(slug)}`,
+    );
+    return response.data;
+  },
 };

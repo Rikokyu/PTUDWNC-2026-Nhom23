@@ -7,8 +7,8 @@ import { RecipeGrid } from "@/components/recipes/recipe-grid";
 import { ErrorMessage } from "@/components/shared/error-message";
 import { Pagination } from "@/components/shared/pagination";
 import { Badge } from "@/components/ui/badge";
-import { categoryApi } from "@/lib/api/categories";
-import type { CategoryDetailDto } from "@/types/api";
+import { categoryApi } from "@/lib/api/custom-categories";
+import type { CategoryDetailDto } from "@/types/custom-api";
 import type { RecipeCardItem } from "@/components/recipes/recipe-card";
 
 const pageSize = 9;

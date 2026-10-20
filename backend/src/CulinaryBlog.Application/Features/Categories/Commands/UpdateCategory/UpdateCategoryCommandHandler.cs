@@ -1,67 +1,98 @@
 using CulinaryBlog.Application.Common.Exceptions;
+using CulinaryBlog.Application.Common.Authorization;
+using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.DTOs.Categories;
-using CulinaryBlog.Application.Features.Categories.Commands.CreateCategory;
+using CulinaryBlog.Application.Features.Categories.Queries.GetCategories;
+using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Interfaces;
 using MediatR;
-using ConflictException = CulinaryBlog.Domain.Exceptions.ConflictException;
+using Microsoft.Extensions.Caching.Memory;
+using DomainConflictException = CulinaryBlog.Domain.Exceptions.ConflictException;
 
 namespace CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
 
 public sealed class UpdateCategoryCommandHandler
-	: IRequestHandler<UpdateCategoryCommand, CategoryDto>
+    : IRequestHandler<UpdateCategoryCommand, CategoryDto>
 {
-	private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMemoryCache _cache;
+    private readonly ICurrentUser _currentUser;
 
-	public UpdateCategoryCommandHandler(IUnitOfWork unitOfWork)
-	{
-		_unitOfWork = unitOfWork;
-	}
+    public UpdateCategoryCommandHandler(
+        IUnitOfWork unitOfWork,
+        IMemoryCache cache,
+        ICurrentUser currentUser)
+    {
+        _unitOfWork = unitOfWork;
+        _cache = cache;
+        _currentUser = currentUser;
+    }
 
-	public async Task<CategoryDto> Handle(
-		UpdateCategoryCommand request,
-		CancellationToken cancellationToken)
-	{
-		var category = await _unitOfWork.Categories.GetByIdAsync(
-			request.Id,
-			cancellationToken)
-			?? throw new NotFoundException("Category was not found.");
-		var name = request.Name.Trim();
+    public async Task<CategoryDto> Handle(
+        UpdateCategoryCommand request,
+        CancellationToken cancellationToken)
+    {
+        AuthorizationGuard.EnsureAdmin(_currentUser);
 
-		if (name.Length is < 2 or > 100 || request.Description?.Length > 2000
-			|| request.OrderIndex < 0)
-		{
-			throw new ValidationException("Category fields are invalid.");
-		}
+        var category = await _unitOfWork.Categories.GetActiveByIdAsync(
+            request.Id,
+            cancellationToken);
 
-		if (request.ImageUrl is not null
-			&& (!Uri.TryCreate(request.ImageUrl, UriKind.Absolute, out var imageUri)
-				|| imageUri.Scheme is not ("http" or "https")))
-		{
-			throw new ValidationException("imageUrl must be a valid HTTP or HTTPS URL.");
-		}
+        if (category is null)
+        {
+            throw new NotFoundException(
+                $"Category with id '{request.Id}' was not found.");
+        }
 
-		var categories = await _unitOfWork.Categories.GetAllAsync(cancellationToken);
-		var slug = CreateCategoryCommandHandler.CreateSlug(name);
-		if (categories.Any(candidate => candidate.Id != category.Id
-				&& (string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase)
-					|| string.Equals(candidate.Slug, slug, StringComparison.OrdinalIgnoreCase))))
-		{
-			throw new ConflictException("A category with this name already exists.");
-		}
+        var name = request.Name?.Trim();
 
-		category.Name = name;
-		category.Slug = slug;
-		category.Description = string.IsNullOrWhiteSpace(request.Description)
-			? null
-			: request.Description.Trim();
-		category.ImageUrl = string.IsNullOrWhiteSpace(request.ImageUrl)
-			? null
-			: request.ImageUrl.Trim();
-		category.OrderIndex = request.OrderIndex;
-		category.UpdatedAt = DateTime.UtcNow;
+        if (name is not null
+            && !string.Equals(
+                name,
+                category.Name,
+                StringComparison.OrdinalIgnoreCase)
+            && await _unitOfWork.Categories.NameExistsAsync(
+                name,
+                request.Id,
+                cancellationToken))
+        {
+            throw new DomainConflictException(
+                $"Category name '{name}' already exists.");
+        }
 
-		_unitOfWork.Categories.Update(category);
-		await _unitOfWork.SaveChangesAsync(cancellationToken);
-		return CreateCategoryCommandHandler.ToDto(category);
-	}
+        category.UpdateDetails(
+            name,
+            request.Description is not null,
+            NormalizeOptional(request.Description),
+            request.ImageUrl is not null,
+            NormalizeOptional(request.ImageUrl),
+            request.OrderIndex);
+
+        _unitOfWork.Categories.Update(category);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _cache.Remove(GetCategoriesQueryHandler.CacheKey);
+
+        var recipeCount = await _unitOfWork.Categories
+            .GetPublishedRecipeCountAsync(
+                category.Id,
+                cancellationToken);
+
+        return ToDto(category, recipeCount);
+    }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static CategoryDto ToDto(
+        Category category,
+        int recipeCount) =>
+        new(
+            category.Id,
+            category.Name,
+            category.Slug,
+            category.Description,
+            category.ImageUrl,
+            category.OrderIndex,
+            recipeCount);
 }

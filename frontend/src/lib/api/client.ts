@@ -1,16 +1,7 @@
-import axios, { type AxiosError, type AxiosRequestConfig, type AxiosResponse } from "axios";
+import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
+import sharedClient from "./axios";
 
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:5000";
-
-export const apiClient = axios.create({
-  baseURL: apiBaseUrl,
-  timeout: 15000,
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true,
-});
+export const apiClient = sharedClient;
 
 export type ApiError = {
   message: string;

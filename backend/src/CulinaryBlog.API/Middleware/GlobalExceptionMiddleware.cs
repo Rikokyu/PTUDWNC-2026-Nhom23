@@ -3,7 +3,6 @@ using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using ApplicationNotFoundException = CulinaryBlog.Application.Common.Exceptions.NotFoundException;
 using ApplicationValidationException = CulinaryBlog.Application.Common.Exceptions.ValidationException;
 using DomainNotFoundException = CulinaryBlog.Domain.Exceptions.NotFoundException;
@@ -80,7 +79,7 @@ public class GlobalExceptionMiddleware
         {
             await WriteProblemAsync(
                 context,
-                StatusCodes.Status400BadRequest,
+                StatusCodes.Status422UnprocessableEntity,
                 "Validation failed",
                 ex.Message);
         }
@@ -88,8 +87,16 @@ public class GlobalExceptionMiddleware
         {
             await WriteProblemAsync(
                 context,
-                StatusCodes.Status400BadRequest,
+                StatusCodes.Status422UnprocessableEntity,
                 "Validation failed",
+                ex.Message);
+        }
+        catch (CulinaryBlog.Domain.Exceptions.UnauthorizedException ex)
+        {
+            await WriteProblemAsync(
+                context,
+                StatusCodes.Status401Unauthorized,
+                "Unauthorized",
                 ex.Message);
         }
         catch (ConflictException ex)
@@ -100,24 +107,6 @@ public class GlobalExceptionMiddleware
                 "Conflict",
                 ex.Message);
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            await WriteProblemAsync(
-                context,
-                StatusCodes.Status409Conflict,
-                "Concurrency conflict",
-                "The resource changed while this request was being processed. Reload it and retry.");
-        }
-        catch (DbUpdateException ex) when (
-            ex.InnerException is PostgresException postgresException
-            && postgresException.SqlState == PostgresErrorCodes.UniqueViolation)
-        {
-            await WriteProblemAsync(
-                context,
-                StatusCodes.Status409Conflict,
-                "Duplicate resource",
-                "A resource with the same unique value already exists.");
-        }
         catch (BusinessRuleException ex)
         {
             await WriteProblemAsync(
@@ -126,30 +115,33 @@ public class GlobalExceptionMiddleware
                 "Business rule conflict",
                 ex.Message);
         }
-            catch (StorageUnavailableException ex)
-            {
-                await WriteProblemAsync(
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "A database constraint rejected {Method} {Path}.",
+                context.Request.Method,
+                context.Request.Path);
+
+            await WriteProblemAsync(
                 context,
-                StatusCodes.Status503ServiceUnavailable,
-                "File storage unavailable",
-                ex.Message);
-            }
-            catch (ArgumentException ex)
-            {
-                await WriteProblemAsync(
+                StatusCodes.Status409Conflict,
+                "Database conflict",
+                "The requested change conflicts with existing data.");
+        }
+        catch (StorageUnavailableException ex)
+        {
+            await WriteProblemAsync(context, StatusCodes.Status503ServiceUnavailable,
+                "File storage unavailable", ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            await WriteProblemAsync(
                 context,
                 StatusCodes.Status400BadRequest,
                 "Invalid request",
                 ex.Message);
-            }
-            catch (InvalidDataException ex)
-            {
-                await WriteProblemAsync(
-                context,
-                StatusCodes.Status400BadRequest,
-                "Invalid upload request",
-                ex.Message);
-            }
+        }
         catch (DomainException ex)
         {
             await WriteProblemAsync(

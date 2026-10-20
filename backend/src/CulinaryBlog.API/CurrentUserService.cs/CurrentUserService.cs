@@ -19,6 +19,18 @@ public class CurrentUserService : ICurrentUser
     public bool IsAuthenticated =>
         User?.Identity?.IsAuthenticated == true;
 
+    public bool IsAuthor
+    {
+        get
+        {
+            if (User == null)
+                return false;
+
+            return User.IsInRole("Author")
+                || User.FindFirst("role")?.Value == "Author";
+        }
+    }
+
     public Guid? UserId
     {
         get

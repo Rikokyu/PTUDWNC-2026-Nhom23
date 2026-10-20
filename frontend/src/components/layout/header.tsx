@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useUIStore } from "@/store/useUIStore";
-import { useAuthStore } from "@/store/auth-store";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,9 +25,8 @@ import { ErrorMessage } from "@/components/shared/error-message";
 
 export function Header() {
   const { sidebarOpen, toggleSidebar } = useUIStore();
-  const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
-  const isLoading = useAuthStore((state) => state.isLoading);
+  const { user, logout, status } = useAuth();
+  const isLoading = status === "loading";
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
@@ -62,11 +61,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" aria-label={`Tài khoản ${user.displayName}`}>
                     <span className="avatar">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt="" />
-                      ) : (
-                        user.displayName.charAt(0).toLocaleUpperCase()
-                      )}
+                      {user.displayName.charAt(0).toLocaleUpperCase()}
                     </span>
                     <span>{user.displayName}</span>
                   </Button>

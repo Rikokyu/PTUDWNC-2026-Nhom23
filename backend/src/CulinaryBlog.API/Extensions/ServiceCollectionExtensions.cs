@@ -1,11 +1,13 @@
 using CulinaryBlog.API.CurrentUser;
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Common.Behaviors;
-using CulinaryBlog.API.Middleware;
-using CulinaryBlog.Application.Features.Recipes.Commands;
+using CulinaryBlog.Application.Features.Auth.Commands.Login;
+using CulinaryBlog.Application.Features.Auth.Commands.Register;
+using CulinaryBlog.Application.Features.Categories.Commands.CreateCategory;
+using CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
+using FluentValidation;
 using MediatR;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
+using System.Threading.RateLimiting;
 
 namespace CulinaryBlog.API.Extensions;
 
@@ -16,34 +18,131 @@ public static class ServiceCollectionExtensions
     {
         services.AddMediatR(
             cfg =>
-            {
                 cfg.RegisterServicesFromAssembly(
                     typeof(
                         CulinaryBlog.Application
                             .Features.Recipes.Queries
                             .GetRecipes.GetRecipesQuery)
-                        .Assembly);
-                cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
-            });
+                        .Assembly));
 
         services.AddHttpContextAccessor();
 
-        services.AddScoped<IPasswordHasher<CulinaryBlog.Domain.Entities.ApplicationUser>,
-            PasswordHasher<CulinaryBlog.Domain.Entities.ApplicationUser>>();
+        services.AddMemoryCache();
 
-        services.AddAuthentication("Bearer")
-            .AddScheme<AuthenticationSchemeOptions, JwtAuthenticationHandler>(
-                "Bearer",
-                _ => { });
-        services.AddAuthorization();
-        services.AddHttpClient();
+        services.AddTransient(
+            typeof(IPipelineBehavior<,>),
+            typeof(FluentValidationBehavior<,>));
+        services.AddTransient<
+            IValidator<RegisterCommand>,
+            RegisterCommandValidator>();
+        services.AddTransient<
+            IValidator<LoginCommand>,
+            LoginCommandValidator>();
+
+        services.AddTransient<
+            IValidator<CreateCategoryCommand>,
+            CreateCategoryCommandValidator>();
+
+        services.AddTransient<
+            IValidator<UpdateCategoryCommand>,
+            UpdateCategoryCommandValidator>();
 
         services.AddScoped<
             ICurrentUser,
             CurrentUserService>();
 
-        services.AddScoped<RecipeManagementService>();
+        return services;
+    }
+
+    public static IServiceCollection AddFrontendCors(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var allowedOrigins = configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>()
+            ?? ["http://localhost:3000"];
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy(
+                "Frontend",
+                policy => policy
+                    .WithOrigins(allowedOrigins)
+                    .WithHeaders(
+                        "Authorization",
+                        "Content-Type",
+                        "If-Match",
+                        "If-None-Match",
+                        "api-version")
+                    .AllowAnyMethod()
+                    .WithExposedHeaders("ETag", "Retry-After"));
+        });
 
         return services;
     }
+
+    public static IServiceCollection AddApiRateLimiting(
+        this IServiceCollection services)
+    {
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode =
+                StatusCodes.Status429TooManyRequests;
+            options.OnRejected = async (context, cancellationToken) =>
+            {
+                context.HttpContext.Response.Headers.RetryAfter = "60";
+                context.HttpContext.Response.ContentType =
+                    "application/problem+json";
+                await context.HttpContext.Response.WriteAsJsonAsync(
+                    new
+                    {
+                        type = "https://httpstatuses.com/429",
+                        title = "Too many requests",
+                        status = StatusCodes.Status429TooManyRequests,
+                        detail = "Please wait before sending another request."
+                    },
+                    cancellationToken);
+            };
+            options.AddPolicy(
+                "Auth",
+                context => RateLimitPartition.GetFixedWindowLimiter(
+                    GetClientAddress(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+            options.AddPolicy(
+                "Api",
+                context => RateLimitPartition.GetFixedWindowLimiter(
+                    GetClientAddress(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 100,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+            options.AddPolicy(
+                "Upload",
+                context => RateLimitPartition.GetFixedWindowLimiter(
+                    GetClientAddress(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+        });
+
+        return services;
+    }
+
+    private static string GetClientAddress(HttpContext context) =>
+        context.Connection.RemoteIpAddress?.MapToIPv6().ToString()
+        ?? "unknown";
 }

@@ -6,5 +6,7 @@ public interface ICurrentUser
 
     bool IsAuthenticated { get; }
 
+    bool IsAuthor { get; }
+
     bool IsAdmin { get; }
 }

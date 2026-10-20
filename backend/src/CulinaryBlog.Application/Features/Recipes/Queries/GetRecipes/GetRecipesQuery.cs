@@ -11,5 +11,7 @@ public sealed record GetRecipesQuery(
     Guid? CategoryId,
     DifficultyLevel? Difficulty,
     int? MaxCookTime,
-    string Sort
+    string Sort,
+    bool OwnRecipesOnly = false,
+    bool IncludeAllStatuses = false
 ) : IRequest<PagedResult<RecipeSummaryDto>>;

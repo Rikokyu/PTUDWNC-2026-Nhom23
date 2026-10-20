@@ -5,10 +5,10 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuthStore } from "@/store/auth-store";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function ProfilePage() {
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth();
 
   return (
     <MainLayout>
@@ -22,14 +22,12 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent className="stack">
               <div className="meta-row">
-                {user.roles.map((role) => (
+                {[user.role].map((role) => (
                   <Badge key={role} variant="secondary">{role}</Badge>
                 ))}
-                <Badge variant={user.emailConfirmed ? "default" : "outline"}>
-                  {user.emailConfirmed ? "Email đã xác minh" : "Email chưa xác minh"}
-                </Badge>
+
               </div>
-              {user.bio ? <p>{user.bio}</p> : null}
+
             </CardContent>
           </Card>
         ) : (

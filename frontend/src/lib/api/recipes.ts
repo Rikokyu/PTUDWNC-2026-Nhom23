@@ -1,27 +1,35 @@
-import { apiClient } from "./client";
+import apiClient from "./axios";
 import type {
+  CreateRecipeRequest,
   PaginatedResult,
-  RecipeDto,
+  RecipeApiDetailDto,
+  RecipeApiSummaryDto,
   RecipeFilters,
-  RecipeListDto,
-  RecipeSearchFilters,
 } from "@/types/api";
 
 export const recipeApi = {
-  getList: (filters: RecipeFilters = {}) =>
-    apiClient
-      .get<
-        PaginatedResult<RecipeListDto>
-      >("/api/v1/recipes", { params: filters })
-      .then((response) => response.data),
-  search: (filters: RecipeSearchFilters) =>
-    apiClient
-      .get<PaginatedResult<RecipeListDto>>("/api/v1/recipes/search", {
+  getList: async (
+    filters: RecipeFilters = {},
+  ): Promise<PaginatedResult<RecipeApiSummaryDto>> => {
+    const response = await apiClient.get<PaginatedResult<RecipeApiSummaryDto>>(
+      "/api/v1/recipes",
+      {
         params: filters,
-      })
-      .then((response) => response.data),
-  getBySlug: (slug: string) =>
-    apiClient
-      .get<RecipeDto>(`/api/v1/recipes/${slug}`)
-      .then((response) => response.data),
+      },
+    );
+    return response.data;
+  },
+  getBySlug: async (slug: string): Promise<RecipeApiDetailDto> => {
+    const response = await apiClient.get<RecipeApiDetailDto>(
+      `/api/v1/recipes/${encodeURIComponent(slug)}`,
+    );
+    return response.data;
+  },
+  create: async (request: CreateRecipeRequest): Promise<RecipeApiDetailDto> => {
+    const response = await apiClient.post<{ data: RecipeApiDetailDto }>(
+      "/api/v1/recipes",
+      request,
+    );
+    return response.data.data;
+  },
 };

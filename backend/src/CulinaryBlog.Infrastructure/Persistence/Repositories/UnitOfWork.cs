@@ -1,7 +1,8 @@
-using CulinaryBlog.Infrastructure.Persistence;
+using CulinaryBlog.Domain.Entities;
+using CulinaryBlog.Domain.Exceptions;
 using CulinaryBlog.Domain.Interfaces;
-
-namespace CulinaryBlog.Infrastructure.Persistence.Repositories;
+using CulinaryBlog.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 public class UnitOfWork : IUnitOfWork
 {
@@ -21,9 +22,26 @@ public class UnitOfWork : IUnitOfWork
 
     public ICategoryRepository Categories { get; }
 
+    public void AddRecipeImage(RecipeImage image) =>
+        _context.RecipeImages.Add(image);
+
     public Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default)
     {
-        return _context.SaveChangesAsync(cancellationToken);
+        return SaveChangesCoreAsync(cancellationToken);
+    }
+
+    private async Task<int> SaveChangesCoreAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new BusinessRuleException(
+                "The resource was modified by another request. Reload it and try again.");
+        }
     }
 }

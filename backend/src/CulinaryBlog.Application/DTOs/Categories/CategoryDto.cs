@@ -7,4 +7,4 @@ public sealed record CategoryDto(
 	string? Description,
 	string? ImageUrl,
 	int OrderIndex,
-	int RecipeCount = 0);
+    int RecipeCount);

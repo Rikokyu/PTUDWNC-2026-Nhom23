@@ -133,6 +133,7 @@ public sealed class GetRecipeBySlugQueryHandler
             recipe.Difficulty,
             recipe.Status,
             recipe.CreatedAt,
+            recipe.RowVersion,
 
             new RecipeCategoryDto(
                 recipe.Category.Id,

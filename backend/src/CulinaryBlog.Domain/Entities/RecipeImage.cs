@@ -1,5 +1,3 @@
-using CulinaryBlog.Domain.Entities;
-
 namespace CulinaryBlog.Domain.Entities;
 
 public class RecipeImage : BaseEntity
@@ -9,8 +7,6 @@ public class RecipeImage : BaseEntity
     public Recipe Recipe { get; set; } = null!;
 
     public string OriginalUrl { get; set; } = string.Empty;
-
-    public string? ObjectKey { get; set; }
 
     public string? MediumUrl { get; set; }
 
@@ -22,5 +18,22 @@ public class RecipeImage : BaseEntity
 
     public int OrderIndex { get; set; }
 
-    public bool IsDeleted { get; set; }
+    public static RecipeImage Create(
+        Guid recipeId,
+        string originalUrl,
+        string? altText,
+        bool isPrimary,
+        int orderIndex)
+    {
+        return new RecipeImage
+        {
+            Id = Guid.NewGuid(),
+            RecipeId = recipeId,
+            OriginalUrl = originalUrl,
+            AltText = altText,
+            IsPrimary = isPrimary,
+            OrderIndex = orderIndex,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
 }

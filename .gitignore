@@ -150,6 +150,7 @@ node_modules/
 # Next.js
 .next/
 **/.next/
+.next-production/
 
 # Production build
 out/
@@ -342,3 +343,7 @@ frontend/temp/
 !.env.example
 !README.md
 !CHANGELOG.md
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+frontend/.next-production/

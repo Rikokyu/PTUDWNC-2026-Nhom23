@@ -18,30 +18,32 @@ public class ApplicationUserConfiguration
             .HasMaxLength(320)
             .IsRequired();
 
-        builder.Property(x => x.EmailConfirmed)
+        builder.Property(x => x.UserName)
+            .HasMaxLength(50)
             .IsRequired();
 
         builder.Property(x => x.DisplayName)
-            .HasMaxLength(150)
+            .HasMaxLength(100)
             .IsRequired();
+
+        builder.Property(x => x.PasswordHash)
+            .HasMaxLength(500)
+            .IsRequired();
+
+        builder.Property(x => x.AvatarUrl)
+            .HasMaxLength(500);
+
+        builder.Property(x => x.Bio)
+            .HasMaxLength(1000);
 
         builder.Property(x => x.Role)
             .HasMaxLength(50)
             .IsRequired();
 
-        builder.Property(x => x.GoogleSubject)
-            .HasMaxLength(200);
-
-        builder.Property(x => x.AvatarUrl)
-            .HasMaxLength(2048);
-
-        builder.Property(x => x.Bio)
-            .HasMaxLength(1000);
-
         builder.HasIndex(x => x.Email)
             .IsUnique();
 
-        builder.HasIndex(x => x.GoogleSubject)
+        builder.HasIndex(x => x.UserName)
             .IsUnique();
 
         builder.HasMany(x => x.RefreshTokens)

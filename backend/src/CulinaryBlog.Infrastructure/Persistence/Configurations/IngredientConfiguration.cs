@@ -12,9 +12,6 @@ public class RecipeIngredientConfiguration
 	{
 		builder.ToTable("RecipeIngredients");
 
-		builder.HasQueryFilter(ingredient =>
-			!ingredient.IsDeleted && !ingredient.Recipe.IsDeleted);
-
 		builder.HasKey(x => x.Id);
 
 		builder.Property(x => x.Name)

@@ -133,7 +133,7 @@ public sealed class MinioFileStorageService : IFileStorageService
         string objectKey,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(objectKey);
+        objectKey = ResolveObjectKey(objectKey);
 
         for (var attempt = 0; ; attempt++)
         {
@@ -204,5 +204,43 @@ public sealed class MinioFileStorageService : IFileStorageService
         }
 
         return false;
+    }
+
+    public async Task<byte[]> ReadAsync(string fileUrl, CancellationToken cancellationToken = default)
+    {
+        var key = ResolveObjectKey(fileUrl);
+        using var buffer = new MemoryStream();
+        try
+        {
+            await _client.GetObjectAsync(new GetObjectArgs().WithBucket(_bucket)
+                .WithObject(key).WithCallbackStream(stream => stream.CopyTo(buffer)), cancellationToken);
+            return buffer.ToArray();
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { throw new StorageUnavailableException("The image could not be read from MinIO.", ex); }
+    }
+
+    public async Task<string> UploadAsync(ReadOnlyMemory<byte> content, string extension,
+        string folder, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(extension) || extension.Contains('/') || extension.Contains('\\'))
+            throw new ArgumentException("A valid extension is required.", nameof(extension));
+        var key = $"{folder.Trim('/')}/{Guid.NewGuid():N}{extension}";
+        using var stream = new MemoryStream(content.ToArray());
+        var contentType = extension.ToLowerInvariant() switch
+        {
+            ".webp" => "image/webp", ".png" => "image/png", ".gif" => "image/gif", ".avif" => "image/avif",
+            _ => "image/jpeg"
+        };
+        return await UploadAsync(stream, key, content.Length, contentType, cancellationToken);
+    }
+
+    private string ResolveObjectKey(string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) return value;
+        var baseUri = new Uri(_publicBaseUrl.TrimEnd('/') + "/");
+        if (!baseUri.IsBaseOf(uri)) throw new ArgumentException("The file URL is outside the configured bucket.", nameof(value));
+        return Uri.UnescapeDataString(baseUri.MakeRelativeUri(uri).ToString());
     }
 }

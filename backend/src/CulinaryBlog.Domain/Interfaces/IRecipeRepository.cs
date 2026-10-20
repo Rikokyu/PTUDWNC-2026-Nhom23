@@ -16,22 +16,36 @@ public interface IRecipeRepository : IRepository<Recipe>
             Guid? currentUserId,
             bool isAuthenticated,
             bool isAdmin,
+            bool ownRecipesOnly = false,
+            bool includeAllStatuses = false,
+            CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
+        GetPagedForCategoryAsync(
+            Guid categoryId,
+            int page,
+            int pageSize,
+            Guid? currentUserId,
+            bool isAuthenticated,
+            bool isAdmin,
             CancellationToken cancellationToken = default);
 
     Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
         CancellationToken cancellationToken = default);
 
-    Task<Recipe?> GetByIdWithDetailsForUpdateAsync(
+    Task<Recipe?> GetByIdWithImagesAsync(
         Guid id,
         CancellationToken cancellationToken = default);
 
-    void AddImage(RecipeImage image);
+    Task<Recipe?> GetByIdWithDetailsAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 
     Task<bool> SlugExistsAsync(
         string slug,
+        Guid? excludingRecipeId = null,
         CancellationToken cancellationToken = default);
-
     Task<(IReadOnlyList<Recipe> Items, int TotalCount)> SearchAsync(
         string searchTerm,
         int page,

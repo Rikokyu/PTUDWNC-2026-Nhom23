@@ -22,11 +22,11 @@ public class RecipeConfiguration
             .HasMaxLength(220)
             .IsRequired();
 
-        builder.HasIndex(x => x.Slug)
-            .IsUnique()
-            .HasFilter("\"IsDeleted\" = false");
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
 
-        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasIndex(x => x.Slug)
+            .IsUnique();
 
         builder.Property(x => x.Description)
             .IsRequired();
@@ -40,8 +40,8 @@ public class RecipeConfiguration
         builder.Property(x => x.Status)
             .HasConversion<int>();
 
-        builder.Property(x => x.UpdatedAt)
-            .IsConcurrencyToken();
+        builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
 
         builder.HasIndex(x => x.CategoryId);
 

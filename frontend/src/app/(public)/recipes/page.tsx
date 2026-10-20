@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { recipeApi } from "@/lib/api/recipes";
+import { recipeApi } from "@/lib/api/custom-recipes";
 import type { RecipeCardItem } from "@/components/recipes/recipe-card";
 
 const pageSize = 9;

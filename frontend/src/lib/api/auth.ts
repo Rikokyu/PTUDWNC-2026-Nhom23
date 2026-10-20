@@ -1,5 +1,7 @@
 import apiClient from "./axios";
-import type { AuthSessionDto, AuthUserDto } from "@/types/api";
+import type { AuthSessionDto } from "@/types/api";
+import { useAuthStore } from "@/store/useAuthStore";
+import { AUTH_CHANGED } from "@/lib/auth/session";
 
 export const authApi = {
   login: async (email: string, password: string): Promise<AuthSessionDto> => {
@@ -13,8 +15,8 @@ export const authApi = {
     displayName: string,
     email: string,
     password: string,
-  ): Promise<AuthUserDto> => {
-    const response = await apiClient.post<AuthUserDto>(
+  ): Promise<AuthSessionDto> => {
+    const response = await apiClient.post<AuthSessionDto>(
       "/api/v1/auth/register",
       { displayName, email, password },
     );
@@ -24,3 +26,10 @@ export const authApi = {
     await apiClient.post("/api/v1/auth/logout");
   },
 };
+
+export function saveAuthSession(session: AuthSessionDto): void {
+  localStorage.setItem("refreshToken", session.refreshToken);
+  localStorage.setItem("accessTokenExpiresAt", session.accessTokenExpiresAt);
+  useAuthStore.getState().setSession(session.accessToken, session.user);
+  window.dispatchEvent(new Event(AUTH_CHANGED));
+}

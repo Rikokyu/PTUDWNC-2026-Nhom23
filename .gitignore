@@ -148,6 +148,7 @@ node_modules/
 # Next.js
 .next/
 **/.next/
+.next-production/
 
 # Production build
 out/

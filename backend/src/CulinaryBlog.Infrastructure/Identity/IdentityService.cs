@@ -31,7 +31,7 @@ public sealed class IdentityService : IIdentityService
         _configuration = configuration;
     }
 
-    public async Task<AuthUserDto> RegisterAsync(
+    public async Task<AuthSessionDto> RegisterAsync(
         string displayName,
         string email,
         string password,
@@ -62,7 +62,7 @@ public sealed class IdentityService : IIdentityService
         await _context.ApplicationUsers.AddAsync(user, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return ToDto(user);
+        return await CreateSessionAsync(user, cancellationToken);
     }
 
     public async Task<AuthSessionDto?> LoginAsync(

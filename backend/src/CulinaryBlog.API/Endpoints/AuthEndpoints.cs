@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
 using CulinaryBlog.Application.Features.Auth.Commands.Logout;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
@@ -38,10 +37,10 @@ public static class AuthEndpoints
             .WithName($"{routeVersion}Register")
             .WithSummary("Register a new user account.")
             .WithDescription(
-                "Creates an account after validating the email and password.")
+                "Creates an Author account, returns an access/refresh token pair, and queues a welcome email.")
             .AllowAnonymous()
             .Produces(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPost("/login", LoginAsync)
@@ -51,7 +50,7 @@ public static class AuthEndpoints
                 "Returns a JWT access token and a refresh token.")
             .AllowAnonymous()
             .Produces(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/logout", LogoutAsync)
@@ -84,27 +83,20 @@ public static class AuthEndpoints
         return Results.Ok(user);
     }
 
-    /// <summary>Creates a user account and returns its public profile.</summary>
+    /// <summary>Creates a user account and immediately returns an authenticated session.</summary>
     private static async Task<IResult> RegisterAsync(
         RegisterRequest request,
         ISender sender,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var user = await sender.Send(
-                new RegisterCommand(
-                    request.DisplayName,
-                    request.Email,
-                    request.Password),
-                cancellationToken);
+        var session = await sender.Send(
+            new RegisterCommand(
+                request.DisplayName,
+                request.Email,
+                request.Password),
+            cancellationToken);
 
-            return Results.Created("/api/auth/register", user);
-        }
-        catch (ValidationException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        return Results.Created("/api/v1/auth/register", session);
     }
 
     /// <summary>Validates credentials and issues an access/refresh token pair.</summary>
@@ -113,18 +105,11 @@ public static class AuthEndpoints
         ISender sender,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var session = await sender.Send(
-                new LoginCommand(request.Email, request.Password),
-                cancellationToken);
+        var session = await sender.Send(
+            new LoginCommand(request.Email, request.Password),
+            cancellationToken);
 
-            return Results.Ok(session);
-        }
-        catch (ValidationException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        return Results.Ok(session);
     }
 
     /// <summary>Revokes all active refresh tokens for the authenticated user.</summary>

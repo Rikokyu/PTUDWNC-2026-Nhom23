@@ -5,9 +5,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { MOCK_RECIPES } from "@/lib/mockData";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { ChefHat, Plus, Eye, Heart, Star, BookOpen, Clock, ArrowUpRight } from "lucide-react";
 
 export default function DashboardOverviewPage() {
+  const { user } = useAuth();
   const userRecipes = MOCK_RECIPES.slice(0, 3);
 
   return (
@@ -16,7 +18,7 @@ export default function DashboardOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-white rounded-xl border border-slate-200 shadow-subtle">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-content-primary">
-            Xin chào, Minh Thư 👋
+            Xin chào, {user?.displayName} 👋
           </h1>
           <p className="text-xs text-content-secondary">
             Chào mừng bạn quay trở lại gian bếp. Bạn có 3 công thức đã xuất bản và 215 lượt yêu thích.

@@ -5,15 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChefHat, Grid, PlusCircle, User, Bookmark, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   const menuItems = [
     { label: "Tổng quan", href: "/dashboard", icon: Grid },
     { label: "Công thức của tôi", href: "/dashboard/recipes", icon: ChefHat },
     { label: "Tạo công thức mới", href: "/dashboard/recipes/new", icon: PlusCircle },
-    { label: "Danh mục quản lý", href: "/dashboard/categories", icon: Grid },
+    ...(user?.role === "Admin" ? [{ label: "Danh mục quản lý", href: "/dashboard/categories", icon: Grid }] : []),
     { label: "Hồ sơ cá nhân", href: "/dashboard/profile", icon: User },
     { label: "Công thức đã lưu", href: "/saved", icon: Bookmark },
   ];
@@ -58,7 +60,7 @@ export const Sidebar: React.FC = () => {
           <span>Cài đặt tài khoản</span>
         </Link>
         <button
-          onClick={() => {}}
+          onClick={() => void logout()}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors text-left"
         >
           <LogOut className="w-4 h-4 text-rose-500" />

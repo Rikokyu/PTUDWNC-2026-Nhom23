@@ -1,6 +1,7 @@
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
+using CulinaryBlog.Infrastructure.Email;
 using CulinaryBlog.Infrastructure.Identity;
 using CulinaryBlog.Domain.Interfaces;
 using CulinaryBlog.Infrastructure.Persistence;
@@ -32,6 +33,7 @@ public static class DependencyInjection
             IPasswordHasher<ApplicationUser>,
             PasswordHasher<ApplicationUser>>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IEmailService, MailKitEmailService>();
 
         if (configuration.GetValue("Hangfire:Enabled", true))
         {
@@ -57,12 +59,18 @@ public static class DependencyInjection
             services.AddScoped<
                 IImageResizeJobScheduler,
                 HangfireImageResizeJobScheduler>();
+            services.AddScoped<
+                IWelcomeEmailJobScheduler,
+                HangfireWelcomeEmailJobScheduler>();
         }
         else
         {
             services.AddScoped<
                 IImageResizeJobScheduler,
                 DisabledImageResizeJobScheduler>();
+            services.AddScoped<
+                IWelcomeEmailJobScheduler,
+                DisabledWelcomeEmailJobScheduler>();
         }
 
         services.AddScoped(

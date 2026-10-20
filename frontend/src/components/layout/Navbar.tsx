@@ -23,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const pathname = usePathname();
   const router = useRouter();
   const authUser = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const clearSession = useAuthStore((state) => state.clearSession);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -30,6 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const currentUser = user ?? (authUser
     ? { name: authUser.displayName, email: authUser.email }
     : null);
+  const isAdmin = authUser?.role === "Admin";
 
   async function handleLogout() {
     setLogoutError(null);
@@ -39,6 +41,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
       setUserDropdownOpen(false);
       router.push("/");
     } catch (error) {
+      if (!accessToken) {
+        clearSession();
+        router.push("/");
+        return;
+      }
       setLogoutError(getApiErrorMessage(error));
     }
   }
@@ -155,6 +162,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                     </div>
 
                     <div className="py-1">
+                      {isAdmin && (
+                        <Link href="/dashboard/categories" onClick={() => setUserDropdownOpen(false)} className="block px-4 py-2 text-xs text-content-secondary hover:bg-slate-50">
+                          Quản lý danh mục
+                        </Link>
+                      )}
                       <Link
                         href="/dashboard/profile"
                         onClick={() => setUserDropdownOpen(false)}

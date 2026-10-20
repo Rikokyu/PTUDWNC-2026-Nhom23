@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Interfaces;
@@ -175,21 +176,25 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         string sort,
         CancellationToken cancellationToken = default)
     {
+        var normalizedSearchTerm = Regex.Replace(searchTerm.Trim(), @"\s+", " ");
+        if (string.IsNullOrWhiteSpace(normalizedSearchTerm))
+        {
+            return (Array.Empty<Recipe>(), 0);
+        }
+
         IQueryable<Recipe> query = _context.Recipes
+            .FromSqlInterpolated($@"
+                SELECT r.*
+                FROM ""Recipes"" AS r
+                WHERE r.""Status"" = {(int)RecipeStatus.Published}
+                  AND r.""SearchVector"" @@ websearch_to_tsquery('simple', unaccent({normalizedSearchTerm}))
+                ORDER BY ts_rank(r.""SearchVector"", websearch_to_tsquery('simple', unaccent({normalizedSearchTerm}))) DESC")
             .AsNoTracking()
-            .Where(recipe => recipe.Status == RecipeStatus.Published)
-            .Where(recipe =>
-                EF.Functions.ToTsVector(
-                    "simple",
-                    EF.Functions.Unaccent(
-                        recipe.Title + " " + recipe.Description + " " + recipe.Instructions))
-                .Matches(EF.Functions.PlainToTsQuery(
-                    "simple",
-                    EF.Functions.Unaccent(searchTerm))))
             .Include(recipe => recipe.Category)
             .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
 
         var totalCount = await query.CountAsync(cancellationToken);
+
         query = sort switch
         {
             "createdAt" => query.OrderBy(recipe => recipe.CreatedAt),
@@ -203,6 +208,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             "-categoryName" => query.OrderByDescending(recipe => recipe.Category.Name),
             _ => query.OrderByDescending(recipe => recipe.CreatedAt)
         };
+
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

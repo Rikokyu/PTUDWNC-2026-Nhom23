@@ -2,6 +2,7 @@ using System.Net;
 using CulinaryBlog.API.HealthChecks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace CulinaryBlog.API.Tests;
@@ -12,7 +13,9 @@ public sealed class HealthCheckTests
     public async Task RedisHealthCheck_ReturnsUnhealthy_WhenConnectionStringIsMissing()
     {
         var configuration = CreateConfiguration();
-        var healthCheck = new RedisHealthCheck(configuration);
+        var healthCheck = new RedisHealthCheck(
+            configuration,
+            NullLogger<RedisHealthCheck>.Instance);
 
         var result = await healthCheck.CheckHealthAsync(
             new HealthCheckContext());

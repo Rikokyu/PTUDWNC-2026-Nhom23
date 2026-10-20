@@ -42,6 +42,21 @@ export interface RecipeCategoryDto {
   slug: string;
 }
 
+export interface CategoryDto {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  imageUrl: string | null;
+  orderIndex: number;
+  recipeCount: number;
+}
+
+export interface CategoryDetailDto {
+  category: CategoryDto;
+  recipes: PaginatedResult<RecipeListDto>;
+}
+
 export interface RecipeAuthorDto {
   id: string;
   displayName: string;

@@ -1,4 +1,3 @@
-using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
 
 namespace CulinaryBlog.Domain.Entities;

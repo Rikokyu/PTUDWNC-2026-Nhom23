@@ -6,10 +6,14 @@ namespace CulinaryBlog.API.HealthChecks;
 public sealed class RedisHealthCheck : IHealthCheck
 {
     private readonly IConfiguration _configuration;
+    private readonly ILogger<RedisHealthCheck> _logger;
 
-    public RedisHealthCheck(IConfiguration configuration)
+    public RedisHealthCheck(
+        IConfiguration configuration,
+        ILogger<RedisHealthCheck> logger)
     {
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -39,8 +43,9 @@ public sealed class RedisHealthCheck : IHealthCheck
         {
             return HealthCheckResult.Unhealthy("Redis health check timed out.");
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            _logger.LogError(exception, "Redis health check failed.");
             return HealthCheckResult.Unhealthy("Redis is unavailable.");
         }
     }

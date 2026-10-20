@@ -52,7 +52,7 @@ public static class DatabaseSeeder
                 continue;
             }
 
-            categories.Add(new Category
+            var category = new Category
             {
                 Id = Guid.NewGuid(),
                 Name = name,
@@ -60,7 +60,10 @@ public static class DatabaseSeeder
                 Description = faker.Lorem.Sentence(),
                 OrderIndex = categories.Count + 1,
                 CreatedAt = DateTime.UtcNow
-            });
+            };
+
+            categories.Add(category);
+            context.Categories.Add(category);
         }
 
         if (context.ChangeTracker.HasChanges())

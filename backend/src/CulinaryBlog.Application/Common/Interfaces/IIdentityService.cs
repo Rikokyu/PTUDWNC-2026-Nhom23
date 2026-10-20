@@ -5,7 +5,7 @@ namespace CulinaryBlog.Application.Common.Interfaces;
 
 public interface IIdentityService
 {
-    Task<AuthUserDto> RegisterAsync(
+    Task<AuthSessionDto> RegisterAsync(
         string displayName,
         string email,
         string password,

@@ -60,7 +60,7 @@ public sealed class GetCurrentUserQueryTests
     {
         public Guid? RequestedUserId { get; private set; }
 
-        public Task<AuthUserDto> RegisterAsync(
+        public Task<AuthSessionDto> RegisterAsync(
             string displayName,
             string email,
             string password,

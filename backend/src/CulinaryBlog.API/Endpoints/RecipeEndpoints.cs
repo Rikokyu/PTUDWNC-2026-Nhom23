@@ -1,5 +1,6 @@
 using CulinaryBlog.Application.Features.Recipes.Queries.SearchRecipes;
 using CulinaryBlog.Application.Common.Exceptions;
+using CulinaryBlog.Application.Common.Models;
 using CulinaryBlog.Application.DTOs.Recipes;
 using CulinaryBlog.Application.Features.Recipes.Commands;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeBySlug;
@@ -44,7 +45,11 @@ public static class RecipeEndpoints
                 GetRecipeBySlugAsync)
             .CacheOutput("RecipeDetail");
 
-        group.MapGet("/search", SearchRecipesAsync).WithName("SearchRecipes");
+        group.MapGet("/search", SearchRecipesAsync)
+            .WithName("SearchRecipes")
+            .WithSummary("Search published recipes using accent-insensitive Vietnamese prefixes.")
+            .Produces<PagedResult<RecipeSummaryDto>>()
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapPost(
             "",
@@ -445,6 +450,7 @@ public static class RecipeEndpoints
             {
                 var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
+                    ["relevance"] = "relevance",
                     ["name"] = "title",
                     ["title"] = "title",
                     ["createdAt"] = "createdAt",
@@ -467,19 +473,11 @@ public static class RecipeEndpoints
             }
             else
             {
-                sort = "-createdAt";
+                sort = "relevance";
             }
         }
 
-        var allowedSorts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "createdAt", "-createdAt", "title", "-title", "cookTime", "-cookTime",
-            "prepTime", "-prepTime", "categoryName", "-categoryName"
-        };
-        if (!allowedSorts.Contains(sort))
-        {
-            throw new ValidationException("sort is invalid.");
-        }
+        sort = SearchRecipesQuery.NormalizeSort(sort);
 
         var result = await sender.Send(
             new SearchRecipesQuery(searchTerm ?? string.Empty, page, pageSize, sort),

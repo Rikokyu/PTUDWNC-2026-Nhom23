@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CulinaryBlog.Application.Common.Models;
 
 public class PagedResult<T>
@@ -12,6 +14,9 @@ public class PagedResult<T>
     public int PageSize { get; init; }
 
     public int TotalPages { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Message { get; init; }
 
     public bool HasNextPage =>
         Page < TotalPages;

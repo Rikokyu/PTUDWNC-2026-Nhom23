@@ -341,10 +341,10 @@ public sealed class RegistrationAndImageUploadTests
     private sealed class FakeRecipeRepository(Recipe recipe)
         : IRecipeRepository
     {
-        public Task<(IReadOnlyList<Recipe> Items, int TotalCount)> SearchAsync(
+        public Task<(IReadOnlyList<CulinaryBlog.Domain.Models.RecipeSearchMatch> Items, int TotalCount)> SearchAsync(
             string searchTerm, int page, int pageSize, string sort,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
+            Task.FromResult<(IReadOnlyList<CulinaryBlog.Domain.Models.RecipeSearchMatch>, int)>(([], 0));
 
         public Guid? LastPagedCurrentUserId { get; private set; }
         public bool LastPagedIncludeAllStatuses { get; private set; }
@@ -405,9 +405,9 @@ public sealed class RegistrationAndImageUploadTests
                 bool includeAllStatuses = false,
                 CancellationToken cancellationToken = default)
         {
-                LastPagedCurrentUserId = currentUserId;
-                LastPagedIncludeAllStatuses = includeAllStatuses;
-                return Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
+            LastPagedCurrentUserId = currentUserId;
+            LastPagedIncludeAllStatuses = includeAllStatuses;
+            return Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
         }
 
         public Task<(IReadOnlyList<Recipe> Items, int TotalCount)>

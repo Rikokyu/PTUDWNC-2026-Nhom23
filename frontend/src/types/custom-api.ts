@@ -2,6 +2,7 @@ export type Difficulty = "Easy" | "Medium" | "Hard" | "Expert";
 export type RecipeStatus = "Draft" | "Published" | "Archived";
 
 export interface RecipeListDto {
+  relevanceScore?: number;
   id: string;
   title: string;
   slug: string;
@@ -109,6 +110,7 @@ export interface CommentDto {
 }
 
 export interface PaginatedResult<T> {
+  message?: string;
   items: T[];
   totalCount: number;
   page: number;

@@ -1,6 +1,8 @@
 using CulinaryBlog.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NpgsqlTypes;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Configurations;
 
@@ -33,6 +35,15 @@ public class RecipeConfiguration
 
         builder.Property(x => x.Instructions)
             .IsRequired();
+
+        // The trigger owns this infrastructure-only value, keeping Npgsql out
+        // of the domain entity and preventing EF from overwriting the vector.
+        var searchVector = builder.Property<NpgsqlTsVector>("SearchVector")
+            .HasColumnType("tsvector")
+            .ValueGeneratedOnAddOrUpdate();
+        searchVector.Metadata.SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
+        searchVector.Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Ignore);
+        builder.HasIndex("SearchVector").HasMethod("GIN");
 
         builder.Property(x => x.Difficulty)
             .HasConversion<int>();

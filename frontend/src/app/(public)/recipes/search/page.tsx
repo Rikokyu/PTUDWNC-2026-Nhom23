@@ -15,15 +15,23 @@ function queryFromUrl() {
   return {
     query: params.get("q") ?? "",
     page: Number.isInteger(page) && page > 0 ? page : 1,
+    sort: params.get("sort") ?? "relevance",
   };
 }
 
-function updateSearchUrl(query: string, page: number, replace = false) {
+function updateSearchUrl(
+  query: string,
+  page: number,
+  sort = "relevance",
+  replace = false,
+) {
   const params = new URLSearchParams(window.location.search);
   if (query) params.set("q", query);
   else params.delete("q");
   if (page > 1) params.set("page", String(page));
   else params.delete("page");
+  if (sort !== "relevance") params.set("sort", sort);
+  else params.delete("sort");
   const search = params.toString();
   const url = `${window.location.pathname}${search ? `?${search}` : ""}`;
   if (replace) window.history.replaceState({}, "", url);
@@ -37,69 +45,99 @@ export default function RecipeSearchPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sort, setSort] = useState("relevance");
+  const [emptyMessage, setEmptyMessage] = useState<string>();
   const requestSequence = useRef(0);
 
-  const loadSearch = useCallback(async (value: string, requestedPage: number) => {
-    const trimmed = value.trim();
-    const requestId = ++requestSequence.current;
-    setQuery(trimmed);
-    setPage(requestedPage);
-    if (!trimmed) {
-      setItems([]);
-      setTotalPages(0);
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      const results = await searchRecipes({
-        q: trimmed,
-        page: requestedPage,
-        pageSize: 10,
-      });
-      if (requestId !== requestSequence.current) return;
-      if (results.totalPages > 0 && requestedPage > results.totalPages) {
-        const lastPage = results.totalPages;
-        setPage(lastPage);
-        updateSearchUrl(trimmed, lastPage, true);
+  const loadSearch = useCallback(
+    async (
+      value: string,
+      requestedPage: number,
+      requestedSort = "relevance",
+    ) => {
+      const trimmed = value.trim().normalize("NFC");
+      const requestId = ++requestSequence.current;
+      setQuery(trimmed);
+      setPage(requestedPage);
+      setSort(requestedSort);
+      setEmptyMessage(undefined);
+      if (!trimmed) {
+        setItems([]);
+        setTotalPages(0);
+        setError(null);
+        setIsLoading(false);
         return;
       }
-      setItems(
-        results.items.map((recipe) => ({
-          id: recipe.id,
-          title: recipe.title,
-          slug: recipe.slug,
-          description: recipe.title,
-          thumbnailUrl: recipe.thumbnailUrl,
-          cookTimeMinutes: recipe.cookTimeMinutes,
-          difficulty: recipe.difficulty,
-          categoryName: recipe.categoryName,
-        })),
-      );
-      setTotalPages(results.totalPages);
-    } catch (requestError) {
-      if (requestId !== requestSequence.current) return;
-      const message =
-        requestError instanceof Error ? requestError.message : "Không thể tìm kiếm công thức.";
-      setError(message);
-      setItems([]);
-      setTotalPages(0);
-    } finally {
-      if (requestId === requestSequence.current) setIsLoading(false);
-    }
-  }, []);
+
+      if (trimmed.length < 2 || trimmed.length > 200) {
+        setItems([]);
+        setTotalPages(0);
+        setError("Nhập từ khóa từ 2 đến 200 ký tự.");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      try {
+        let results = await searchRecipes({
+          q: trimmed,
+          page: requestedPage,
+          pageSize: 10,
+          sort: requestedSort,
+        });
+        if (requestId !== requestSequence.current) return;
+        if (results.totalPages > 0 && requestedPage > results.totalPages) {
+          const lastPage = results.totalPages;
+          setPage(lastPage);
+          updateSearchUrl(trimmed, lastPage, requestedSort, true);
+          results = await searchRecipes({
+            q: trimmed,
+            page: lastPage,
+            pageSize: 10,
+            sort: requestedSort,
+          });
+          if (requestId !== requestSequence.current) return;
+        }
+        setItems(
+          results.items.map((recipe) => ({
+            id: recipe.id,
+            title: recipe.title,
+            slug: recipe.slug,
+            description: recipe.title,
+            thumbnailUrl: recipe.thumbnailUrl,
+            cookTimeMinutes: recipe.cookTimeMinutes,
+            difficulty: recipe.difficulty,
+            categoryName: recipe.categoryName,
+          })),
+        );
+        setTotalPages(results.totalPages);
+        setEmptyMessage(results.message);
+      } catch (requestError) {
+        if (requestId !== requestSequence.current) return;
+        const message =
+          requestError instanceof Error
+            ? requestError.message
+            : "Không thể tìm kiếm công thức.";
+        setError(message);
+        setItems([]);
+        setTotalPages(0);
+      } finally {
+        if (requestId === requestSequence.current) setIsLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const initial = queryFromUrl();
-    if (initial.query) void loadSearch(initial.query, initial.page);
+    if (initial.query)
+      void loadSearch(initial.query, initial.page, initial.sort);
     const onPopState = () => {
       const next = queryFromUrl();
       setQuery(next.query);
       setPage(next.page);
-      void loadSearch(next.query, next.page);
+      void loadSearch(next.query, next.page, next.sort);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -107,13 +145,13 @@ export default function RecipeSearchPage() {
 
   const submitSearch = () => {
     const trimmed = query.trim();
-    updateSearchUrl(trimmed, 1);
-    void loadSearch(trimmed, 1);
+    updateSearchUrl(trimmed, 1, sort);
+    void loadSearch(trimmed, 1, sort);
   };
 
   const changePage = (nextPage: number) => {
-    updateSearchUrl(query, nextPage);
-    void loadSearch(query, nextPage);
+    updateSearchUrl(query, nextPage, sort);
+    void loadSearch(query, nextPage, sort);
   };
 
   return (
@@ -122,7 +160,9 @@ export default function RecipeSearchPage() {
         <div className="section-heading">
           <div>
             <h1>Tìm kiếm công thức</h1>
-            <p className="muted">Tìm theo tên món hoặc từ khóa tiếng Việt.</p>
+            <p className="muted">
+              Tìm từ 2 đến 200 ký tự, có hoặc không dấu tiếng Việt.
+            </p>
           </div>
         </div>
 
@@ -133,14 +173,55 @@ export default function RecipeSearchPage() {
           placeholder="Ví dụ: pho bo, canh chua, bun cha"
         />
 
-        {error ? <ErrorMessage message={error} onRetry={() => void loadSearch(query, page)} /> : null}
+        <div className="my-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">
+            Mặc định ưu tiên công thức phù hợp nhất với từ khóa.
+          </p>
+          <label
+            className="flex items-center gap-2 text-sm"
+            htmlFor="search-sort"
+          >
+            Sắp xếp
+            <select
+              id="search-sort"
+              value={sort}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2"
+              onChange={(event) => {
+                const nextSort = event.target.value;
+                updateSearchUrl(query, 1, nextSort);
+                void loadSearch(query, 1, nextSort);
+              }}
+            >
+              <option value="relevance">Phù hợp nhất</option>
+              <option value="-createdAt">Mới nhất</option>
+              <option value="createdAt">Cũ nhất</option>
+              <option value="title">Tên món A–Z</option>
+              <option value="cookTime">Thời gian nấu tăng dần</option>
+            </select>
+          </label>
+        </div>
+        {error ? (
+          <ErrorMessage
+            message={error}
+            onRetry={() => void loadSearch(query, page, sort)}
+          />
+        ) : null}
         <RecipeGrid
           items={items}
           isLoading={isLoading}
-          emptyTitle={query ? "Không tìm thấy công thức phù hợp" : "Nhập từ khóa để tìm công thức"}
+          emptyDescription={emptyMessage}
+          emptyTitle={
+            query
+              ? "Không tìm thấy công thức phù hợp"
+              : "Nhập từ khóa để tìm công thức"
+          }
         />
         {!isLoading && !error ? (
-          <Pagination currentPage={page} totalPages={totalPages} onPageChange={changePage} />
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={changePage}
+          />
         ) : null}
       </div>
     </MainLayout>

@@ -1,8 +1,10 @@
-using System.Text.RegularExpressions;
+using CulinaryBlog.Application.Common.Helpers;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Interfaces;
+using CulinaryBlog.Domain.Models;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Repositories;
 
@@ -215,52 +217,58 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                         || recipe.Id != excludingRecipeId.Value),
                 cancellationToken);
     }
-    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)> SearchAsync(
+    public async Task<(IReadOnlyList<RecipeSearchMatch> Items, int TotalCount)> SearchAsync(
         string searchTerm,
         int page,
         int pageSize,
         string sort,
         CancellationToken cancellationToken = default)
     {
-        var normalizedSearchTerm = Regex.Replace(searchTerm.Trim(), @"\s+", " ");
-        if (string.IsNullOrWhiteSpace(normalizedSearchTerm))
+        var prefixQuery = RecipeSearchText.BuildPrefixQuery(searchTerm);
+        if (string.IsNullOrEmpty(prefixQuery))
         {
-            return (Array.Empty<Recipe>(), 0);
+            return (Array.Empty<RecipeSearchMatch>(), 0);
         }
 
-        IQueryable<Recipe> query = _context.Recipes
-            .FromSqlInterpolated($@"
-                SELECT r.*
-                FROM ""Recipes"" AS r
-                WHERE r.""Status"" = {(int)RecipeStatus.Published}
-                  AND r.""SearchVector"" @@ websearch_to_tsquery('simple', unaccent({normalizedSearchTerm}))
-                ORDER BY ts_rank(r.""SearchVector"", websearch_to_tsquery('simple', unaccent({normalizedSearchTerm}))) DESC")
+        var matches = _context.Recipes
             .AsNoTracking()
-            .Where(recipe => !recipe.IsDeleted && !recipe.Category.IsDeleted)
+            .Where(recipe => !recipe.IsDeleted && !recipe.Category.IsDeleted
+                && recipe.Status == RecipeStatus.Published
+                && EF.Property<NpgsqlTsVector>(recipe, "SearchVector")
+                    .Matches(EF.Functions.ToTsQuery("public.vietnamese", prefixQuery)))
             .Include(recipe => recipe.Category)
             .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
 
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        query = sort switch
+        var totalCount = await matches.CountAsync(cancellationToken);
+        var query = matches.Select(recipe => new
         {
-            "createdAt" => query.OrderBy(recipe => recipe.CreatedAt),
-            "title" => query.OrderBy(recipe => recipe.Title),
-            "-title" => query.OrderByDescending(recipe => recipe.Title),
-            "cookTime" => query.OrderBy(recipe => recipe.CookTimeMinutes),
-            "-cookTime" => query.OrderByDescending(recipe => recipe.CookTimeMinutes),
-            "prepTime" => query.OrderBy(recipe => recipe.PrepTimeMinutes),
-            "-prepTime" => query.OrderByDescending(recipe => recipe.PrepTimeMinutes),
-            "categoryName" => query.OrderBy(recipe => recipe.Category.Name),
-            "-categoryName" => query.OrderByDescending(recipe => recipe.Category.Name),
-            _ => query.OrderByDescending(recipe => recipe.CreatedAt)
+            Recipe = recipe,
+            RelevanceScore = EF.Property<NpgsqlTsVector>(recipe, "SearchVector")
+                .Rank(EF.Functions.ToTsQuery("public.vietnamese", prefixQuery))
+        });
+
+        var ordered = sort switch
+        {
+            "createdAt" => query.OrderBy(match => match.Recipe.CreatedAt),
+            "-createdAt" => query.OrderByDescending(match => match.Recipe.CreatedAt),
+            "title" => query.OrderBy(match => match.Recipe.Title),
+            "-title" => query.OrderByDescending(match => match.Recipe.Title),
+            "cookTime" => query.OrderBy(match => match.Recipe.CookTimeMinutes),
+            "-cookTime" => query.OrderByDescending(match => match.Recipe.CookTimeMinutes),
+            "prepTime" => query.OrderBy(match => match.Recipe.PrepTimeMinutes),
+            "-prepTime" => query.OrderByDescending(match => match.Recipe.PrepTimeMinutes),
+            "categoryName" => query.OrderBy(match => match.Recipe.Category.Name),
+            "-categoryName" => query.OrderByDescending(match => match.Recipe.Category.Name),
+            _ => query.OrderByDescending(match => match.RelevanceScore)
         };
 
-        var items = await query
+        var items = await ordered
+            .ThenByDescending(match => match.Recipe.CreatedAt)
+            .ThenBy(match => match.Recipe.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return (items, totalCount);
+        return (items.Select(item => new RecipeSearchMatch(item.Recipe, item.RelevanceScore)).ToList(), totalCount);
     }
 }

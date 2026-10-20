@@ -1,4 +1,5 @@
 using CulinaryBlog.Domain.Enums;
+using System.Text.Json.Serialization;
 
 namespace CulinaryBlog.Application.DTOs.Recipes;
 
@@ -15,7 +16,11 @@ public sealed record RecipeSummaryDto(
     DifficultyLevel Difficulty,
     RecipeStatus Status,
     DateTime CreatedAt
-);
+)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? RelevanceScore { get; init; }
+}
 
 public sealed record RecipeDetailDto(
     Guid Id,

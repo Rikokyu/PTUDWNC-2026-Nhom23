@@ -42,6 +42,7 @@ export interface CreateRecipeRequest {
 }
 
 export interface RecipeApiSummaryDto {
+  relevanceScore?: number;
   id: string;
   title: string;
   slug: string;
@@ -185,6 +186,7 @@ export interface CommentDto {
 }
 
 export interface PaginatedResult<T> {
+  message?: string;
   items: T[];
   totalCount: number;
   page: number;

@@ -1,5 +1,6 @@
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
+using CulinaryBlog.Domain.Models;
 
 namespace CulinaryBlog.Domain.Interfaces;
 
@@ -46,7 +47,7 @@ public interface IRecipeRepository : IRepository<Recipe>
         string slug,
         Guid? excludingRecipeId = null,
         CancellationToken cancellationToken = default);
-    Task<(IReadOnlyList<Recipe> Items, int TotalCount)> SearchAsync(
+    Task<(IReadOnlyList<RecipeSearchMatch> Items, int TotalCount)> SearchAsync(
         string searchTerm,
         int page,
         int pageSize,

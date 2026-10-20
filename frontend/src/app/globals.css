@@ -86,9 +86,11 @@ img {
   display: block;
 }
 
-a {
-  color: var(--primary);
-  text-decoration: none;
+@layer base {
+  a {
+    color: var(--primary);
+    text-decoration: none;
+  }
 }
 
 button,

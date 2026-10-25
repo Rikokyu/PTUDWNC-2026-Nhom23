@@ -35,12 +35,15 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
     setLogoutError(null);
     try {
       await authApi.logout();
-      clearSession();
-      setUserDropdownOpen(false);
-      router.push("/");
     } catch (error) {
       setLogoutError(getApiErrorMessage(error));
+      clearSession();
+      setUserDropdownOpen(false);
+      return;
     }
+    clearSession();
+    setUserDropdownOpen(false);
+    router.push("/");
   }
 
   const navLinks = [

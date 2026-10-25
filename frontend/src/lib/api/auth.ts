@@ -1,5 +1,10 @@
 import apiClient from "./axios";
-import type { AuthSessionDto, AuthUserDto } from "@/types/api";
+import type {
+  AuthSessionDto,
+  AuthUserDto,
+  UpdateProfileRequest,
+  UserProfileDto,
+} from "@/types/api";
 
 export const authApi = {
   login: async (email: string, password: string): Promise<AuthSessionDto> => {
@@ -22,5 +27,33 @@ export const authApi = {
   },
   logout: async (): Promise<void> => {
     await apiClient.post("/api/v1/auth/logout");
+  },
+  getMe: async (): Promise<UserProfileDto> => {
+    const response = await apiClient.get<UserProfileDto>("/api/v1/auth/me");
+    return response.data;
+  },
+  updateProfile: async (
+    request: UpdateProfileRequest,
+  ): Promise<UserProfileDto> => {
+    const response = await apiClient.patch<UserProfileDto>(
+      "/api/v1/auth/me",
+      request,
+    );
+    return response.data;
+  },
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> => {
+    await apiClient.post("/api/v1/auth/change-password", {
+      currentPassword,
+      newPassword,
+    });
+  },
+  requestPasswordReset: async (email: string): Promise<void> => {
+    await apiClient.post("/api/v1/auth/forgot-password", { email });
+  },
+  resetPassword: async (token: string, newPassword: string): Promise<void> => {
+    await apiClient.post("/api/v1/auth/reset-password", { token, newPassword });
   },
 };

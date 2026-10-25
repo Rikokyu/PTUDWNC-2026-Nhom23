@@ -1,120 +1,149 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ApiRecipeCard } from "@/components/common/ApiRecipeCard";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { SearchBar } from "@/components/common/SearchBar";
-import { RecipeCard } from "@/components/common/RecipeCard";
-import { CategoryPill } from "@/components/common/CategoryPill";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { MOCK_RECIPES, MOCK_CATEGORIES } from "@/lib/mockData";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Input } from "@/components/ui/Input";
+import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
+import { recipeApi } from "@/lib/api/recipes";
+import { useQuery } from "@tanstack/react-query";
 
 function SearchContent() {
   const searchParams = useSearchParams();
-  const initialQuery = searchParams.get("q") || "";
+  const router = useRouter();
+  const initialQuery = searchParams.get("q") ?? "";
+  const [draft, setDraft] = useState(initialQuery);
+  const [term, setTerm] = useState(initialQuery.trim());
+  const [page, setPage] = useState(1);
+  const [validationError, setValidationError] = useState("");
 
-  const [query, setQuery] = useState(initialQuery);
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  useEffect(() => {
+    setDraft(initialQuery);
+    setTerm(initialQuery.trim());
+  }, [initialQuery]);
 
-  const searchResults = MOCK_RECIPES.filter((r) => {
-    const q = query.toLowerCase();
-    const matchesText =
-      !q ||
-      r.title.toLowerCase().includes(q) ||
-      r.summary.toLowerCase().includes(q) ||
-      r.ingredients.some((ing) => ing.name.toLowerCase().includes(q));
-
-    const matchesCat =
-      selectedCategory === "all" || r.categorySlug === selectedCategory;
-
-    return matchesText && matchesCat;
+  const resultsQuery = useQuery({
+    queryKey: ["recipe-search", term, page],
+    queryFn: () => recipeApi.search(term, page, 9),
+    enabled: term.length >= 2,
   });
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalizedTerm = draft.trim();
+    if (normalizedTerm.length < 2) {
+      setValidationError("Nhập ít nhất 2 ký tự để tìm kiếm.");
+      return;
+    }
+    setValidationError("");
+    setPage(1);
+    setTerm(normalizedTerm);
+    router.replace(`/recipes/search?q=${encodeURIComponent(normalizedTerm)}`);
+  }
 
   return (
     <div className="space-y-8">
-      <Breadcrumb
-        items={[
-          { label: "Công thức", href: "/recipes" },
-          { label: "Tìm kiếm công thức" },
-        ]}
-      />
-
-      <div className="space-y-2">
-        <h1 className="text-3xl font-extrabold text-content-primary tracking-tight">
-          Tìm Kiếm Công Thức Nấu Ăn
+      <Breadcrumb items={[
+        { label: "Công thức", href: "/recipes" },
+        { label: "Tìm kiếm" },
+      ]} />
+      <header className="space-y-2">
+        <h1 className="text-3xl font-extrabold tracking-tight text-content-primary">
+          Tìm kiếm công thức
         </h1>
-        <p className="text-sm text-content-secondary max-w-xl">
-          Nhập tên món ăn, loại nguyên liệu hoặc phương pháp chế biến bạn muốn tìm.
+        <p className="max-w-2xl text-sm text-content-secondary">
+          Tìm theo tên món ăn, mô tả, hướng dẫn hoặc tên nguyên liệu.
         </p>
-      </div>
-      <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Kết quả tìm kiếm hiện dùng dữ liệu minh họa, chưa truy vấn API.
-      </p>
+      </header>
 
-      <div className="max-w-2xl space-y-4">
-        <SearchBar
-          initialValue={query}
-          onSearch={(q) => setQuery(q)}
-          placeholder="Ví dụ: Phở bò, Sườn nướng, Bơ, Nấm..."
+      <form onSubmit={submitSearch} className="flex max-w-2xl items-end gap-3">
+        <Input
+          label="Từ khóa"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Ví dụ: phở bò, nấm, gà..."
+          maxLength={100}
         />
+        <Button type="submit" className="shrink-0">Tìm kiếm</Button>
+      </form>
+      {validationError && <p role="alert" className="text-sm text-rose-700">{validationError}</p>}
 
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-2">
-          <CategoryPill
-            name="Tất cả"
-            slug="all"
-            isActive={selectedCategory === "all"}
-            onClick={() => setSelectedCategory("all")}
-          />
-          {MOCK_CATEGORIES.map((c) => (
-            <CategoryPill
-              key={c.id}
-              name={c.name}
-              slug={c.slug}
-              isActive={selectedCategory === c.slug}
-              onClick={() => setSelectedCategory(c.slug)}
-            />
-          ))}
+      {!term && (
+        <p className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-content-secondary">
+          Nhập từ khóa để tìm kiếm trong công thức đã xuất bản.
+        </p>
+      )}
+      {term.length >= 2 && resultsQuery.isLoading && (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => <RecipeCardSkeleton key={index} />)}
         </div>
-      </div>
-
-      <div className="border-t border-slate-100 pt-6">
-        <div className="flex items-center justify-between text-xs text-content-tertiary mb-6">
-          <span>
-            {query ? (
-              <>
-                Kết quả tìm kiếm cho: <strong className="text-content-primary">"{query}"</strong> ({searchResults.length} món)
-              </>
-            ) : (
-              <>Tất cả công thức tìm thấy ({searchResults.length} món)</>
-            )}
-          </span>
-        </div>
-
-        {searchResults.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {searchResults.map((recipe) => (
-              <RecipeCard key={recipe.id} {...recipe} />
+      )}
+      {resultsQuery.isError && (
+        <ErrorState
+          title="Tìm kiếm không thành công"
+          message="Không thể truy vấn API tìm kiếm. Hãy thử lại."
+          onRetry={() => void resultsQuery.refetch()}
+        />
+      )}
+      {resultsQuery.data && resultsQuery.data.items.length > 0 && (
+        <>
+          <p className="text-sm text-content-secondary">
+            {resultsQuery.data.totalCount} kết quả cho “{term}”
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {resultsQuery.data.items.map((recipe) => (
+              <ApiRecipeCard key={recipe.id} recipe={recipe} />
             ))}
           </div>
-        ) : (
-          <EmptyState
-            title="Không tìm thấy kết quả phù hợp"
-            description="Hãy thử lại với từ khóa khác như 'bò', 'gà', 'chay', 'matcha'..."
-            actionLabel="Xóa từ khóa tìm kiếm"
-            onAction={() => {
-              setQuery("");
-              setSelectedCategory("all");
-            }}
-          />
-        )}
-      </div>
+          {resultsQuery.data.totalPages > 1 && (
+            <nav className="flex items-center justify-center gap-4" aria-label="Phân trang kết quả">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!resultsQuery.data.hasPreviousPage}
+                onClick={() => setPage((current) => current - 1)}
+              >
+                Trước
+              </Button>
+              <span className="text-sm text-content-secondary">
+                Trang {resultsQuery.data.page} / {resultsQuery.data.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!resultsQuery.data.hasNextPage}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Tiếp
+              </Button>
+            </nav>
+          )}
+        </>
+      )}
+      {resultsQuery.data?.items.length === 0 && (
+        <EmptyState
+          title="Không tìm thấy công thức phù hợp"
+          description="Thử một từ khóa khác hoặc kiểm tra chính tả."
+          actionLabel="Xóa từ khóa"
+          onAction={() => {
+            setDraft("");
+            setTerm("");
+            setPage(1);
+            router.replace("/recipes/search");
+          }}
+        />
+      )}
     </div>
   );
 }
 
 export default function RecipeSearchPage() {
   return (
-    <Suspense fallback={<div className="py-12 text-center text-sm text-slate-500">Đang tải trang tìm kiếm...</div>}>
+    <Suspense fallback={<p className="py-12 text-center text-sm text-slate-500">Đang tải trang tìm kiếm...</p>}>
       <SearchContent />
     </Suspense>
   );

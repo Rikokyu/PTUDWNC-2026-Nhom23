@@ -578,7 +578,21 @@ npm --prefix frontend install
 npm --prefix frontend run dev
 ```
 
-Mặc định frontend gọi backend tại `http://localhost:5080`; có thể đổi bằng `NEXT_PUBLIC_API_BASE_URL`. Chỉ bật `NEXT_PUBLIC_USE_DEMO_DATA=true` khi muốn xem dữ liệu mẫu cho danh sách/chi tiết nếu API lỗi; giao diện sẽ ghi rõ dữ liệu không đến từ máy chủ. Login/register và tạo công thức gọi API thật, access token chỉ tồn tại trong bộ nhớ trình duyệt và cần đăng nhập lại sau khi tải lại trang. Các trang chủ/danh mục hiện vẫn dùng mock data và đã được đánh dấu; upload ảnh chưa có trong contract endpoint tạo công thức hiện tại.
+Mặc định frontend gọi backend tại `http://localhost:5080`; có thể đổi bằng `NEXT_PUBLIC_API_BASE_URL`. Phiên đăng nhập chỉ tồn tại trong Zustand ở bộ nhớ trình duyệt; người dùng cần đăng nhập lại sau khi tải lại trang. Trang chủ, danh sách/chi tiết danh mục, công thức, tìm kiếm, hồ sơ và các luồng xác thực sử dụng API thật. Tìm kiếm công khai qua `GET /api/v1/recipes/search?q=...` chỉ trả công thức Published. Không bật dữ liệu mẫu trong môi trường cần xác minh API thật.
+
+Quên mật khẩu gửi email qua SMTP. Cấu hình Backend bằng biến môi trường (không commit thông tin SMTP):
+
+```text
+Email__Smtp__Host
+Email__Smtp__Port
+Email__Smtp__Username
+Email__Smtp__Password
+Email__Smtp__From
+Email__Smtp__EnableSsl
+Frontend__BaseUrl
+```
+
+Nếu SMTP chưa được cấu hình, endpoint quên mật khẩu trả `503 Service Unavailable`; đăng ký, đăng nhập, hồ sơ, đổi mật khẩu và các trang công khai vẫn dùng các API tương ứng. Khi triển khai production hoặc nhiều instance, cần cấu hình lưu trữ Data Protection keys dùng chung để token reset còn xác thực được sau khi restart/đổi instance.
 
 ## Tài liệu tham chiếu
 

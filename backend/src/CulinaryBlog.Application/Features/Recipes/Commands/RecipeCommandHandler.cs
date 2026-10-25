@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.DTOs.Recipes;
@@ -22,7 +23,7 @@ public sealed class RecipeCommandHandler :
     IRequestHandler<AddRecipeStepCommand, Guid>,
     IRequestHandler<UpdateRecipeStepCommand>,
     IRequestHandler<DeleteRecipeStepCommand>,
-    IRequestHandler<AddRecipeImageCommand, Guid>,
+    IRequestHandler<ReorderRecipeStepsCommand>,
     IRequestHandler<UpdateRecipeImageCommand>,
     IRequestHandler<DeleteRecipeImageCommand>
 {
@@ -31,19 +32,25 @@ public sealed class RecipeCommandHandler :
     private readonly IRepository<Recipe> _recipeStore;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IImageCleanupJobScheduler _imageCleanupJobs;
+    private readonly ILogger<RecipeCommandHandler> _logger;
 
     public RecipeCommandHandler(
         IRecipeRepository recipes,
         IRepository<Category> categories,
         IRepository<Recipe> recipeStore,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IImageCleanupJobScheduler imageCleanupJobs,
+        ILogger<RecipeCommandHandler> logger)
     {
         _recipes = recipes;
         _categories = categories;
         _recipeStore = recipeStore;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _imageCleanupJobs = imageCleanupJobs;
+        _logger = logger;
     }
 
     public async Task<RecipeMutationResult> Handle(
@@ -211,7 +218,9 @@ public sealed class RecipeCommandHandler :
                 request.Quantity,
                 request.Unit,
                 request.Notes),
-            recipe.Ingredients.Count);
+            recipe.Ingredients.Count == 0
+                ? 0
+                : recipe.Ingredients.Max(item => item.OrderIndex) + 1);
         ingredient.Recipe = recipe;
         recipe.Ingredients.Add(ingredient);
         recipe.UpdatedAt = DateTime.UtcNow;
@@ -249,9 +258,15 @@ public sealed class RecipeCommandHandler :
         var ingredient = recipe.Ingredients
             .FirstOrDefault(item => item.Id == request.IngredientId)
             ?? throw new NotFoundException("Recipe ingredient was not found.");
-        EnsurePublishedRecipeKeepsOne(recipe, recipe.Ingredients.Count);
-
         recipe.Ingredients.Remove(ingredient);
+        var remainingIngredients = recipe.Ingredients
+            .OrderBy(item => item.OrderIndex)
+            .ToList();
+        for (var index = 0; index < remainingIngredients.Count; index++)
+        {
+            remainingIngredients[index].OrderIndex = index;
+        }
+
         recipe.UpdatedAt = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
@@ -269,11 +284,19 @@ public sealed class RecipeCommandHandler :
                 request.Description,
                 request.TimerMinutes,
                 request.ImageUrl),
-            recipe.Steps.Count + 1);
+            recipe.Steps.Count == 0
+                ? 1
+                : recipe.Steps.Max(item => item.StepNumber) + 1);
         step.Recipe = recipe;
         recipe.Steps.Add(step);
         recipe.UpdatedAt = DateTime.UtcNow;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.ExecuteInTransactionAsync(
+            async transactionToken =>
+            {
+                await _unitOfWork.SaveChangesAsync(transactionToken);
+                await NormalizeStepNumbersAsync(recipe, transactionToken);
+            },
+            cancellationToken);
         return step.Id;
     }
 
@@ -287,14 +310,20 @@ public sealed class RecipeCommandHandler :
         var step = recipe.Steps
             .FirstOrDefault(item => item.Id == request.StepId)
             ?? throw new NotFoundException("Recipe step was not found.");
-        ValidateStep(request.Description, request.TimerMinutes);
+        ValidateStep(request.Title, request.Description, request.TimerMinutes, request.ImageUrl);
 
-        step.Title = request.Title.Trim();
-        step.Description = request.Description.Trim();
-        step.TimerMinutes = request.TimerMinutes;
-        step.ImageUrl = request.ImageUrl?.Trim();
-        recipe.UpdatedAt = DateTime.UtcNow;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.ExecuteInTransactionAsync(
+            async transactionToken =>
+            {
+                step.Title = request.Title?.Trim() ?? string.Empty;
+                step.Description = request.Description.Trim();
+                step.TimerMinutes = request.TimerMinutes;
+                step.ImageUrl = request.ImageUrl?.Trim();
+                recipe.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(transactionToken);
+                await NormalizeStepNumbersAsync(recipe, transactionToken);
+            },
+            cancellationToken);
     }
 
     public async Task Handle(
@@ -307,62 +336,65 @@ public sealed class RecipeCommandHandler :
         var step = recipe.Steps
             .FirstOrDefault(item => item.Id == request.StepId)
             ?? throw new NotFoundException("Recipe step was not found.");
-        EnsurePublishedRecipeKeepsOne(recipe, recipe.Steps.Count);
+        EnsurePublishedRecipeKeepsOneStep(recipe, recipe.Steps.Count);
 
         recipe.Steps.Remove(step);
         var remainingSteps = recipe.Steps
             .OrderBy(item => item.StepNumber)
             .ToList();
-        foreach (var remainingStep in remainingSteps)
-        {
-            remainingStep.StepNumber = -remainingStep.StepNumber;
-        }
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        for (var index = 0; index < remainingSteps.Count; index++)
-        {
-            remainingSteps[index].StepNumber = index + 1;
-        }
-
         recipe.UpdatedAt = DateTime.UtcNow;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.ExecuteInTransactionAsync(
+            async transactionToken =>
+            {
+                if (remainingSteps.Count == 0)
+                {
+                    await _unitOfWork.SaveChangesAsync(transactionToken);
+                    return;
+                }
+
+                SetTemporaryStepNumbers(remainingSteps);
+                await _unitOfWork.SaveChangesAsync(transactionToken);
+                SetSequentialStepNumbers(remainingSteps);
+                await _unitOfWork.SaveChangesAsync(transactionToken);
+            },
+            cancellationToken);
     }
 
-    public async Task<Guid> Handle(
-        AddRecipeImageCommand request,
+    public async Task Handle(
+        ReorderRecipeStepsCommand request,
         CancellationToken cancellationToken)
     {
         var recipe = await GetOwnedRecipeAsync(
             request.RecipeId,
             cancellationToken);
-        if (string.IsNullOrWhiteSpace(request.OriginalUrl))
+        var stepsById = recipe.Steps.ToDictionary(step => step.Id);
+        if (request.StepIds is null
+            || request.StepIds.Count != stepsById.Count
+            || request.StepIds.Distinct().Count() != request.StepIds.Count
+            || request.StepIds.Any(stepId => !stepsById.ContainsKey(stepId)))
         {
-            throw new ValidationException("originalUrl is required.");
+            throw new ValidationException(
+                "stepIds must contain every recipe step exactly once.");
         }
 
-        var makePrimary = request.IsPrimary || recipe.Images.Count == 0;
-        if (makePrimary)
+        var orderedSteps = request.StepIds
+            .Select(stepId => stepsById[stepId])
+            .ToList();
+        if (orderedSteps.Select((step, index) => step.StepNumber == index + 1).All(isOrdered => isOrdered))
         {
-            foreach (var image in recipe.Images)
-            {
-                image.IsPrimary = false;
-            }
+            return;
         }
 
-        var imageEntity = new RecipeImage
-        {
-            Recipe = recipe,
-            OriginalUrl = request.OriginalUrl.Trim(),
-            AltText = request.AltText?.Trim(),
-            IsPrimary = makePrimary,
-            OrderIndex = recipe.Images.Count,
-            CreatedAt = DateTime.UtcNow
-        };
-        recipe.Images.Add(imageEntity);
         recipe.UpdatedAt = DateTime.UtcNow;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return imageEntity.Id;
+        await _unitOfWork.ExecuteInTransactionAsync(
+            async transactionToken =>
+            {
+                SetTemporaryStepNumbers(orderedSteps);
+                await _unitOfWork.SaveChangesAsync(transactionToken);
+                SetSequentialStepNumbers(orderedSteps);
+                await _unitOfWork.SaveChangesAsync(transactionToken);
+            },
+            cancellationToken);
     }
 
     public async Task Handle(
@@ -406,6 +438,15 @@ public sealed class RecipeCommandHandler :
             .FirstOrDefault(item => item.Id == request.ImageId)
             ?? throw new NotFoundException("Recipe image was not found.");
         var wasPrimary = image.IsPrimary;
+        var filesToDelete = new[]
+            {
+                image.OriginalUrl,
+                image.MediumUrl,
+                image.ThumbnailUrl
+            }
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Select(url => url!)
+            .ToArray();
         recipe.Images.Remove(image);
 
         if (wasPrimary)
@@ -421,6 +462,21 @@ public sealed class RecipeCommandHandler :
 
         recipe.UpdatedAt = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        foreach (var fileUrl in filesToDelete)
+        {
+            try
+            {
+                _imageCleanupJobs.Enqueue(fileUrl);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Could not enqueue cleanup for recipe image file {FileUrl}.",
+                    fileUrl);
+            }
+        }
     }
 
     private async Task<Recipe> GetOwnedRecipeAsync(
@@ -569,39 +625,13 @@ public sealed class RecipeCommandHandler :
                 "ingredient quantity and unit must be at most 50 characters; notes must be at most 500 characters.");
         }
 
-        if (string.IsNullOrWhiteSpace(quantity))
-        {
-            if (!string.IsNullOrWhiteSpace(unit)
-                || string.IsNullOrWhiteSpace(notes))
-            {
-                throw new ValidationException(
-                    "An ingredient without quantity must omit unit and provide notes.");
-            }
-        }
-        else if (!decimal.TryParse(
-                     quantity,
-                     NumberStyles.Number,
-                     CultureInfo.InvariantCulture,
-                     out var parsedQuantity)
-                 || parsedQuantity <= 0
-                 || string.IsNullOrWhiteSpace(unit))
-        {
-            throw new ValidationException(
-                "quantity must be a positive number and requires a unit.");
-        }
     }
 
     private static RecipeStep CreateStep(
         RecipeStepInput input,
         int stepNumber)
     {
-        if (input.Title?.Trim().Length > 200)
-        {
-            throw new ValidationException(
-                "step title must be at most 200 characters.");
-        }
-
-        ValidateStep(input.Description, input.TimerMinutes);
+        ValidateStep(input.Title, input.Description, input.TimerMinutes, input.ImageUrl);
         return new RecipeStep
         {
             StepNumber = stepNumber,
@@ -614,17 +644,37 @@ public sealed class RecipeCommandHandler :
     }
 
     private static void ValidateStep(
+        string? title,
         string description,
-        int? timerMinutes)
+        int? timerMinutes,
+        string? imageUrl)
     {
+        if (title?.Trim().Length > 200)
+        {
+            throw new ValidationException(
+                "step title must be at most 200 characters.");
+        }
+
         if (string.IsNullOrWhiteSpace(description))
         {
             throw new ValidationException("step description is required.");
         }
 
+        if (description.Trim().Length > 2000)
+        {
+            throw new ValidationException(
+                "step description must be at most 2000 characters.");
+        }
+
         if (timerMinutes < 0)
         {
             throw new ValidationException("timerMinutes must be non-negative.");
+        }
+
+        if (imageUrl?.Trim().Length > 500)
+        {
+            throw new ValidationException(
+                "step imageUrl must be at most 500 characters.");
         }
     }
 
@@ -689,14 +739,50 @@ public sealed class RecipeCommandHandler :
         }
     }
 
-    private static void EnsurePublishedRecipeKeepsOne(
+    private static void EnsurePublishedRecipeKeepsOneStep(
         Recipe recipe,
         int itemCount)
     {
         if (recipe.Status == RecipeStatus.Published && itemCount <= 1)
         {
             throw new ValidationException(
-                "A published recipe must keep at least one ingredient and one step.");
+                "A published recipe must keep at least one step.");
+        }
+    }
+
+    private async Task NormalizeStepNumbersAsync(
+        Recipe recipe,
+        CancellationToken cancellationToken)
+    {
+        var steps = recipe.Steps
+            .OrderBy(step => step.StepNumber)
+            .ToList();
+        if (steps.Select((step, index) => step.StepNumber == index + 1).All(isOrdered => isOrdered))
+        {
+            return;
+        }
+
+        SetTemporaryStepNumbers(steps);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        SetSequentialStepNumbers(steps);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void SetTemporaryStepNumbers(
+        IReadOnlyList<RecipeStep> steps)
+    {
+        for (var index = 0; index < steps.Count; index++)
+        {
+            steps[index].StepNumber = -(index + 1);
+        }
+    }
+
+    private static void SetSequentialStepNumbers(
+        IReadOnlyList<RecipeStep> steps)
+    {
+        for (var index = 0; index < steps.Count; index++)
+        {
+            steps[index].StepNumber = index + 1;
         }
     }
 }

@@ -18,6 +18,22 @@ export interface AuthSessionDto {
   user: AuthUserDto;
 }
 
+export interface UserProfileDto {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  role: string;
+  createdAt: string;
+}
+
+export interface UpdateProfileRequest {
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+}
+
 export interface CreateRecipeRequest {
   title: string;
   description: string;
@@ -115,6 +131,20 @@ export interface RecipeApiImageDto {
   altText: string | null;
   isPrimary: boolean;
   orderIndex: number;
+}
+
+export interface RecipeIngredientRequest {
+  name: string;
+  quantity: string | null;
+  unit: string | null;
+  notes: string | null;
+}
+
+export interface RecipeStepRequest {
+  title: string;
+  description: string;
+  timerMinutes: number | null;
+  imageUrl: string | null;
 }
 
 export interface RecipeApiNutritionDto {

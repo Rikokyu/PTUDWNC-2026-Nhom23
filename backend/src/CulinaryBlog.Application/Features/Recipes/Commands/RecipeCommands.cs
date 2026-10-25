@@ -96,12 +96,10 @@ public sealed record UpdateRecipeStepCommand(
 public sealed record DeleteRecipeStepCommand(Guid RecipeId, Guid StepId)
     : IRequest;
 
-public sealed record AddRecipeImageCommand(
+public sealed record ReorderRecipeStepsCommand(
     Guid RecipeId,
-    string OriginalUrl,
-    string? AltText,
-    bool IsPrimary)
-    : IRequest<Guid>;
+    IReadOnlyList<Guid> StepIds)
+    : IRequest;
 
 public sealed record UpdateRecipeImageCommand(
     Guid RecipeId,

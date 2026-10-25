@@ -6,6 +6,7 @@ import { MOCK_RECIPES } from "@/lib/mockData";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { RecipeDetailView } from "@/features/recipes/RecipeDetailView";
 import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
+import { resolveApiAssetUrl } from "@/lib/api/axios";
 
 const demoEnabled = process.env.NEXT_PUBLIC_USE_DEMO_DATA === "true";
 
@@ -52,10 +53,11 @@ export function RecipeDetailPageContent({ slug }: { slug: string }) {
   const difficulty = ["", "Dễ", "Trung bình", "Khó", "Chuyên gia"][
     recipe.difficulty
   ] ?? "Chưa phân loại";
-  const heroImage =
+  const heroImage = resolveApiAssetUrl(
     recipe.images.find((image) => image.isPrimary)?.mediumUrl ??
     recipe.images[0]?.mediumUrl ??
-    recipe.images[0]?.originalUrl;
+    recipe.images[0]?.originalUrl,
+  );
 
   return (
     <article className="mx-auto max-w-4xl space-y-8">

@@ -10,6 +10,17 @@ const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+export function resolveApiAssetUrl(
+  fileUrl: string | null | undefined,
+): string | undefined {
+  if (!fileUrl) return undefined;
+  try {
+    return new URL(fileUrl, apiClient.defaults.baseURL).toString();
+  } catch {
+    return fileUrl;
+  }
+}
+
 apiClient.interceptors.request.use((config) => {
   const accessToken = useAuthStore.getState().accessToken;
   if (accessToken) {

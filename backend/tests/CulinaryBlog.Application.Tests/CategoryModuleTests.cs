@@ -227,6 +227,11 @@ public sealed class CategoryModuleTests
             SaveCount++;
             return Task.FromResult(1);
         }
+
+        public Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken = default) =>
+            operation(cancellationToken);
     }
 
     private sealed class FakeCategoryRepository : ICategoryRepository

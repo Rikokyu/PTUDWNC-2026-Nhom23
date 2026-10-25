@@ -115,7 +115,7 @@ export default function NewRecipePage() {
       });
       setSubmittedSuccess(true);
       await queryClient.invalidateQueries({ queryKey: recipeKeys.all() });
-      router.push(`/recipes/${encodeURIComponent(created.slug)}`);
+      router.push(`/dashboard/recipes/${created.id}/edit`);
     } catch (error) {
       setSubmitError(getApiErrorMessage(error));
     } finally {

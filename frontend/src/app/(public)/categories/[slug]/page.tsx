@@ -1,11 +1,12 @@
 "use client";
 
-import React, { use } from "react";
+import { use } from "react";
+import { ApiRecipeCard } from "@/components/common/ApiRecipeCard";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { RecipeCard } from "@/components/common/RecipeCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { MOCK_CATEGORIES, MOCK_RECIPES } from "@/lib/mockData";
-import { notFound } from "next/navigation";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
+import { useCategory } from "@/hooks/useCategories";
 
 export default function CategoryDetailPage({
   params,
@@ -13,47 +14,53 @@ export default function CategoryDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
+  const categoryQuery = useCategory(slug);
 
-  const category = MOCK_CATEGORIES.find((c) => c.slug === slug);
-  if (!category) {
-    notFound();
+  if (categoryQuery.isLoading) return <RecipeCardSkeleton />;
+  if (categoryQuery.isError) {
+    return (
+      <ErrorState
+        title="Không tải được danh mục"
+        message="Danh mục không tồn tại hoặc API chưa khả dụng."
+        onRetry={() => void categoryQuery.refetch()}
+      />
+    );
   }
-  const categoryRecipes = MOCK_RECIPES.filter((r) => r.categorySlug === category.slug);
+  const data = categoryQuery.data;
+  if (!data) return <ErrorState message="Máy chủ không trả về dữ liệu danh mục." />;
 
   return (
     <div className="space-y-8">
       <Breadcrumb
         items={[
           { label: "Danh mục", href: "/categories" },
-          { label: category.name },
+          { label: data.category.name },
         ]}
       />
-
-      <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-        <h1 className="text-3xl font-extrabold text-content-primary tracking-tight">
-          {category.name}
+      <header className="space-y-3 rounded-2xl border border-slate-200 bg-orange-50/60 p-6 sm:p-8">
+        <h1 className="text-3xl font-extrabold tracking-tight text-content-primary">
+          {data.category.name}
         </h1>
-        <p className="text-sm text-content-secondary max-w-2xl leading-relaxed">
-          {category.description}
+        {data.category.description && (
+          <p className="max-w-2xl text-sm leading-6 text-content-secondary">
+            {data.category.description}
+          </p>
+        )}
+        <p className="text-xs font-semibold text-content-tertiary">
+          {data.recipes.totalCount} công thức
         </p>
-        <p className="text-xs text-content-tertiary font-semibold pt-2">
-          Tổng số {categoryRecipes.length} công thức sẵn có
-        </p>
-      </div>
-      <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Nội dung danh mục và công thức trên trang này là dữ liệu minh họa.
-      </p>
+      </header>
 
-      {categoryRecipes.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {categoryRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} {...recipe} />
+      {data.recipes.items.length > 0 ? (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {data.recipes.items.map((recipe) => (
+            <ApiRecipeCard key={recipe.id} recipe={recipe} />
           ))}
         </div>
       ) : (
         <EmptyState
           title="Chưa có công thức trong danh mục này"
-          description="Hãy quay lại sau hoặc là người đầu tiên đóng góp công thức mới cho danh mục này."
+          description="Hãy quay lại sau để khám phá các công thức mới."
         />
       )}
     </div>

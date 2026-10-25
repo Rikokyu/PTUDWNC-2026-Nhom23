@@ -65,6 +65,11 @@ export function LoginForm() {
           Đăng ký
         </Link>
       </p>
+      <p className="text-center text-sm">
+        <Link href="/forgot-password" className="text-brand hover:underline">
+          Quên mật khẩu?
+        </Link>
+      </p>
     </form>
   );
 }

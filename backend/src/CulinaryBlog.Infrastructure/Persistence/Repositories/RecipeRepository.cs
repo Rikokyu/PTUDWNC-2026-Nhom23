@@ -155,6 +155,39 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         return (items, totalCount);
     }
 
+    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
+        SearchPublishedAsync(
+            string searchTerm,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+    {
+        var pattern = $"%{searchTerm.Trim()}%";
+        var query = _context.Recipes
+            .AsNoTracking()
+            .Where(recipe =>
+                !recipe.IsDeleted
+                && !recipe.Category.IsDeleted
+                && recipe.Status == RecipeStatus.Published
+                && (EF.Functions.ILike(recipe.Title, pattern)
+                    || EF.Functions.ILike(recipe.Description, pattern)
+                    || EF.Functions.ILike(recipe.Instructions, pattern)
+                    || recipe.Ingredients.Any(ingredient =>
+                        EF.Functions.ILike(ingredient.Name, pattern))))
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(recipe => recipe.CreatedAt)
+            .ThenBy(recipe => recipe.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
     public async Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
         CancellationToken cancellationToken = default)

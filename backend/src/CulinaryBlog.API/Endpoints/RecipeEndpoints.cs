@@ -3,6 +3,7 @@ using CulinaryBlog.Application.DTOs.Recipes;
 using CulinaryBlog.Application.Features.Recipes.Commands;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeBySlug;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipes;
+using CulinaryBlog.Application.Features.Recipes.Queries.SearchRecipes;
 using CulinaryBlog.Domain.Enums;
 using Asp.Versioning;
 using Asp.Versioning.Builder;
@@ -36,6 +37,25 @@ public static class RecipeEndpoints
                         ownRecipesOnly: false,
                         includeAllStatuses: false))
             .CacheOutput("RecipeList");
+
+        group
+            .MapGet(
+                "/search",
+                async (
+                    string? q,
+                    ISender sender,
+                    CancellationToken cancellationToken,
+                    int page = 1,
+                    int pageSize = 10) =>
+                {
+                    var result = await sender.Send(
+                        new SearchRecipesQuery(q ?? string.Empty, page, pageSize),
+                        cancellationToken);
+                    return Results.Ok(result);
+                })
+            .WithSummary("Search published recipes by title, description, instructions, or ingredients.")
+            .Produces(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group
             .MapGet(

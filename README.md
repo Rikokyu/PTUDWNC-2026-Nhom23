@@ -25,11 +25,11 @@
 |             | Tạo Công thức Nấu ăn Mới          | 2    | 100%    | Tạo công thức ở trạng thái Draft                   | Hoàn thành      |
 |             | Cập nhật Công thức                | 3    | 100%    | Cập nhật có phân quyền và xử lý concurrency        | Hoàn thành      |
 |             | Xuất bản / Hủy Xuất bản Công thức | 3    | 100%    | Chuyển đổi trạng thái Published/Draft              | Hoàn thành      |
-|             | Lưu trữ Công thức (Archive)       | 4    | 100%    | Chuyển công thức sang trạng thái Archived          | Chưa kiểm tra   |
-|             | Xóa Công thức                     | 4    | 100%    | Xóa công thức và dữ liệu liên quan                 | Chưa kiểm tra   |
-|             | Quản lý Ảnh Công thức             | 5    | 100%    | Tải lên, đặt ảnh chính và xóa ảnh công thức        | Chưa kiểm tra   |
-|             | Quản lý Nguyên liệu (CRUD)        | 5    | 100%    | Hoàn thành CRUD nguyên liệu                        | Chưa kiểm tra   |
-|             | Quản lý Các bước Thực hiện (CRUD) | 6    | 100%    | CRUD bước nấu và tự động đánh lại số thứ tự        | Chưa kiểm tra   |
+|             | Lưu trữ Công thức (Archive)       | 4    | 100%    | Chuyển công thức sang trạng thái Archived          | Hoàn thành      |
+|             | Xóa Công thức                     | 4    | 100%    | Xóa công thức và dữ liệu liên quan                 | Hoàn thành      |
+|             | Quản lý Ảnh Công thức             | 5    | 90%     | Tải lên, đặt ảnh chính và xóa ảnh công thức        | Đang kiểm tra   |
+|             | Quản lý Nguyên liệu (CRUD)        | 5    | 90%     | Hoàn thành CRUD nguyên liệu                        | Đang kiểm tra   |
+|             | Quản lý Các bước Thực hiện (CRUD) | 6    | 90%     | CRUD bước nấu và tự động đánh lại số thứ tự        | Đang kiểm tra   |
 | ---         | ---                               | ---  | ---     | ---                                                | ---             |
 | **2312569** | Welcome Email Job                 | 1    |         | Thiết lập job gửi email chào mừng bằng Hangfire    |                 |
 |             | Image Resize / Thumbnail Job      | 2    |         | Tạo thumbnail và resize ảnh                        |                 |

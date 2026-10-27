@@ -8,6 +8,14 @@ export interface AuthUserDto {
   email: string;
   displayName: string;
   role: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+}
+
+export interface UserProfileDto extends AuthUserDto {
+  avatarUrl: string | null;
+  bio: string | null;
+  createdAt: string;
 }
 
 export interface AuthSessionDto {

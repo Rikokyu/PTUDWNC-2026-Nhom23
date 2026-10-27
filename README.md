@@ -1,3 +1,13 @@
+## Chạy ứng dụng cục bộ
+
+Yêu cầu: Node.js, .NET 10 SDK và Docker Desktop đang chạy. Từ thư mục gốc dự án, dùng một lệnh:
+
+```powershell
+npm run dev
+```
+
+Lệnh này tự khởi động PostgreSQL/Mailpit, API và frontend; nếu frontend chưa có dependencies, chúng sẽ được cài từ `frontend/package-lock.json`. Trình duyệt mở tại `http://localhost:3000` (nếu cổng này bận, URL thay thế sẽ được in trong terminal). Nhấn `Ctrl+C` để dừng ứng dụng và các container mà lệnh đã khởi động.
+
 ## Thông tin sinh viên
 
 | MSSV    | Họ tên sinh viên      | Mail cá nhân       | Github cá nhân                 | Số điện thoại |

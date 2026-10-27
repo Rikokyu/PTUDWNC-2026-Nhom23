@@ -2,7 +2,11 @@ using CulinaryBlog.API.CurrentUser;
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Common.Behaviors;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
+using CulinaryBlog.Application.Features.Auth.Commands.ChangePassword;
+using CulinaryBlog.Application.Features.Auth.Commands.ForgotPassword;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
+using CulinaryBlog.Application.Features.Auth.Commands.ResetPassword;
+using CulinaryBlog.Application.Features.Auth.Commands.UpdateUserProfile;
 using CulinaryBlog.Application.Features.Categories.Commands.CreateCategory;
 using CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
 using FluentValidation;
@@ -38,6 +42,18 @@ public static class ServiceCollectionExtensions
         services.AddTransient<
             IValidator<LoginCommand>,
             LoginCommandValidator>();
+        services.AddTransient<
+            IValidator<ChangePasswordCommand>,
+            ChangePasswordCommandValidator>();
+        services.AddTransient<
+            IValidator<ForgotPasswordCommand>,
+            ForgotPasswordCommandValidator>();
+        services.AddTransient<
+            IValidator<ResetPasswordCommand>,
+            ResetPasswordCommandValidator>();
+        services.AddTransient<
+            IValidator<UpdateUserProfileCommand>,
+            UpdateUserProfileCommandValidator>();
 
         services.AddTransient<
             IValidator<CreateCategoryCommand>,

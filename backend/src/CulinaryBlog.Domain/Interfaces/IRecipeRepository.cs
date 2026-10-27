@@ -30,6 +30,13 @@ public interface IRecipeRepository : IRepository<Recipe>
             bool isAdmin,
             CancellationToken cancellationToken = default);
 
+    Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
+        SearchPublishedAsync(
+            string searchTerm,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default);
+
     Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
         CancellationToken cancellationToken = default);

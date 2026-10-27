@@ -28,45 +28,45 @@ Lệnh này tự khởi động PostgreSQL/Mailpit, API và frontend; nếu fron
 
 ## Chi tiết phân công
 
-| MSSV        | Chi tiết công việc                | Tuần | Tiến độ | Kết quả dự kiến                                    | Kết quả thực tế   |
-| ----------- | --------------------------------- | ---- | ------- | -------------------------------------------------- | ----------------- |
-| **2312610** | Xem Danh sách Công thức           | 1    | 100%    | Hoàn thành API xem danh sách công thức             | Hoàn thành        |
-|             | Xem Chi tiết Công thức            | 1    | 100%    | Hoàn thành API xem chi tiết công thức              | Hoàn thành        |
-|             | Tạo Công thức Nấu ăn Mới          | 2    | 100%     | Tạo công thức ở trạng thái Draft                   | Hoàn thành 1 phần |
-|             | Cập nhật Công thức                | 3    | 100%    | Cập nhật có phân quyền và xử lý concurrency        | Hoàn thành        |
-|             | Xuất bản / Hủy Xuất bản Công thức | 3    | 100%    | Chuyển đổi trạng thái Published/Draft              | Hoàn thành        |
-|             | Lưu trữ Công thức (Archive)       | 4    | 100%        | Chuyển công thức sang trạng thái Archived          | Hoàn thành                  |
-|             | Xóa Công thức                     | 4    | 100%        | Xóa công thức và dữ liệu liên quan                 | Hoàn thành                  |
-|             | Quản lý Ảnh Công thức             | 5    |         | Tải lên, đặt ảnh chính và xóa ảnh công thức        |                   |
-|             | Quản lý Nguyên liệu (CRUD)        | 5    |         | Hoàn thành CRUD nguyên liệu                        |                   |
-|             | Quản lý Các bước Thực hiện (CRUD) | 6    |         | CRUD bước nấu và tự động đánh lại số thứ tự        |                   |
-| ---         | ---                               | ---  | ---     | ---                                                | ---               |
-| **2312569** | Welcome Email Job                 | 1    |         | Thiết lập job gửi email chào mừng bằng Hangfire    |                   |
-|             | Image Resize / Thumbnail Job      | 2    |         | Tạo thumbnail và resize ảnh                        |                   |
-|             | Sitemap Generation Job            | 3    |         | Tạo sitemap tự động bằng Hangfire                  |                   |
-|             | Xem Danh sách Danh mục            | 4    |         | Hoàn thành API xem danh sách danh mục              |                   |
-|             | Xem Chi tiết Danh mục & Công thức | 4    |         | Xem chi tiết danh mục và danh sách công thức       |                   |
-|             | Tạo Danh mục Mới [Admin]          | 5    |         | Admin tạo được danh mục mới                        |                   |
-|             | Cập nhật Danh mục [Admin]         | 5    |         | Admin cập nhật được danh mục                       |                   |
-|             | Xóa Danh mục [Admin]              | 6    |         | Admin xóa danh mục khi kiểm tra điều kiện dữ liệu  |                   |
-| ---         | ---                               | ---  | ---     | ---                                                | ---               |
-| **2312789** | Health Check Endpoints            | 1    |         | Thiết lập Health Check cho hệ thống                |                   |
-|             | Structured Logging                | 2    |         | Thiết lập structured logging cho backend           |                   |
-|             | Upload File lên MinIO             | 2    |         | Tích hợp chức năng tải file lên MinIO              |                   |
-|             | Xóa File khỏi MinIO               | 3    |         | Hoàn thành chức năng xóa file khỏi MinIO           |                   |
-|             | Tìm kiếm Toàn văn bản (FTS)       | 4    |         | Tìm kiếm toàn văn bằng PostgreSQL Full-Text Search |                   |
-|             | Bộ lọc Công thức nâng cao         | 5    |         | Hoàn thành bộ lọc công thức                        |                   |
-|             | Sắp xếp Kết quả                   | 5    |         | Hoàn thành sắp xếp kết quả tìm kiếm                |                   |
-|             | Phân trang Offset-based           | 6    |         | Phân trang offset-based cho kết quả tìm kiếm       |                   |
-|             | Distributed Tracing & Metrics     | 7    |         | Hoàn thiện tracing và metrics bằng OpenTelemetry   |                   |
-| ---         | ---                               | ---  | ---     | ---                                                | ---               |
-| **2312622** | Đăng ký Tài khoản                 | 1    |         | Khởi tạo chức năng đăng ký tài khoản               |                   |
-|             | Đăng nhập Email/Mật khẩu          | 2    |         | Hoàn thành đăng nhập bằng Email/Mật khẩu           |                   |
-|             | Đăng xuất                         | 3    |         | Hoàn thành đăng xuất và thu hồi token              |                   |
-|             | Xem Hồ sơ Cá nhân                 | 4    |         | Người dùng xem được thông tin cá nhân              |                   |
-|             | Cập nhật Hồ sơ Cá nhân            | 5    |         | Hoàn thành cập nhật thông tin cá nhân              |                   |
-|             | Đăng nhập Google OAuth 2.0        | 6    |         | Hoàn thành đăng nhập Google OAuth 2.0              |                   |
-|             | Làm mới Access Token              | 7    |         | Hoàn thành cơ chế Refresh Token                    |                   |
+| MSSV        | Chi tiết công việc                | Tuần | Tiến độ | Kết quả dự kiến                                    | Kết quả thực tế |
+| ----------- | --------------------------------- | ---- | ------- | -------------------------------------------------- | --------------- |
+| **2312610** | Xem Danh sách Công thức           | 1    | 100%    | Hoàn thành API xem danh sách công thức             | Hoàn thành      |
+|             | Xem Chi tiết Công thức            | 1    | 100%    | Hoàn thành API xem chi tiết công thức              | Hoàn thành      |
+|             | Tạo Công thức Nấu ăn Mới          | 2    | 100%    | Tạo công thức ở trạng thái Draft                   | Hoàn thành      |
+|             | Cập nhật Công thức                | 3    | 100%    | Cập nhật có phân quyền và xử lý concurrency        | Hoàn thành      |
+|             | Xuất bản / Hủy Xuất bản Công thức | 3    | 100%    | Chuyển đổi trạng thái Published/Draft              | Hoàn thành      |
+|             | Lưu trữ Công thức (Archive)       | 4    | 100%    | Chuyển công thức sang trạng thái Archived          | Hoàn thành      |
+|             | Xóa Công thức                     | 4    | 100%    | Xóa công thức và dữ liệu liên quan                 | Hoàn thành      |
+|             | Quản lý Ảnh Công thức             | 5    | 90%     | Tải lên, đặt ảnh chính và xóa ảnh công thức        | Đang kiểm tra   |
+|             | Quản lý Nguyên liệu (CRUD)        | 5    | 90%     | Hoàn thành CRUD nguyên liệu                        | Đang kiểm tra   |
+|             | Quản lý Các bước Thực hiện (CRUD) | 6    | 90%     | CRUD bước nấu và tự động đánh lại số thứ tự        | Đang kiểm tra   |
+| ---         | ---                               | ---  | ---     | ---                                                | ---             |
+| **2312569** | Welcome Email Job                 | 1    |         | Thiết lập job gửi email chào mừng bằng Hangfire    |                 |
+|             | Image Resize / Thumbnail Job      | 2    |         | Tạo thumbnail và resize ảnh                        |                 |
+|             | Sitemap Generation Job            | 3    |         | Tạo sitemap tự động bằng Hangfire                  |                 |
+|             | Xem Danh sách Danh mục            | 4    |         | Hoàn thành API xem danh sách danh mục              |                 |
+|             | Xem Chi tiết Danh mục & Công thức | 4    |         | Xem chi tiết danh mục và danh sách công thức       |                 |
+|             | Tạo Danh mục Mới [Admin]          | 5    |         | Admin tạo được danh mục mới                        |                 |
+|             | Cập nhật Danh mục [Admin]         | 5    |         | Admin cập nhật được danh mục                       |                 |
+|             | Xóa Danh mục [Admin]              | 6    |         | Admin xóa danh mục khi kiểm tra điều kiện dữ liệu  |                 |
+| ---         | ---                               | ---  | ---     | ---                                                | ---             |
+| **2312789** | Health Check Endpoints            | 1    |         | Thiết lập Health Check cho hệ thống                |                 |
+|             | Structured Logging                | 2    |         | Thiết lập structured logging cho backend           |                 |
+|             | Upload File lên MinIO             | 2    |         | Tích hợp chức năng tải file lên MinIO              |                 |
+|             | Xóa File khỏi MinIO               | 3    |         | Hoàn thành chức năng xóa file khỏi MinIO           |                 |
+|             | Tìm kiếm Toàn văn bản (FTS)       | 4    |         | Tìm kiếm toàn văn bằng PostgreSQL Full-Text Search |                 |
+|             | Bộ lọc Công thức nâng cao         | 5    |         | Hoàn thành bộ lọc công thức                        |                 |
+|             | Sắp xếp Kết quả                   | 5    |         | Hoàn thành sắp xếp kết quả tìm kiếm                |                 |
+|             | Phân trang Offset-based           | 6    |         | Phân trang offset-based cho kết quả tìm kiếm       |                 |
+|             | Distributed Tracing & Metrics     | 7    |         | Hoàn thiện tracing và metrics bằng OpenTelemetry   |                 |
+| ---         | ---                               | ---  | ---     | ---                                                | ---             |
+| **2312622** | Đăng ký Tài khoản                 | 1    |         | Khởi tạo chức năng đăng ký tài khoản               |                 |
+|             | Đăng nhập Email/Mật khẩu          | 2    |         | Hoàn thành đăng nhập bằng Email/Mật khẩu           |                 |
+|             | Đăng xuất                         | 3    |         | Hoàn thành đăng xuất và thu hồi token              |                 |
+|             | Xem Hồ sơ Cá nhân                 | 4    |         | Người dùng xem được thông tin cá nhân              |                 |
+|             | Cập nhật Hồ sơ Cá nhân            | 5    |         | Hoàn thành cập nhật thông tin cá nhân              |                 |
+|             | Đăng nhập Google OAuth 2.0        | 6    |         | Hoàn thành đăng nhập Google OAuth 2.0              |                 |
+|             | Làm mới Access Token              | 7    |         | Hoàn thành cơ chế Refresh Token                    |                 |
 
 ### Tuần 1 – Nền tảng
 
@@ -588,7 +588,32 @@ npm --prefix frontend install
 npm --prefix frontend run dev
 ```
 
-Mặc định frontend gọi backend tại `http://localhost:5080`; có thể đổi bằng `NEXT_PUBLIC_API_BASE_URL`. Chỉ bật `NEXT_PUBLIC_USE_DEMO_DATA=true` khi muốn xem dữ liệu mẫu cho danh sách/chi tiết nếu API lỗi; giao diện sẽ ghi rõ dữ liệu không đến từ máy chủ. Login/register và tạo công thức gọi API thật, access token chỉ tồn tại trong bộ nhớ trình duyệt và cần đăng nhập lại sau khi tải lại trang. Các trang chủ/danh mục hiện vẫn dùng mock data và đã được đánh dấu; upload ảnh chưa có trong contract endpoint tạo công thức hiện tại.
+Mặc định frontend gọi backend tại `http://localhost:5080`; có thể đổi bằng `NEXT_PUBLIC_API_BASE_URL`. Phiên đăng nhập chỉ tồn tại trong Zustand ở bộ nhớ trình duyệt; người dùng cần đăng nhập lại sau khi tải lại trang. Trang chủ, danh sách/chi tiết danh mục, công thức, tìm kiếm, hồ sơ và các luồng xác thực sử dụng API thật. Tìm kiếm công khai qua `GET /api/v1/recipes/search?q=...` chỉ trả công thức Published. Không bật dữ liệu mẫu trong môi trường cần xác minh API thật.
+
+Quên mật khẩu gửi email qua SMTP. Cấu hình Backend bằng biến môi trường (không commit thông tin SMTP):
+
+```text
+Email__Smtp__Host
+Email__Smtp__Port
+Email__Smtp__Username
+Email__Smtp__Password
+Email__Smtp__From
+Email__Smtp__EnableSsl
+Frontend__BaseUrl
+```
+
+Nếu SMTP chưa được cấu hình, endpoint quên mật khẩu trả `503 Service Unavailable`; đăng ký, đăng nhập, hồ sơ, đổi mật khẩu và các trang công khai vẫn dùng các API tương ứng. Khi triển khai production hoặc nhiều instance, cần cấu hình lưu trữ Data Protection keys dùng chung để token reset còn xác thực được sau khi restart/đổi instance.
+
+## Cấu hình Backend local
+
+Chuỗi kết nối PostgreSQL và các khóa bí mật không được lưu trong `appsettings*.json` hoặc commit vào Git. Khi chạy API trong môi trường Development, cấu hình bằng .NET User Secrets:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string-local>" --project backend\src\CulinaryBlog.API\CulinaryBlog.API.csproj
+dotnet user-secrets set "Jwt:Secret" "<random-secret-at-least-32-characters>" --project backend\src\CulinaryBlog.API\CulinaryBlog.API.csproj
+```
+
+ASP.NET Core tự nạp User Secrets trong Development; biến môi trường `ConnectionStrings__DefaultConnection` có thể dùng thay thế và được ưu tiên cao hơn. Công cụ EF design-time đọc biến môi trường này, vì vậy hãy cấp nó trong môi trường chạy lệnh migration mà không ghi giá trị vào file được theo dõi. `appsettings` chỉ chứa cấu hình không bí mật; `.env.example` chỉ chứa placeholder để sao chép vào file `.env` bị Git bỏ qua.
 
 ## Tài liệu tham chiếu
 

@@ -2,6 +2,7 @@ using CulinaryBlog.Application.Features.Recipes.Commands;
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using MediatR;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace CulinaryBlog.API.Endpoints;
 
@@ -24,6 +25,7 @@ public static class RecipeIngredientEndpoints
 				Guid recipeId,
 				RecipeIngredientRequest request,
 				ISender sender,
+				IOutputCacheStore outputCacheStore,
 				CancellationToken cancellationToken) =>
 			{
 				var id = await sender.Send(
@@ -34,6 +36,9 @@ public static class RecipeIngredientEndpoints
 						request.Unit,
 						request.Notes),
 					cancellationToken);
+				await outputCacheStore.EvictByTagAsync(
+					"recipes",
+					cancellationToken);
 				return Results.Created(
 					$"/api/v1/recipes/{recipeId}/ingredients/{id}",
 					new { id });
@@ -41,13 +46,14 @@ public static class RecipeIngredientEndpoints
 			.WithSummary("Add an ingredient to a recipe.")
 			.RequireAuthorization();
 
-		group.MapPatch(
+		group.MapPut(
 			"/{ingredientId:guid}",
 			async (
 				Guid recipeId,
 				Guid ingredientId,
 				RecipeIngredientRequest request,
 				ISender sender,
+				IOutputCacheStore outputCacheStore,
 				CancellationToken cancellationToken) =>
 			{
 				await sender.Send(
@@ -59,9 +65,13 @@ public static class RecipeIngredientEndpoints
 						request.Unit,
 						request.Notes),
 					cancellationToken);
-				return Results.NoContent();
+				await outputCacheStore.EvictByTagAsync(
+					"recipes",
+					cancellationToken);
+				return Results.Ok();
 			})
 			.WithSummary("Update a recipe ingredient.")
+			.Produces(StatusCodes.Status200OK)
 			.RequireAuthorization();
 
 		group.MapDelete(
@@ -70,10 +80,14 @@ public static class RecipeIngredientEndpoints
 				Guid recipeId,
 				Guid ingredientId,
 				ISender sender,
+				IOutputCacheStore outputCacheStore,
 				CancellationToken cancellationToken) =>
 			{
 				await sender.Send(
 					new DeleteRecipeIngredientCommand(recipeId, ingredientId),
+					cancellationToken);
+				await outputCacheStore.EvictByTagAsync(
+					"recipes",
 					cancellationToken);
 				return Results.NoContent();
 			})

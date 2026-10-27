@@ -33,7 +33,8 @@ public static class DependencyInjection
             IPasswordHasher<ApplicationUser>,
             PasswordHasher<ApplicationUser>>();
         services.AddScoped<IIdentityService, IdentityService>();
-        services.AddScoped<IEmailService, MailKitEmailService>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddDataProtection();
 
         if (configuration.GetValue("Hangfire:Enabled", true))
         {
@@ -60,8 +61,8 @@ public static class DependencyInjection
                 IImageResizeJobScheduler,
                 HangfireImageResizeJobScheduler>();
             services.AddScoped<
-                IWelcomeEmailJobScheduler,
-                HangfireWelcomeEmailJobScheduler>();
+                IImageCleanupJobScheduler,
+                HangfireImageCleanupJobScheduler>();
         }
         else
         {
@@ -69,8 +70,8 @@ public static class DependencyInjection
                 IImageResizeJobScheduler,
                 DisabledImageResizeJobScheduler>();
             services.AddScoped<
-                IWelcomeEmailJobScheduler,
-                DisabledWelcomeEmailJobScheduler>();
+                IImageCleanupJobScheduler,
+                DisabledImageCleanupJobScheduler>();
         }
 
         services.AddScoped(

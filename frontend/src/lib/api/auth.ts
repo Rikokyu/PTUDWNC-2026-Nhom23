@@ -37,13 +37,8 @@ export const authApi = {
   forgotPassword: async (email: string): Promise<void> => {
     await apiClient.post("/api/v1/auth/forgot-password", { email });
   },
-  resetPassword: async (
-    email: string,
-    token: string,
-    newPassword: string,
-  ): Promise<void> => {
+  resetPassword: async (token: string, newPassword: string): Promise<void> => {
     await apiClient.post("/api/v1/auth/reset-password", {
-      email,
       token,
       newPassword,
     });

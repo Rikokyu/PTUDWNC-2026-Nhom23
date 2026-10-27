@@ -125,8 +125,8 @@ public sealed class IdentityService : IIdentityService
     public async Task<UserDto> UpdateProfileAsync(
         Guid userId,
         string displayName,
-        string? avatarUrl,
         string? bio,
+        string? avatarUrl,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(displayName))
@@ -337,7 +337,6 @@ public sealed class IdentityService : IIdentityService
             user.Bio,
             user.Role,
             user.CreatedAt);
-    }
 
     private string CreatePasswordResetToken(ApplicationUser user)
     {

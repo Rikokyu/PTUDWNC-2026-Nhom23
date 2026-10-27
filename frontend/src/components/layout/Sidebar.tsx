@@ -5,16 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChefHat, Grid, PlusCircle, User, Bookmark, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-import { authApi } from "@/lib/api/auth";
-import { getApiErrorMessage } from "@/lib/api/error";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const router = useRouter();
-  const clearSession = useAuthStore((state) => state.clearSession);
-  const [logoutError, setLogoutError] = React.useState("");
+  const { user, logout } = useAuth();
 
   const menuItems = [
     { label: "Tổng quan", href: "/dashboard", icon: Grid },
@@ -24,18 +19,6 @@ export const Sidebar: React.FC = () => {
     { label: "Hồ sơ cá nhân", href: "/dashboard/profile", icon: User },
     { label: "Công thức đã lưu", href: "/saved", icon: Bookmark },
   ];
-
-  async function logout() {
-    setLogoutError("");
-    try {
-      await authApi.logout();
-      clearSession();
-      router.replace("/");
-    } catch (error) {
-      setLogoutError(getApiErrorMessage(error));
-      clearSession();
-    }
-  }
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between shrink-0 hidden md:flex">
@@ -69,11 +52,6 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <div className="pt-4 border-t border-slate-100 space-y-1">
-        {logoutError && (
-          <p role="alert" className="px-3 py-2 text-xs text-rose-700">
-            Đã xóa phiên đăng nhập trên thiết bị này, nhưng máy chủ chưa xác nhận thu hồi token: {logoutError}
-          </p>
-        )}
         <Link
           href="/dashboard/settings"
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-content-secondary hover:text-content-primary hover:bg-slate-50 transition-colors"

@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddDataProtection();
+        services.AddScoped<IEmailService, MailKitEmailService>();
 
         if (configuration.GetValue("Hangfire:Enabled", true))
         {
@@ -63,6 +64,9 @@ public static class DependencyInjection
             services.AddScoped<
                 IImageCleanupJobScheduler,
                 HangfireImageCleanupJobScheduler>();
+            services.AddScoped<
+                IWelcomeEmailJobScheduler,
+                HangfireWelcomeEmailJobScheduler>();
         }
         else
         {
@@ -72,6 +76,9 @@ public static class DependencyInjection
             services.AddScoped<
                 IImageCleanupJobScheduler,
                 DisabledImageCleanupJobScheduler>();
+            services.AddScoped<
+                IWelcomeEmailJobScheduler,
+                DisabledWelcomeEmailJobScheduler>();
         }
 
         services.AddScoped(

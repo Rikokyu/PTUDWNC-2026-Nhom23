@@ -60,7 +60,7 @@ public sealed class GetCurrentUserQueryTests
     {
         public Guid? RequestedUserId { get; private set; }
 
-        public Task<AuthUserDto> RegisterAsync(
+        public Task<AuthSessionDto> RegisterAsync(
             string displayName,
             string email,
             string password,
@@ -103,8 +103,17 @@ public sealed class GetCurrentUserQueryTests
             throw new NotSupportedException();
 
         public Task ResetPasswordAsync(
+            string email,
             string token,
             string newPassword,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<UserDto> UpdateProfileAsync(
+            Guid userId,
+            string displayName,
+            string? bio,
+            string? avatarUrl,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 

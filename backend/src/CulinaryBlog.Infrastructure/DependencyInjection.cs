@@ -1,6 +1,7 @@
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
+using CulinaryBlog.Infrastructure.Email;
 using CulinaryBlog.Infrastructure.Identity;
 using CulinaryBlog.Domain.Interfaces;
 using CulinaryBlog.Infrastructure.Persistence;

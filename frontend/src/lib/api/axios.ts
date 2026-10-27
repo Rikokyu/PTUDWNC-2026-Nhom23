@@ -1,11 +1,12 @@
 import axios from "axios";
 import { useAuthStore } from "@/store/useAuthStore";
+import { clearAuthSession } from "@/lib/auth/session";
 
 const apiClient = axios.create({
   baseURL:
     process.env.NEXT_PUBLIC_API_BASE_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
-    "http://localhost:5080",
+    "",
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
 });
@@ -28,5 +29,15 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && useAuthStore.getState().accessToken) {
+      clearAuthSession();
+    }
+    return Promise.reject(error);
+  },
+);
 
 export default apiClient;

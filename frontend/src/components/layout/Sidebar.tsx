@@ -20,7 +20,7 @@ export const Sidebar: React.FC = () => {
     { label: "Tổng quan", href: "/dashboard", icon: Grid },
     { label: "Công thức của tôi", href: "/dashboard/recipes", icon: ChefHat },
     { label: "Tạo công thức mới", href: "/dashboard/recipes/new", icon: PlusCircle },
-    { label: "Danh mục quản lý", href: "/dashboard/categories", icon: Grid },
+    ...(user?.role === "Admin" ? [{ label: "Danh mục quản lý", href: "/dashboard/categories", icon: Grid }] : []),
     { label: "Hồ sơ cá nhân", href: "/dashboard/profile", icon: User },
     { label: "Công thức đã lưu", href: "/saved", icon: Bookmark },
   ];

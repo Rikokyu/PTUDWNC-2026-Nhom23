@@ -5,7 +5,7 @@ namespace CulinaryBlog.Application.Common.Interfaces;
 
 public interface IIdentityService
 {
-    Task<AuthUserDto> RegisterAsync(
+    Task<AuthSessionDto> RegisterAsync(
         string displayName,
         string email,
         string password,
@@ -38,8 +38,16 @@ public interface IIdentityService
         CancellationToken cancellationToken);
 
     Task ResetPasswordAsync(
+        string email,
         string token,
         string newPassword,
+        CancellationToken cancellationToken);
+
+    Task<UserDto> UpdateProfileAsync(
+        Guid userId,
+        string displayName,
+        string? bio,
+        string? avatarUrl,
         CancellationToken cancellationToken);
 
     Task RevokeRefreshTokensAsync(

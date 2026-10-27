@@ -1,10 +1,7 @@
 import apiClient from "./axios";
-import type {
-  AuthSessionDto,
-  AuthUserDto,
-  UpdateProfileRequest,
-  UserProfileDto,
-} from "@/types/api";
+import type { AuthSessionDto, UserProfileDto } from "@/types/api";
+import { useAuthStore } from "@/store/useAuthStore";
+import { AUTH_CHANGED } from "@/lib/auth/session";
 
 export const authApi = {
   login: async (email: string, password: string): Promise<AuthSessionDto> => {
@@ -18,8 +15,8 @@ export const authApi = {
     displayName: string,
     email: string,
     password: string,
-  ): Promise<AuthUserDto> => {
-    const response = await apiClient.post<AuthUserDto>(
+  ): Promise<AuthSessionDto> => {
+    const response = await apiClient.post<AuthSessionDto>(
       "/api/v1/auth/register",
       { displayName, email, password },
     );
@@ -27,19 +24,6 @@ export const authApi = {
   },
   logout: async (): Promise<void> => {
     await apiClient.post("/api/v1/auth/logout");
-  },
-  getMe: async (): Promise<UserProfileDto> => {
-    const response = await apiClient.get<UserProfileDto>("/api/v1/auth/me");
-    return response.data;
-  },
-  updateProfile: async (
-    request: UpdateProfileRequest,
-  ): Promise<UserProfileDto> => {
-    const response = await apiClient.patch<UserProfileDto>(
-      "/api/v1/auth/me",
-      request,
-    );
-    return response.data;
   },
   changePassword: async (
     currentPassword: string,
@@ -50,10 +34,36 @@ export const authApi = {
       newPassword,
     });
   },
-  requestPasswordReset: async (email: string): Promise<void> => {
+  forgotPassword: async (email: string): Promise<void> => {
     await apiClient.post("/api/v1/auth/forgot-password", { email });
   },
-  resetPassword: async (token: string, newPassword: string): Promise<void> => {
-    await apiClient.post("/api/v1/auth/reset-password", { token, newPassword });
+  resetPassword: async (
+    email: string,
+    token: string,
+    newPassword: string,
+  ): Promise<void> => {
+    await apiClient.post("/api/v1/auth/reset-password", {
+      email,
+      token,
+      newPassword,
+    });
+  },
+  updateProfile: async (profile: {
+    displayName: string;
+    bio: string | null;
+    avatarUrl: string | null;
+  }): Promise<UserProfileDto> => {
+    const response = await apiClient.put<UserProfileDto>(
+      "/api/v1/auth/me",
+      profile,
+    );
+    return response.data;
   },
 };
+
+export function saveAuthSession(session: AuthSessionDto): void {
+  localStorage.setItem("refreshToken", session.refreshToken);
+  localStorage.setItem("accessTokenExpiresAt", session.accessTokenExpiresAt);
+  useAuthStore.getState().setSession(session.accessToken, session.user);
+  window.dispatchEvent(new Event(AUTH_CHANGED));
+}

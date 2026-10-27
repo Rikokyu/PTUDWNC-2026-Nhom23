@@ -35,6 +35,8 @@ public sealed class WelcomeEmailJobTests
         Assert.Contains("http://localhost:3000", content.HtmlBody);
         Assert.Contains("Kích hoạt email", content.HtmlBody);
         Assert.Contains("token=a&amp;user=1", content.HtmlBody);
+        Assert.Contains("charset=\"utf-8\"", content.HtmlBody);
+        Assert.Contains("Chào mừng", content.HtmlBody);
     }
 
     [Fact]

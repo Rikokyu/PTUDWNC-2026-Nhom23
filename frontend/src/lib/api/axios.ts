@@ -23,7 +23,12 @@ export function resolveApiAssetUrl(
 }
 
 apiClient.interceptors.request.use((config) => {
-  const accessToken = useAuthStore.getState().accessToken;
+  // Zustand is initialized empty after a full page reload. Fall back to the
+  // browser-persisted token so the first authenticated request (e.g. /me)
+  // carries the existing session instead of looking like an anonymous user.
+  const accessToken =
+    useAuthStore.getState().accessToken ??
+    (typeof window !== "undefined" ? localStorage.getItem("accessToken") : null);
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }

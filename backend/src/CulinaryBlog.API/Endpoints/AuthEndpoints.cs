@@ -1,6 +1,4 @@
 using System.Security.Claims;
-using CulinaryBlog.Application.Common.Exceptions;
-using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
 using CulinaryBlog.Application.Features.Auth.Commands.Logout;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
@@ -120,77 +118,7 @@ public static class AuthEndpoints
         return Results.Ok(user);
     }
 
-    private static async Task<IResult> UpdateProfileAsync(
-        UpdateProfileRequest request,
-        ClaimsPrincipal principal,
-        IIdentityService identityService,
-        CancellationToken cancellationToken)
-    {
-        var userId = GetUserId(principal);
-        var user = await identityService.UpdateProfileAsync(
-            userId,
-            request.DisplayName,
-            request.AvatarUrl,
-            request.Bio,
-            cancellationToken);
-        return Results.Ok(user);
-    }
-
-    private static async Task<IResult> ChangePasswordAsync(
-        ChangePasswordRequest request,
-        ClaimsPrincipal principal,
-        IIdentityService identityService,
-        CancellationToken cancellationToken)
-    {
-        await identityService.ChangePasswordAsync(
-            GetUserId(principal),
-            request.CurrentPassword,
-            request.NewPassword,
-            cancellationToken);
-        return Results.NoContent();
-    }
-
-    private static async Task<IResult> RequestPasswordResetAsync(
-        ForgotPasswordRequest request,
-        IIdentityService identityService,
-        CancellationToken cancellationToken)
-    {
-        await identityService.RequestPasswordResetAsync(
-            request.Email,
-            cancellationToken);
-        return Results.Accepted(
-            value: new
-            {
-                message = "Nếu email tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi."
-            });
-    }
-
-    private static async Task<IResult> ResetPasswordAsync(
-        ResetPasswordRequest request,
-        IIdentityService identityService,
-        CancellationToken cancellationToken)
-    {
-        await identityService.ResetPasswordAsync(
-            request.Token,
-            request.NewPassword,
-            cancellationToken);
-        return Results.NoContent();
-    }
-
-    private static Guid GetUserId(ClaimsPrincipal principal)
-    {
-        var userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? principal.FindFirstValue("sub");
-        if (!Guid.TryParse(userIdValue, out var userId))
-        {
-            throw new UnauthorizedException(
-                "The authenticated user identifier is invalid.");
-        }
-
-        return userId;
-    }
-
-    /// <summary>Creates a user account and returns its public profile.</summary>
+    /// <summary>Creates a user account and immediately returns an authenticated session.</summary>
     private static async Task<IResult> RegisterAsync(
         RegisterRequest request,
         ISender sender,
@@ -279,7 +207,6 @@ public static class AuthEndpoints
     {
         await sender.Send(
             new ResetPasswordCommand(
-                request.Email,
                 request.Token,
                 request.NewPassword),
             cancellationToken);
@@ -342,12 +269,7 @@ public sealed record ForgotPasswordRequest(string Email);
 
 /// <summary>Email, reset token, and replacement password.</summary>
 public sealed record ResetPasswordRequest(
-    string Email,
     string Token,
     string NewPassword);
 
 /// <summary>Editable public profile fields.</summary>
-public sealed record UpdateProfileRequest(
-    string DisplayName,
-    string? Bio,
-    string? AvatarUrl);

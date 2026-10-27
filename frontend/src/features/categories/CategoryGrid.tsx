@@ -2,11 +2,11 @@
 
 import React from "react";
 import Link from "next/link";
-import { MockCategory } from "@/lib/mockData";
 import { ChefHat, ArrowRight } from "lucide-react";
+import type { CategoryApiDto } from "@/types/api";
 
 export interface CategoryGridProps {
-  categories: MockCategory[];
+  categories: CategoryApiDto[];
 }
 
 export const CategoryGrid: React.FC<CategoryGridProps> = ({ categories }) => {
@@ -33,7 +33,7 @@ export const CategoryGrid: React.FC<CategoryGridProps> = ({ categories }) => {
           </div>
 
           <p className="text-xs text-content-secondary leading-relaxed mb-6">
-            {category.description}
+            {category.description || "Khám phá các công thức thuộc danh mục này."}
           </p>
 
           <div className="text-xs font-semibold text-brand inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">

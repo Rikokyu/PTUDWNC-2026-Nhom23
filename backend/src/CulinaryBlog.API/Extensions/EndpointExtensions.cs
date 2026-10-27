@@ -9,6 +9,7 @@ public static class EndpointExtensions
         this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapAuthEndpoints();
+        endpoints.MapAdminUserEndpoints();
         endpoints.MapCategoryEndpoints();
         endpoints.MapHealthEndpoints();
 

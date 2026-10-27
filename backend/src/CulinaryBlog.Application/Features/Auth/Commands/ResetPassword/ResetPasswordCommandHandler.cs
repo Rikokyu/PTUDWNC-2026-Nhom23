@@ -12,7 +12,6 @@ public sealed class ResetPasswordCommandHandler(
         CancellationToken cancellationToken)
     {
         await identityService.ResetPasswordAsync(
-            request.Email,
             request.Token,
             request.NewPassword,
             cancellationToken);

@@ -9,7 +9,9 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, status, retry } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const adminOnly = pathname === "/dashboard/categories" || pathname.startsWith("/dashboard/categories/");
+  const adminOnly = ["/dashboard/categories", "/dashboard/users", "/dashboard/admin-recipes"].some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
 
   useEffect(() => {
     if (status === "guest") {
@@ -23,7 +25,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }
   if (status === "error") {
     return (
-      <div role="alert" className="p-8 text-center space-y-4">
+      <div role="alert" className="space-y-4 p-8 text-center">
         <p>Không thể xác minh tài khoản. Vui lòng kiểm tra kết nối và thử lại.</p>
         <button onClick={retry} className="text-brand underline">Thử lại</button>
       </div>
@@ -31,9 +33,9 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }
   if (!user || !["Author", "Admin"].includes(user.role) || (adminOnly && user.role !== "Admin")) {
     return (
-      <div role="alert" className="p-8 text-center space-y-4">
+      <div role="alert" className="space-y-4 p-8 text-center">
         <h1 className="text-xl font-bold">Bạn không có quyền truy cập trang này</h1>
-        <p>Trang quản lý danh mục chỉ dành cho quản trị viên.</p>
+        <p>Khu vực quản trị này chỉ dành cho Admin.</p>
         <Link className="text-brand underline" href="/dashboard">Về trang cá nhân</Link>
       </div>
     );

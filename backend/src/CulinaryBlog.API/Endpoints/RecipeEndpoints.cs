@@ -98,7 +98,7 @@ public static class RecipeEndpoints
                     $"/api/v1/recipes/{result.Slug}",
                     new { data = createdRecipe });
             })
-            .RequireAuthorization();
+            .RequireAuthorization("AuthorOrAdmin");
 
         group.MapPut(
             "/{recipeId:guid}",
@@ -137,7 +137,7 @@ public static class RecipeEndpoints
 
                 return Results.Ok(new { data = updatedRecipe });
             })
-            .RequireAuthorization();
+            .RequireAuthorization("AuthorOrAdmin");
 
         group.MapPatch(
             "/{recipeId:guid}/publish",
@@ -152,7 +152,7 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
-            .RequireAuthorization();
+            .RequireAuthorization("AuthorOrAdmin");
 
         group.MapPatch(
             "/{recipeId:guid}/unpublish",
@@ -167,7 +167,7 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
-            .RequireAuthorization();
+            .RequireAuthorization("AuthorOrAdmin");
 
         group.MapPatch(
             "/{recipeId:guid}/archive",
@@ -182,7 +182,7 @@ public static class RecipeEndpoints
                     sender,
                     outputCacheStore,
                     cancellationToken))
-            .RequireAuthorization();
+            .RequireAuthorization("AuthorOrAdmin");
 
         group.MapDelete(
             "/{recipeId:guid}",
@@ -205,7 +205,7 @@ public static class RecipeEndpoints
 
                 return Results.NoContent();
             })
-            .RequireAuthorization();
+            .RequireAuthorization("AuthorOrAdmin");
 
         endpoints.MapGet(
             "/api/v1/me/recipes",
@@ -227,7 +227,8 @@ public static class RecipeEndpoints
                     cancellationToken,
                     ownRecipesOnly: true,
                     includeAllStatuses: false);
-            });
+            })
+            .RequireAuthorization("AuthorOrAdmin");
 
         endpoints.MapGet(
             "/api/v1/admin/recipes",
@@ -249,7 +250,8 @@ public static class RecipeEndpoints
                     cancellationToken,
                     ownRecipesOnly: false,
                     includeAllStatuses: true);
-            });
+            })
+            .RequireAuthorization("Admin");
 
         return endpoints;
     }
@@ -371,6 +373,14 @@ public static class RecipeEndpoints
             maxCookTime = parsedMaxCookTime;
         }
 
+        var search = query["search"].FirstOrDefault()?.Trim();
+
+        if (search?.Length > 100)
+        {
+            throw new ValidationException(
+                "search cannot be longer than 100 characters.");
+        }
+
         var sort =
             query["sort"].FirstOrDefault()
             ?? "-createdAt";
@@ -400,6 +410,7 @@ public static class RecipeEndpoints
                 categoryId,
                 difficulty,
                 maxCookTime,
+                search,
                 sort,
                 ownRecipesOnly,
                 includeAllStatuses);

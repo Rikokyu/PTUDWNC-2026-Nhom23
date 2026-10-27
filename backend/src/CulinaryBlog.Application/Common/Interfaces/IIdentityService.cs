@@ -20,13 +20,6 @@ public interface IIdentityService
         Guid userId,
         CancellationToken cancellationToken);
 
-    Task<UserDto> UpdateProfileAsync(
-        Guid userId,
-        string displayName,
-        string? avatarUrl,
-        string? bio,
-        CancellationToken cancellationToken);
-
     Task ChangePasswordAsync(
         Guid userId,
         string currentPassword,
@@ -38,7 +31,6 @@ public interface IIdentityService
         CancellationToken cancellationToken);
 
     Task ResetPasswordAsync(
-        string email,
         string token,
         string newPassword,
         CancellationToken cancellationToken);

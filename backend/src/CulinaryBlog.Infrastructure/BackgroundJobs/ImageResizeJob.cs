@@ -11,7 +11,10 @@ public sealed class ImageResizeJob(
     IFileStorageService fileStorage,
     ILogger<ImageResizeJob> logger)
 {
-    [AutomaticRetry(Attempts = 3)]
+    [AutomaticRetry(
+        Attempts = 3,
+        OnAttemptsExceeded = AttemptsExceededAction.Fail,
+        LogEvents = true)]
     public async Task ProcessAsync(
         Guid imageId,
         CancellationToken cancellationToken)

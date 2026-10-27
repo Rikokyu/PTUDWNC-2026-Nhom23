@@ -1,5 +1,9 @@
 using System.Text;
+using System.Security.Claims;
+using CulinaryBlog.Domain.Constants;
+using CulinaryBlog.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CulinaryBlog.API.Extensions;
@@ -43,6 +47,50 @@ public static class AuthenticationExtensions
                         NameClaimType = "sub",
                         RoleClaimType = "role"
                     };
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var principal = context.Principal;
+                        var userIdValue = principal?.FindFirstValue("sub")
+                            ?? principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                        var tokenVersionValue = principal?
+                            .FindFirstValue("token_version");
+                        var tokenRole = principal?.FindFirstValue("role");
+
+                        if (!Guid.TryParse(userIdValue, out var userId)
+                            || !int.TryParse(
+                                tokenVersionValue,
+                                out var tokenVersion))
+                        {
+                            context.Fail("The access token is invalid.");
+                            return;
+                        }
+
+                        var database = context.HttpContext.RequestServices
+                            .GetRequiredService<CulinaryBlogDbContext>();
+                        var account = await database.ApplicationUsers
+                            .AsNoTracking()
+                            .Where(user => user.Id == userId)
+                            .Select(user => new
+                            {
+                                user.IsActive,
+                                user.Role,
+                                user.TokenVersion
+                            })
+                            .SingleOrDefaultAsync(
+                                context.HttpContext.RequestAborted);
+
+                        if (account is null
+                            || !account.IsActive
+                            || account.TokenVersion != tokenVersion
+                            || account.Role != tokenRole)
+                        {
+                            context.Fail(
+                                "The account is disabled or its permissions have changed.");
+                        }
+                    }
+                };
             });
 
         services
@@ -51,7 +99,12 @@ public static class AuthenticationExtensions
                 "Admin",
                 policy => policy
                     .RequireAuthenticatedUser()
-                    .RequireRole("Admin"));
+                    .RequireRole(UserRoles.Admin))
+            .AddPolicy(
+                "AuthorOrAdmin",
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .RequireRole(UserRoles.Author, UserRoles.Admin));
 
         return services;
     }

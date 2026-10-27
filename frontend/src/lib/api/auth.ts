@@ -4,6 +4,10 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { AUTH_CHANGED } from "@/lib/auth/session";
 
 export const authApi = {
+  getMe: async (): Promise<UserProfileDto> => {
+    const response = await apiClient.get<UserProfileDto>("/api/v1/auth/me");
+    return response.data;
+  },
   login: async (email: string, password: string): Promise<AuthSessionDto> => {
     const response = await apiClient.post<AuthSessionDto>(
       "/api/v1/auth/login",
@@ -37,13 +41,8 @@ export const authApi = {
   forgotPassword: async (email: string): Promise<void> => {
     await apiClient.post("/api/v1/auth/forgot-password", { email });
   },
-  resetPassword: async (
-    email: string,
-    token: string,
-    newPassword: string,
-  ): Promise<void> => {
+  resetPassword: async (token: string, newPassword: string): Promise<void> => {
     await apiClient.post("/api/v1/auth/reset-password", {
-      email,
       token,
       newPassword,
     });

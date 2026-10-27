@@ -1,4 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
+	<!--
+		ImageSharp 4 requests the .NET 10 out-of-process MSBuild task host for
+		license validation. Some Windows Application Control policies block that
+		host, so run the compatible validation task in the current MSBuild process.
+	-->
+	<UsingTask
+		TaskName="SixLabors.Licensing.ValidateLicenseTask"
+		AssemblyFile="$(PkgSixLabors_ImageSharp)\build\net6.0\SixLabors.Licensing.dll"
+		Runtime="CurrentRuntime"
+		Architecture="CurrentArchitecture"
+		Override="true" />
+
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -13,15 +25,15 @@
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		  <PrivateAssets>all</PrivateAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.12">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
 		<PackageReference Include="Hangfire.AspNetCore" Version="1.8.25" />
 		<PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
+		<PackageReference Include="Minio" Version="7.0.0" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-		<PackageReference Include="SixLabors.ImageSharp" Version="4.1.3" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="4.1.3" GeneratePathProperty="true" />
 		<PackageReference Include="HeyRed.ImageSharp.Heif" Version="2.1.3" />
 		<PackageReference Include="LibHeif.Native" Version="1.15.1" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />

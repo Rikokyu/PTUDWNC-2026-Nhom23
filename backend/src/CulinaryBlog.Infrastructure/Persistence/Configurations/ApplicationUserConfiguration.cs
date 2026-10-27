@@ -40,6 +40,14 @@ public class ApplicationUserConfiguration
             .HasMaxLength(50)
             .IsRequired();
 
+        builder.Property(x => x.IsActive)
+            .HasDefaultValue(true)
+            .IsRequired();
+
+        builder.Property(x => x.TokenVersion)
+            .HasDefaultValue(0)
+            .IsRequired();
+
         builder.HasIndex(x => x.Email)
             .IsUnique();
 

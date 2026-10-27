@@ -2,6 +2,19 @@ export type Difficulty = "Easy" | "Medium" | "Hard";
 
 export type ApiDifficultyLevel = 1 | 2 | 3 | 4;
 export type ApiRecipeStatus = 0 | 1 | 2;
+export type UserRole = "Author" | "Admin";
+
+export interface AdminUserDto {
+  id: string;
+  email: string;
+  userName: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+}
 
 export interface AuthUserDto {
   id: string;

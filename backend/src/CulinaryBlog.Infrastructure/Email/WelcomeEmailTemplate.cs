@@ -24,6 +24,7 @@ public static class WelcomeEmailTemplate
         var htmlBody = $"""
             <!doctype html>
             <html lang="vi">
+            <head><meta charset="utf-8"></head>
             <body style="margin:0;background:#fff7ed;font-family:Arial,sans-serif;color:#292524">
               <div style="max-width:600px;margin:32px auto;background:#fff;padding:32px;border-radius:12px">
                 <h1 style="color:#c2410c">Chào mừng {encodedName}!</h1>

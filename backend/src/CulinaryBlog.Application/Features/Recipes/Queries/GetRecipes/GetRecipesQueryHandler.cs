@@ -33,6 +33,7 @@ public sealed class GetRecipesQueryHandler
                 request.CategoryId,
                 request.Difficulty,
                 request.MaxCookTime,
+                request.Search,
                 request.Sort,
                 _currentUser.IsAuthor || _currentUser.IsAdmin
                     ? _currentUser.UserId
@@ -40,7 +41,7 @@ public sealed class GetRecipesQueryHandler
                 _currentUser.IsAuthenticated,
                 _currentUser.IsAdmin,
                 request.OwnRecipesOnly,
-                request.IncludeAllStatuses || _currentUser.IsAdmin,
+                request.IncludeAllStatuses,
                 cancellationToken);
 
         var items =

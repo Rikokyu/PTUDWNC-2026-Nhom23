@@ -108,6 +108,7 @@ public sealed class RegistrationAndImageUploadTests
                 null,
                 null,
                 null,
+                null,
                 "-createdAt"),
             CancellationToken.None);
 
@@ -131,6 +132,7 @@ public sealed class RegistrationAndImageUploadTests
                 null,
                 null,
                 null,
+                null,
                 "-createdAt"),
             CancellationToken.None);
 
@@ -138,7 +140,7 @@ public sealed class RegistrationAndImageUploadTests
     }
 
     [Fact]
-    public async Task RecipeList_AdminIncludesAllStatusesByDefault()
+    public async Task RecipeList_AdminDoesNotIncludeOtherAuthorsPrivateStatuses()
     {
         var repository = new FakeRecipeRepository(
             CreateRecipe(Guid.NewGuid()));
@@ -153,10 +155,11 @@ public sealed class RegistrationAndImageUploadTests
                 null,
                 null,
                 null,
+                null,
                 "-createdAt"),
             CancellationToken.None);
 
-        Assert.True(repository.LastPagedIncludeAllStatuses);
+        Assert.False(repository.LastPagedIncludeAllStatuses);
     }
 
     [Fact]
@@ -183,6 +186,7 @@ public sealed class RegistrationAndImageUploadTests
     public async Task UpdateRecipe_AllowsAdminToUpdateAnotherAuthorsRecipe()
     {
         var recipe = CreateRecipe(Guid.NewGuid());
+        recipe.Status = RecipeStatus.Published;
         var repository = new FakeRecipeRepository(recipe);
         var unitOfWork = new FakeUnitOfWork(repository);
         var handler = new RecipeCommandHandler(
@@ -199,6 +203,24 @@ public sealed class RegistrationAndImageUploadTests
             CancellationToken.None);
 
         Assert.Equal(1, unitOfWork.SaveCount);
+    }
+
+    [Fact]
+    public async Task UpdateRecipe_RejectsAdminForAnotherAuthorsDraft()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        var repository = new FakeRecipeRepository(recipe);
+        var handler = new RecipeCommandHandler(
+            repository,
+            new FakeCategoryStore(),
+            repository,
+            new FakeUnitOfWork(repository),
+            new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true));
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            handler.Handle(
+                UpdateCommand(recipe, recipe.RowVersion),
+                CancellationToken.None));
     }
 
     [Fact]
@@ -603,6 +625,7 @@ public sealed class RegistrationAndImageUploadTests
                 Guid? categoryId,
                 DifficultyLevel? difficulty,
                 int? maxCookTime,
+                string? search,
                 string sort,
                 Guid? currentUserId,
                 bool isAuthenticated,

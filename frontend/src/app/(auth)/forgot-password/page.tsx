@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
     setError("");
     setLoading(true);
     try {
-      await authApi.requestPasswordReset(email.trim());
+      await authApi.forgotPassword(email.trim());
       setSubmitted(true);
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));

@@ -67,7 +67,6 @@ public sealed class MailKitEmailService(
         await client.SendMailAsync(message, cancellationToken);
         logger.LogInformation("Sent welcome email to {Email}.", email);
     }
-
     public async Task SendPasswordResetEmailAsync(
         string email,
         string displayName,

@@ -27,6 +27,7 @@ public class ApplicationUserConfiguration
             .IsRequired();
 
         builder.Property(x => x.PasswordHash)
+            .IsConcurrencyToken()
             .HasMaxLength(500)
             .IsRequired();
 

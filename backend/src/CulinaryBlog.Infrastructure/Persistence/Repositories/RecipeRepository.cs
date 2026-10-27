@@ -88,7 +88,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         }
 
         // Sorting
-        query = sort switch
+        var orderedList = sort switch
         {
             "createdAt" =>
                 query.OrderBy(x => x.CreatedAt),
@@ -98,6 +98,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
 
             "title" =>
                 query.OrderBy(x => x.Title),
+
+            "-title" => query.OrderByDescending(x => x.Title),
 
             "cookTime" =>
                 query.OrderBy(x => x.CookTimeMinutes),
@@ -110,6 +112,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 query.OrderByDescending(x =>
                     x.CreatedAt)
         };
+
+        query = orderedList.ThenBy(x => x.Id);
 
         var totalCount =
             await query.CountAsync(cancellationToken);
@@ -146,6 +150,39 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                         && recipe.AuthorId == currentUserId.Value)))
             .Include(recipe => recipe.Category)
             .Include(recipe => recipe.Images);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(recipe => recipe.CreatedAt)
+            .ThenBy(recipe => recipe.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
+    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
+        SearchPublishedAsync(
+            string searchTerm,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+    {
+        var pattern = $"%{searchTerm.Trim()}%";
+        var query = _context.Recipes
+            .AsNoTracking()
+            .Where(recipe =>
+                !recipe.IsDeleted
+                && !recipe.Category.IsDeleted
+                && recipe.Status == RecipeStatus.Published
+                && (EF.Functions.ILike(recipe.Title, pattern)
+                    || EF.Functions.ILike(recipe.Description, pattern)
+                    || EF.Functions.ILike(recipe.Instructions, pattern)
+                    || recipe.Ingredients.Any(ingredient =>
+                        EF.Functions.ILike(ingredient.Name, pattern))))
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
 
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
@@ -222,7 +259,10 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         int page,
         int pageSize,
         string sort,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Guid? categoryId = null,
+        DifficultyLevel? difficulty = null,
+        int? maxCookTime = null)
     {
         var prefixQuery = RecipeSearchText.BuildPrefixQuery(searchTerm);
         if (string.IsNullOrEmpty(prefixQuery))
@@ -230,7 +270,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             return (Array.Empty<RecipeSearchMatch>(), 0);
         }
 
-        var matches = _context.Recipes
+        IQueryable<Recipe> matches = _context.Recipes
             .AsNoTracking()
             .Where(recipe => !recipe.IsDeleted && !recipe.Category.IsDeleted
                 && recipe.Status == RecipeStatus.Published
@@ -238,6 +278,10 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                     .Matches(EF.Functions.ToTsQuery("public.vietnamese", prefixQuery)))
             .Include(recipe => recipe.Category)
             .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
+
+        if (categoryId.HasValue) matches = matches.Where(x => x.CategoryId == categoryId.Value);
+        if (difficulty.HasValue) matches = matches.Where(x => x.Difficulty == difficulty.Value);
+        if (maxCookTime.HasValue) matches = matches.Where(x => x.CookTimeMinutes <= maxCookTime.Value);
 
         var totalCount = await matches.CountAsync(cancellationToken);
         var query = matches.Select(recipe => new

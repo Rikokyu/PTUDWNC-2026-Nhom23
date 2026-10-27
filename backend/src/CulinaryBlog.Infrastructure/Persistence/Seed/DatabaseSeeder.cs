@@ -1,6 +1,7 @@
 using Bogus;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Seed;
@@ -12,11 +13,17 @@ public static class DatabaseSeeder
 
     public static async Task SeedAsync(
         CulinaryBlogDbContext context,
+        IPasswordHasher<ApplicationUser> passwordHasher,
         CancellationToken cancellationToken = default)
     {
         await context.Database.MigrateAsync(cancellationToken);
 
         Randomizer.Seed = new Random(12345);
+
+        await EnsureUsersAsync(
+            context,
+            passwordHasher,
+            cancellationToken);
 
         var categories = await EnsureCategoriesAsync(
             context,
@@ -25,6 +32,49 @@ public static class DatabaseSeeder
             context,
             categories,
             cancellationToken);
+    }
+
+    private static async Task EnsureUsersAsync(
+        CulinaryBlogDbContext context,
+        IPasswordHasher<ApplicationUser> passwordHasher,
+        CancellationToken cancellationToken)
+    {
+        var seedUsers = new (string Email, string UserName, string DisplayName, string Password, string Role)[]
+        {
+            ("admin@culinaryblog.com", "admin", "System Admin", "Admin@123", "Admin"),
+            ("author@culinaryblog.com", "author", "Sample Author", "Author@123", "Author"),
+            ("user@culinaryblog.com", "user", "Sample User", "User@123", "User")
+        };
+
+        foreach (var seedUser in seedUsers)
+        {
+            var emailExists = await context.ApplicationUsers.AnyAsync(
+                user => user.Email.ToLower() == seedUser.Email,
+                cancellationToken);
+
+            if (emailExists)
+            {
+                continue;
+            }
+
+            var user = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = seedUser.Email,
+                UserName = seedUser.UserName,
+                DisplayName = seedUser.DisplayName,
+                Role = seedUser.Role,
+                CreatedAt = DateTime.UtcNow
+            };
+            user.PasswordHash = passwordHasher.HashPassword(user, seedUser.Password);
+
+            await context.ApplicationUsers.AddAsync(user, cancellationToken);
+        }
+
+        if (context.ChangeTracker.HasChanges())
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private static async Task<List<Category>> EnsureCategoriesAsync(

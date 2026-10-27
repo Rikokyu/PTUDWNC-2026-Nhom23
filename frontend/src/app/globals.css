@@ -344,7 +344,7 @@ input {
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .pagination {

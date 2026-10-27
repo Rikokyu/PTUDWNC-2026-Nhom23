@@ -67,6 +67,14 @@ public class GlobalExceptionMiddleware
                 "Unauthorized",
                 ex.Message);
         }
+        catch (CulinaryBlog.Application.Common.Exceptions.EmailServiceUnavailableException ex)
+        {
+            await WriteProblemAsync(
+                context,
+                StatusCodes.Status503ServiceUnavailable,
+                "Email service unavailable",
+                ex.Message);
+        }
         catch (UnauthorizedAccessException ex)
         {
             await WriteProblemAsync(

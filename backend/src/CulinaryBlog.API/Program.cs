@@ -7,11 +7,15 @@ using CulinaryBlog.API.Extensions;
 using CulinaryBlog.API.Authorization;
 using CulinaryBlog.API.HealthChecks;
 using CulinaryBlog.API.Middleware;
+using CulinaryBlog.Domain.Entities;
+using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.OpenApi;
 using Hangfire;
 using Asp.Versioning;
@@ -237,7 +241,12 @@ app.UseCors("Frontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseStaticFiles();
+var staticContentTypes = new FileExtensionContentTypeProvider();
+staticContentTypes.Mappings[".avif"] = "image/avif";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = staticContentTypes
+});
 
 // Output cache
 app.UseOutputCache();
@@ -263,16 +272,17 @@ using (var scope =
 {
     var context =
         scope.ServiceProvider
-            .GetRequiredService<
-                CulinaryBlog.Infrastructure
-                    .Persistence
-                    .CulinaryBlogDbContext>();
+            .GetRequiredService<CulinaryBlogDbContext>();
+    var passwordHasher =
+        scope.ServiceProvider
+            .GetRequiredService<IPasswordHasher<ApplicationUser>>();
 
     try
     {
         await DatabaseSeeder
             .SeedAsync(
                 context,
+                passwordHasher,
                 app.Lifetime.ApplicationStopping);
     }
     catch (DbUpdateConcurrencyException ex)

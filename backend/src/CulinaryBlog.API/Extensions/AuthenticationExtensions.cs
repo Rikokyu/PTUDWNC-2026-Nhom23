@@ -25,6 +25,19 @@ public static class AuthenticationExtensions
             .AddJwtBearer(options =>
             {
                 options.MapInboundClaims = false;
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var subject = context.Principal?.FindFirst("sub")?.Value;
+                        if (!Guid.TryParse(subject, out var id)) { context.Fail("Invalid session."); return; }
+                        var db = context.HttpContext.RequestServices.GetRequiredService<CulinaryBlog.Infrastructure.Persistence.CulinaryBlogDbContext>();
+                        var user = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.SingleOrDefaultAsync(
+                            db.ApplicationUsers, x => x.Id == id, context.HttpContext.RequestAborted);
+                        if (user is null || context.Principal?.FindFirst("pwdv")?.Value != CulinaryBlog.Infrastructure.Identity.AccountService.PasswordVersion(user.PasswordHash))
+                            context.Fail("Session expired. Sign in again.");
+                    }
+                };
                 options.TokenValidationParameters =
                     new TokenValidationParameters
                     {

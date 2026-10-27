@@ -82,6 +82,34 @@ public sealed class GetCurrentUserQueryTests
                 user?.Id == userId ? user : null);
         }
 
+        public Task<UserDto> UpdateProfileAsync(
+            Guid userId,
+            string displayName,
+            string? avatarUrl,
+            string? bio,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task ChangePasswordAsync(
+            Guid userId,
+            string currentPassword,
+            string newPassword,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task RequestPasswordResetAsync(
+            string email,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task ResetPasswordAsync(
+            string email,
+            string token,
+            string newPassword,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+
         public Task RevokeRefreshTokensAsync(
             Guid userId,
             CancellationToken cancellationToken) =>

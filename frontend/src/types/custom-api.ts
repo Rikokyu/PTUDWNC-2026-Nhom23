@@ -129,7 +129,7 @@ export interface RecipeFilters {
   sort?: string;
 }
 
-export interface RecipeSearchFilters {
+export interface RecipeSearchFilters extends RecipeFilters {
   q: string;
   page?: number;
   pageSize?: number;

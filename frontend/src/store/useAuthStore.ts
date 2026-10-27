@@ -7,12 +7,15 @@ export interface AuthUser {
   email: string;
   displayName: string;
   role: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
 }
 
 interface AuthState {
   accessToken: string | null;
   user: AuthUser | null;
   setSession: (accessToken: string, user: AuthUser) => void;
+  setUser: (user: AuthUser) => void;
   clearSession: () => void;
 }
 
@@ -25,6 +28,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.setItem("authUser", JSON.stringify(user));
     }
     set({ accessToken, user });
+  },
+  setUser: (user) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("authUser", JSON.stringify(user));
+    }
+    set({ user });
   },
   clearSession: () => {
     if (typeof window !== "undefined") {

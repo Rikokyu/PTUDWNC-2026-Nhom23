@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Clock, Flame } from "lucide-react";
+import { resolveApiAssetUrl } from "@/lib/api/axios";
 import type { RecipeApiSummaryDto } from "@/types/api";
 
 const difficultyLabels: Record<number, string> = {
@@ -14,7 +15,7 @@ export function ApiRecipeCard({ recipe }: { recipe: RecipeApiSummaryDto }) {
     <article className="overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300">
       <Link href={`/recipes/${encodeURIComponent(recipe.slug)}`} className="block">
         <img
-          src={recipe.thumbnailUrl || "/images/image 1.png"}
+          src={resolveApiAssetUrl(recipe.thumbnailUrl) || "/images/image 1.png"}
           alt={recipe.title}
           className="aspect-[4/3] w-full bg-slate-100 object-cover"
           loading="lazy"

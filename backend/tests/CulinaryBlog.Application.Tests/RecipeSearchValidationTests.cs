@@ -17,6 +17,21 @@ public sealed class RecipeSearchValidationTests
             .Options)));
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task InvalidFilters_AreRejectedBeforeDatabaseAccess(int kind)
+    {
+        var request = kind switch
+        {
+            0 => new SearchRecipesQuery("pho", 1, 10, CategoryId: Guid.Empty),
+            1 => new SearchRecipesQuery("pho", 1, 10, Difficulty: (CulinaryBlog.Domain.Enums.DifficultyLevel)999),
+            _ => new SearchRecipesQuery("pho", 1, 10, MaxCookTime: -1)
+        };
+        await Assert.ThrowsAsync<ValidationException>(() => CreateHandler().Handle(request, default));
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("a")]

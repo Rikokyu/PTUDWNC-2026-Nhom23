@@ -41,6 +41,8 @@ function LoginFormContent() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Link href="/forgot-password">Quên mật khẩu?</Link>
+      {searchParams.get("passwordChanged") === "1" && <p role="status">Mật khẩu đã cập nhật. Vui lòng đăng nhập lại.</p>}
       {error && <ErrorState title="Không thể đăng nhập" message={error} />}
       <Input
         label="Địa chỉ Email"
@@ -68,6 +70,11 @@ function LoginFormContent() {
         Chưa có tài khoản?{" "}
         <Link href="/auth/register" className="font-semibold text-brand">
           Đăng ký
+        </Link>
+      </p>
+      <p className="text-center text-sm">
+        <Link href="/forgot-password" className="text-brand hover:underline">
+          Quên mật khẩu?
         </Link>
       </p>
     </form>

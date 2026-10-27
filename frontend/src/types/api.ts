@@ -8,6 +8,14 @@ export interface AuthUserDto {
   email: string;
   displayName: string;
   role: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+}
+
+export interface UserProfileDto extends AuthUserDto {
+  avatarUrl: string | null;
+  bio: string | null;
+  createdAt: string;
 }
 
 export interface AuthSessionDto {
@@ -16,6 +24,22 @@ export interface AuthSessionDto {
   refreshToken: string;
   refreshTokenExpiresAt: string;
   user: AuthUserDto;
+}
+
+export interface UserProfileDto {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  role: string;
+  createdAt: string;
+}
+
+export interface UpdateProfileRequest {
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
 }
 
 export interface CreateRecipeRequest {
@@ -118,6 +142,20 @@ export interface RecipeApiImageDto {
   orderIndex: number;
 }
 
+export interface RecipeIngredientRequest {
+  name: string;
+  quantity: string | null;
+  unit: string | null;
+  notes: string | null;
+}
+
+export interface RecipeStepRequest {
+  title: string;
+  description: string;
+  timerMinutes: number | null;
+  imageUrl: string | null;
+}
+
 export interface RecipeApiNutritionDto {
   calories: number | null;
   protein: number | null;
@@ -202,6 +240,6 @@ export interface RecipeFilters {
   categoryId?: string;
   difficulty?: Difficulty | "Expert";
   maxCookTime?: number;
-  sort?: "-createdAt" | "createdAt" | "title" | "cookTime" | "-cookTime";
+  sort?: "-createdAt" | "createdAt" | "title" | "-title" | "cookTime" | "-cookTime";
   search?: string;
 }

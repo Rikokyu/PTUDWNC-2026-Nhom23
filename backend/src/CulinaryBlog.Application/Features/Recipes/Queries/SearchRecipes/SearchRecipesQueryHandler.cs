@@ -34,12 +34,16 @@ public sealed class SearchRecipesQueryHandler
             throw new ValidationException("page must be positive and pageSize must be between 1 and 50.");
         }
 
+        if (request.CategoryId == Guid.Empty || request.MaxCookTime < 0
+            || (request.Difficulty.HasValue && !Enum.IsDefined(request.Difficulty.Value)))
+            throw new ValidationException("Invalid recipe filters.");
+
         var result = await _recipeRepository.SearchAsync(
             searchTerm,
             request.Page,
             request.PageSize,
             SearchRecipesQuery.NormalizeSort(request.Sort),
-            cancellationToken);
+            cancellationToken, request.CategoryId, request.Difficulty, request.MaxCookTime);
 
         var items = result.Items
             .Select(match =>

@@ -4,15 +4,15 @@ services:
     container_name: culinary-blog-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: culinary_blog
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: ${POSTGRES_DB:-culinary_blog}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in local .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in local .env}
     ports:
       - "5433:5432"
     volumes:
       - culinary_blog_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d culinary_blog"]
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
       timeout: 5s
       retries: 10

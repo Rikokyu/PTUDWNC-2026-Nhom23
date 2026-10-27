@@ -1,4 +1,4 @@
-import { RecipeEditor } from "@/components/dashboard/recipe-editor";
+import { RecipeContentManager } from "@/components/recipes/RecipeContentManager";
 
 export default async function EditRecipePage({
   params,
@@ -6,5 +6,5 @@ export default async function EditRecipePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <RecipeEditor id={id} />;
+  return <RecipeContentManager recipeId={id} />;
 }

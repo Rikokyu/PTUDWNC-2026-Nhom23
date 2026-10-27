@@ -45,6 +45,7 @@ export function Header() {
       <header className="site-header">
         <div className="container nav-shell">
           <Link href="/" className="brand">
+            <span aria-hidden="true">🍳 </span>
             Culinary Blog
           </Link>
 
@@ -55,6 +56,10 @@ export function Header() {
             <Link href="/categories">Danh mục</Link>
           </nav>
 
+          <form action="/recipes/search" className="hidden lg:flex" role="search">
+            <input name="q" aria-label="Tìm công thức" placeholder="Tìm công thức…" minLength={2} maxLength={200} required className="rounded-lg border p-2" />
+            <button type="submit" className="button">Tìm</button>
+          </form>
           <div className="nav-actions">
             {user ? (
               <DropdownMenu>

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using CulinaryBlog.Application.Features.Recipes.Queries.SearchRecipes;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
@@ -20,7 +21,8 @@ public sealed class PostgresFactAttribute : FactAttribute
     }
 }
 
-// Each test creates and removes its own uniquely named database. Never migrate,
+// Each test creates its own uniquely named database. Set CULINARYBLOG_KEEP_TEST_DATABASES=1
+// to retain it after testing. Otherwise only that test database is removed. Never migrate,
 // seed, or delete data in the database named by the supplied connection string.
 public sealed class RecipeFullTextSearchTests : IAsyncLifetime
 {
@@ -53,7 +55,7 @@ public sealed class RecipeFullTextSearchTests : IAsyncLifetime
         if (_db is not null) await _db.DisposeAsync();
         if (_admin is not null)
         {
-            if (_created)
+            if (_created && Environment.GetEnvironmentVariable("CULINARYBLOG_KEEP_TEST_DATABASES") != "1")
                 await new NpgsqlCommand($"DROP DATABASE \"{_databaseName}\" WITH (FORCE)", _admin).ExecuteNonQueryAsync();
             await _admin.DisposeAsync();
         }
@@ -89,6 +91,119 @@ public sealed class RecipeFullTextSearchTests : IAsyncLifetime
         };
         _db.Recipes.Add(recipe);
         return recipe;
+    }
+
+    private sealed class TestClock : TimeProvider
+    {
+        public DateTimeOffset Now = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+    private sealed class TestResetMail : CulinaryBlog.Application.Common.Interfaces.IPasswordResetEmailSender
+    {
+        public string? Link;
+        public int Count;
+        public Task SendAsync(string email, string link, CancellationToken ct) { Link = link; Count++; return Task.CompletedTask; }
+        public string Token => Uri.UnescapeDataString(Link!.Split("&token=")[1]);
+    }
+    private (CulinaryBlog.Infrastructure.Identity.AccountService Service, TestResetMail Mail, TestClock Clock) Accounts()
+    {
+        var mail = new TestResetMail(); var clock = new TestClock();
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(
+            new Dictionary<string, string?> { ["PasswordReset:ApplicationUrl"] = "https://culinary.test" }).Build();
+        return (new(_db, new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>(),
+            new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(), mail, config, clock), mail, clock);
+    }
+    private async Task<ApplicationUser> AddAccount()
+    {
+        var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "test@example.com", UserName = "test", DisplayName = "Original", Role = "Author", CreatedAt = DateTime.UtcNow };
+        user.PasswordHash = new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>().HashPassword(user, "Original123!");
+        _db.ApplicationUsers.Add(user);
+        _db.RefreshTokens.Add(new RefreshToken { Id = Guid.NewGuid(), UserId = user.Id, TokenHash = "test-refresh", CreatedAt = DateTime.UtcNow, ExpiresAt = DateTime.UtcNow.AddDays(1) });
+        await _db.SaveChangesAsync(); return user;
+    }
+    [PostgresFact]
+    public async Task ChangePassword_VerifiesCurrent_ValidatesConfirmation_AndRevokesSessions()
+    {
+        var user = await AddAccount(); var (service, _, _) = Accounts(); var oldHash = user.PasswordHash;
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.ChangePasswordAsync(user.Id, "wrong", "Changed123!", "Changed123!", default));
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.ChangePasswordAsync(user.Id, "Original123!", "Changed123!", "mismatch", default));
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.ChangePasswordAsync(user.Id, "Original123!", "weak", "weak", default));
+        Assert.Equal(oldHash, user.PasswordHash);
+        await service.ChangePasswordAsync(user.Id, "Original123!", "Changed123!", "Changed123!", default);
+        _db.ChangeTracker.Clear();
+        var saved = await _db.ApplicationUsers.SingleAsync();
+        var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>();
+        Assert.Equal(Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed, hasher.VerifyHashedPassword(saved, saved.PasswordHash, "Original123!"));
+        Assert.NotEqual(Microsoft.AspNetCore.Identity.PasswordVerificationResult.Failed, hasher.VerifyHashedPassword(saved, saved.PasswordHash, "Changed123!"));
+        Assert.NotNull((await _db.RefreshTokens.SingleAsync()).RevokedAt);
+    }
+    [PostgresFact]
+    public async Task ResetPassword_Expires_RejectsInvalidAndReusedTokens_AndHidesMissingEmail()
+    {
+        var user = await AddAccount(); var (service, mail, clock) = Accounts();
+        await service.ForgotPasswordAsync("missing@example.com", default); Assert.Equal(0, mail.Count);
+        await service.ForgotPasswordAsync(user.Email, default); Assert.Equal(1, mail.Count);
+        var expired = mail.Token; clock.Now = clock.Now.AddMinutes(31);
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.ResetPasswordAsync(user.Email, expired, "Changed123!", "Changed123!", default));
+        await service.ForgotPasswordAsync(user.Email, default); var valid = mail.Token;
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.ResetPasswordAsync(user.Email, "invalid", "Changed123!", "Changed123!", default));
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.ResetPasswordAsync("other@example.com", valid, "Changed123!", "Changed123!", default));
+        await service.ResetPasswordAsync(user.Email, valid, "Changed123!", "Changed123!", default);
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.ResetPasswordAsync(user.Email, valid, "Another123!", "Another123!", default));
+        Assert.NotNull((await _db.RefreshTokens.SingleAsync()).RevokedAt);
+    }
+    [PostgresFact]
+    public async Task ProfileUpdate_PersistsSupportedFields_WithoutChangingRoleOrEmail()
+    {
+        var user = await AddAccount(); var (service, _, _) = Accounts();
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.UpdateProfileAsync(user.Id, " ", null, null, default));
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.UpdateProfileAsync(user.Id, "Name", new string('x', 1001), null, default));
+        await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.ValidationException>(() => service.UpdateProfileAsync(user.Id, "Name", null, "javascript:alert(1)", default));
+        var result = await service.UpdateProfileAsync(user.Id, " Updated ", " About me ", "https://example.com/avatar.png", default);
+        _db.ChangeTracker.Clear(); var saved = await _db.ApplicationUsers.SingleAsync();
+        Assert.Equal("Updated", saved.DisplayName); Assert.Equal("About me", saved.Bio);
+        Assert.Equal("https://example.com/avatar.png", saved.AvatarUrl);
+        Assert.Equal("Author", result.Role); Assert.Equal("test@example.com", saved.Email);
+    }
+
+    [PostgresFact]
+    public async Task FiltersAndAllSorts_ComposeBeforePagination_WithStableTies()
+    {
+        var category = AddCategory();
+        var a = AddRecipe(category, "Pho Alpha", createdAt: DateTime.UtcNow.AddDays(-2));
+        var b = AddRecipe(category, "Pho Zulu", createdAt: DateTime.UtcNow.AddDays(-1));
+        a.CookTimeMinutes = 10;
+        b.CookTimeMinutes = 20;
+        var slow = AddRecipe(category, "Pho Slow"); slow.CookTimeMinutes = 60;
+        var hard = AddRecipe(category, "Pho Hard"); hard.Difficulty = DifficultyLevel.Hard;
+        AddRecipe(AddCategory(), "Pho Other");
+        await _db.SaveChangesAsync();
+        var repository = new RecipeRepository(_db);
+        foreach (var sort in new[] { "createdAt", "-createdAt", "title", "-title", "cookTime", "-cookTime" })
+        {
+            var expected = sort.StartsWith('-') ? new[] { b.Id, a.Id } : new[] { a.Id, b.Id };
+            var list = await repository.GetPagedAsync(1, 10, category.Id, DifficultyLevel.Easy, 20,
+                sort, null, false, false);
+            Assert.Equal(expected, list.Items.Select(x => x.Id));
+            var search = await Handler.Handle(new("pho", 1, 10, sort, category.Id, DifficultyLevel.Easy, 20), CancellationToken.None);
+            Assert.Equal(2, search.TotalCount);
+            Assert.Equal(expected, search.Items.Select(x => x.Id));
+        }
+        // Equal primary keys must still produce disjoint, repeatable pages.
+        b.Title = a.Title; b.CreatedAt = a.CreatedAt; b.CookTimeMinutes = a.CookTimeMinutes;
+        await _db.SaveChangesAsync();
+        foreach (var sort in new[] { "createdAt", "-createdAt", "title", "-title", "cookTime", "-cookTime" })
+        {
+            var first = await repository.GetPagedAsync(1, 1, category.Id, DifficultyLevel.Easy, 20, sort, null, false, false);
+            var second = await repository.GetPagedAsync(2, 1, category.Id, DifficultyLevel.Easy, 20, sort, null, false, false);
+            var again = await repository.GetPagedAsync(1, 1, category.Id, DifficultyLevel.Easy, 20, sort, null, false, false);
+            Assert.NotEqual(first.Items[0].Id, second.Items[0].Id);
+            Assert.Equal(first.Items[0].Id, again.Items[0].Id);
+            var searchFirst = await Handler.Handle(new("pho", 1, 1, sort, category.Id, DifficultyLevel.Easy, 20), CancellationToken.None);
+            var searchSecond = await Handler.Handle(new("pho", 2, 1, sort, category.Id, DifficultyLevel.Easy, 20), CancellationToken.None);
+            Assert.NotEqual(searchFirst.Items[0].Id, searchSecond.Items[0].Id);
+        }
+        Assert.Empty((await Handler.Handle(new("pho", 1, 10, "title", category.Id, DifficultyLevel.Expert, 20), CancellationToken.None)).Items);
     }
 
     [PostgresFact]

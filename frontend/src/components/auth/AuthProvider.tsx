@@ -16,6 +16,7 @@ type AuthState = {
 const AuthContext = createContext<(AuthState & {
   retry: () => void;
   logout: () => Promise<void>;
+  updateUser: (user: AuthUserDto) => void;
 }) | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const retry = useCallback(() => setRevision((value) => value + 1), []);
+  const updateUser = useCallback((user: AuthUserDto) => {
+    const token = useAuthStore.getState().accessToken;
+    if (!token) return;
+    setSession(token, user);
+    setState({ user, status: "authenticated" });
+  }, [setSession]);
 
   useEffect(() => {
     const changed = () => {
@@ -106,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  return <AuthContext.Provider value={{ ...state, retry, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, retry, logout, updateUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

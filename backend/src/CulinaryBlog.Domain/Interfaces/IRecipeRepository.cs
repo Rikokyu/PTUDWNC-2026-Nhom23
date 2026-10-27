@@ -31,6 +31,13 @@ public interface IRecipeRepository : IRepository<Recipe>
             bool isAdmin,
             CancellationToken cancellationToken = default);
 
+    Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
+        SearchPublishedAsync(
+            string searchTerm,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default);
+
     Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
         CancellationToken cancellationToken = default);
@@ -52,5 +59,8 @@ public interface IRecipeRepository : IRepository<Recipe>
         int page,
         int pageSize,
         string sort,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Guid? categoryId = null,
+        DifficultyLevel? difficulty = null,
+        int? maxCookTime = null);
 }

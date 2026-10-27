@@ -9,7 +9,10 @@ public sealed record SearchRecipesQuery(
     string SearchTerm,
     int Page,
     int PageSize,
-    string Sort = "relevance") : IRequest<PagedResult<RecipeSummaryDto>>
+    string Sort = "relevance",
+    Guid? CategoryId = null,
+    CulinaryBlog.Domain.Enums.DifficultyLevel? Difficulty = null,
+    int? MaxCookTime = null) : IRequest<PagedResult<RecipeSummaryDto>>
 {
     private static readonly IReadOnlyDictionary<string, string> Sorts =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

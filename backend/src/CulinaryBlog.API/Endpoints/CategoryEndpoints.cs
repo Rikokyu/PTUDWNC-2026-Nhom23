@@ -28,6 +28,7 @@ public static class CategoryEndpoints
 			.WithName("GetCategoryBySlug")
 			.WithSummary("Get a category and its paginated recipes.")
 			.Produces<CategoryDetailDto>(StatusCodes.Status200OK)
+			.ProducesProblem(StatusCodes.Status400BadRequest)
 			.ProducesProblem(StatusCodes.Status404NotFound)
 			.ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
@@ -78,8 +79,7 @@ public static class CategoryEndpoints
 
 	private static async Task<IResult> GetCategoryBySlugAsync(
 		string slug,
-		int page,
-		int pageSize,
+		HttpRequest request,
 		ISender sender,
 		CancellationToken cancellationToken)
 	{
@@ -88,19 +88,18 @@ public static class CategoryEndpoints
 			throw new ValidationException("slug is required.");
 		}
 
-		page = page == 0 ? 1 : page;
-		pageSize = pageSize == 0 ? 12 : pageSize;
-
-		if (page < 1)
+		// Parse here so malformed query values return 400 without a binding exception.
+		if (!TryParsePagination(request.Query, "page", 1, out var page))
 		{
-			throw new ValidationException(
-				"page must be a positive integer.");
+			return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+				detail: "page must be a positive integer.");
 		}
 
-		if (pageSize is < 1 or > 50)
+		if (!TryParsePagination(request.Query, "pageSize", 12, out var pageSize)
+			|| pageSize > 50 || (long)(page - 1) * pageSize > int.MaxValue)
 		{
-			throw new ValidationException(
-				"pageSize must be between 1 and 50.");
+			return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+				detail: "pageSize must be between 1 and 50 and pagination must not overflow.");
 		}
 
 		var result = await sender.Send(
@@ -111,6 +110,13 @@ public static class CategoryEndpoints
 			cancellationToken);
 
 		return Results.Ok(result);
+	}
+
+	private static bool TryParsePagination(IQueryCollection query, string key, int defaultValue, out int value)
+	{
+		value = defaultValue;
+		if (!query.TryGetValue(key, out var values)) return true;
+		return values.Count == 1 && int.TryParse(values[0], out value) && value >= 1;
 	}
 
 	private static async Task<IResult> CreateCategoryAsync(

@@ -124,7 +124,9 @@ storage/
 # ============================================================
 
 .env
+.env.*
 .env.local
+.env.*.local
 .env.development
 .env.production
 .env.test
@@ -347,3 +349,9 @@ frontend/temp/
 # TypeScript incremental build cache
 *.tsbuildinfo
 frontend/.next-production/
+
+# Browser test output
+frontend/test-results/
+frontend/playwright-report/
+**/test-results/
+**/playwright-report/

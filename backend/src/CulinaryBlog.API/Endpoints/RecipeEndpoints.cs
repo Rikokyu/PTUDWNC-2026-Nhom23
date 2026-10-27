@@ -1,10 +1,10 @@
-using CulinaryBlog.Application.Features.Recipes.Queries.SearchRecipes;
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Common.Models;
 using CulinaryBlog.Application.DTOs.Recipes;
 using CulinaryBlog.Application.Features.Recipes.Commands;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeBySlug;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipes;
+using CulinaryBlog.Application.Features.Recipes.Queries.SearchRecipes;
 using CulinaryBlog.Domain.Enums;
 using Asp.Versioning;
 using Asp.Versioning.Builder;
@@ -295,7 +295,7 @@ public static class RecipeEndpoints
                 "pageSize must be a positive integer.");
         }
 
-        if (pageSize > 50)
+        if (pageSize > 50 || (long)(page - 1) * pageSize > int.MaxValue)
         {
             throw new ValidationException(
                 "pageSize cannot be greater than 50.");
@@ -310,7 +310,7 @@ public static class RecipeEndpoints
         {
             if (!Guid.TryParse(
                     categoryValue,
-                    out var parsedCategoryId))
+                    out var parsedCategoryId) || parsedCategoryId == Guid.Empty)
             {
                 throw new ValidationException(
                     "categoryId must be a valid GUID.");
@@ -330,7 +330,7 @@ public static class RecipeEndpoints
             if (!Enum.TryParse<DifficultyLevel>(
                     difficultyValue,
                     true,
-                    out var parsedDifficulty))
+                    out var parsedDifficulty) || !Enum.IsDefined(parsedDifficulty))
             {
                 throw new ValidationException(
                     "difficulty must be Easy, Medium, Hard or Expert.");
@@ -369,6 +369,7 @@ public static class RecipeEndpoints
                 "-createdAt",
                 "createdAt",
                 "title",
+                "-title",
                 "cookTime",
                 "-cookTime"
             };
@@ -388,7 +389,7 @@ public static class RecipeEndpoints
                 categoryId,
                 difficulty,
                 maxCookTime,
-                sort,
+                allowedSorts.First(value => value.Equals(sort, StringComparison.OrdinalIgnoreCase)),
                 ownRecipesOnly,
                 includeAllStatuses);
 
@@ -478,9 +479,30 @@ public static class RecipeEndpoints
         }
 
         sort = SearchRecipesQuery.NormalizeSort(sort);
+        Guid? categoryId = null;
+        DifficultyLevel? difficulty = null;
+        int? maxCookTime = null;
+        if (query.ContainsKey("categoryId") && !string.IsNullOrWhiteSpace(query["categoryId"]))
+        {
+            if (!Guid.TryParse(query["categoryId"], out var id) || id == Guid.Empty)
+                throw new ValidationException("categoryId must be a non-empty GUID.");
+            categoryId = id;
+        }
+        if (query.ContainsKey("difficulty") && !string.IsNullOrWhiteSpace(query["difficulty"]))
+        {
+            if (!Enum.TryParse<DifficultyLevel>(query["difficulty"], true, out var level) || !Enum.IsDefined(level))
+                throw new ValidationException("difficulty is invalid.");
+            difficulty = level;
+        }
+        if (query.ContainsKey("maxCookTime") && !string.IsNullOrWhiteSpace(query["maxCookTime"]))
+        {
+            if (!int.TryParse(query["maxCookTime"], out var minutes) || minutes < 0)
+                throw new ValidationException("maxCookTime must be a non-negative integer.");
+            maxCookTime = minutes;
+        }
 
         var result = await sender.Send(
-            new SearchRecipesQuery(searchTerm ?? string.Empty, page, pageSize, sort),
+            new SearchRecipesQuery(searchTerm ?? string.Empty, page, pageSize, sort, categoryId, difficulty, maxCookTime),
             cancellationToken);
 
         return Results.Ok(result);

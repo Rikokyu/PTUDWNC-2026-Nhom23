@@ -32,6 +32,7 @@ export function Footer() {
           </ul>
         </div>
       </div>
+    <p className="container muted">© {new Date().getFullYear()} Culinary Blog. Mọi quyền được bảo lưu.</p>
     </footer>
   );
 }

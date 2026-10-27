@@ -21,6 +21,7 @@ const sortOptions: NonNullable<RecipeFilters["sort"]>[] = [
   "-createdAt",
   "createdAt",
   "title",
+  "-title",
   "cookTime",
   "-cookTime",
 ];
@@ -175,6 +176,7 @@ export function RecipeExplorer() {
             <option value="-createdAt">Mới nhất</option>
             <option value="createdAt">Cũ nhất</option>
             <option value="title">Tên A–Z</option>
+            <option value="-title">Tên Z–A</option>
             <option value="cookTime">Nấu nhanh</option>
             <option value="-cookTime">Nấu lâu</option>
           </select>

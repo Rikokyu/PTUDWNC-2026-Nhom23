@@ -6,6 +6,8 @@ import { RecipeGrid } from "@/components/recipes/recipe-grid";
 import { ErrorMessage } from "@/components/shared/error-message";
 import { Pagination } from "@/components/shared/pagination";
 import { SearchBar } from "@/components/shared/search-bar";
+import { useCategories } from "@/hooks/useCategories";
+import type { Difficulty } from "@/types/custom-api";
 import { searchRecipes } from "@/lib/api/search";
 import type { RecipeCardItem } from "@/components/recipes/recipe-card";
 
@@ -39,6 +41,10 @@ function updateSearchUrl(
 }
 
 export default function RecipeSearchPage() {
+  const categories = useCategories();
+  const [categoryId, setCategoryId] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [maxCookTime, setMaxCookTime] = useState("");
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<RecipeCardItem[]>([]);
   const [page, setPage] = useState(1);
@@ -55,6 +61,14 @@ export default function RecipeSearchPage() {
       requestedPage: number,
       requestedSort = "relevance",
     ) => {
+      const urlFilters = new URLSearchParams(window.location.search);
+      const filters = {
+        categoryId: urlFilters.get("categoryId") || undefined,
+        difficulty: (urlFilters.get("difficulty") || undefined) as Difficulty | undefined,
+        maxCookTime: urlFilters.has("maxCookTime") ? Number(urlFilters.get("maxCookTime")) : undefined,
+      };
+      setCategoryId(filters.categoryId ?? ""); setDifficulty(filters.difficulty ?? "");
+      setMaxCookTime(filters.maxCookTime === undefined ? "" : String(filters.maxCookTime));
       const trimmed = value.trim().normalize("NFC");
       const requestId = ++requestSequence.current;
       setQuery(trimmed);
@@ -81,6 +95,7 @@ export default function RecipeSearchPage() {
       setError(null);
       try {
         let results = await searchRecipes({
+          ...filters,
           q: trimmed,
           page: requestedPage,
           pageSize: 10,
@@ -92,6 +107,7 @@ export default function RecipeSearchPage() {
           setPage(lastPage);
           updateSearchUrl(trimmed, lastPage, requestedSort, true);
           results = await searchRecipes({
+            ...filters,
             q: trimmed,
             page: lastPage,
             pageSize: 10,
@@ -131,8 +147,7 @@ export default function RecipeSearchPage() {
 
   useEffect(() => {
     const initial = queryFromUrl();
-    if (initial.query)
-      void loadSearch(initial.query, initial.page, initial.sort);
+    void loadSearch(initial.query, initial.page, initial.sort);
     const onPopState = () => {
       const next = queryFromUrl();
       setQuery(next.query);
@@ -142,6 +157,14 @@ export default function RecipeSearchPage() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [loadSearch]);
+
+  const changeFilter = (name: string, value: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (value !== "") params.set(name, value); else params.delete(name);
+    params.delete("page");
+    window.history.pushState({}, "", `${window.location.pathname}?${params}`);
+    void loadSearch(query, 1, sort);
+  };
 
   const submitSearch = () => {
     const trimmed = query.trim();
@@ -173,6 +196,17 @@ export default function RecipeSearchPage() {
           placeholder="Ví dụ: pho bo, canh chua, bun cha"
         />
 
+        <div className="my-4 grid gap-3 sm:grid-cols-3">
+          <label>Danh mục<select aria-label="Danh mục" className="w-full rounded-lg border p-2" value={categoryId} onChange={e => changeFilter("categoryId", e.target.value)}>
+            <option value="">Tất cả</option>{categories.data?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select></label>
+          <label>Độ khó<select aria-label="Độ khó" className="w-full rounded-lg border p-2" value={difficulty} onChange={e => changeFilter("difficulty", e.target.value)}>
+            <option value="">Tất cả</option><option value="Easy">Dễ</option><option value="Medium">Trung bình</option><option value="Hard">Khó</option><option value="Expert">Chuyên gia</option>
+          </select></label>
+          <label>Thời gian nấu tối đa (phút)<input aria-label="Thời gian nấu tối đa" className="w-full rounded-lg border p-2" type="number" min={0} step={1} value={maxCookTime} onChange={e => changeFilter("maxCookTime", e.target.value)} /></label>
+          {categories.isLoading && <p role="status">Đang tải danh mục…</p>}
+          {categories.isError && <ErrorMessage message="Không tải được danh mục." onRetry={() => void categories.refetch()} />}
+        </div>
         <div className="my-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-500">
             Mặc định ưu tiên công thức phù hợp nhất với từ khóa.
@@ -196,6 +230,8 @@ export default function RecipeSearchPage() {
               <option value="-createdAt">Mới nhất</option>
               <option value="createdAt">Cũ nhất</option>
               <option value="title">Tên món A–Z</option>
+              <option value="-title">Tên món Z–A</option>
+              <option value="-cookTime">Thời gian nấu giảm dần</option>
               <option value="cookTime">Thời gian nấu tăng dần</option>
             </select>
           </label>

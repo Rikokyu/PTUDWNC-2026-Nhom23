@@ -1,3 +1,4 @@
+using CulinaryBlog.Application.Common.Interfaces;
 using System.Security.Claims;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
 using CulinaryBlog.Application.Features.Auth.Commands.Logout;
@@ -16,13 +17,13 @@ public static class AuthEndpoints
         var group = endpoints
             .MapGroup("/api/auth")
             .WithTags("Authentication")
-            .RequireRateLimiting("Auth");
+            .RequireRateLimiting("Api");
 
         MapEndpoints(group, "Auth");
         MapEndpoints(
             endpoints.MapGroup("/api/v1/auth")
                 .WithTags("Authentication")
-                .RequireRateLimiting("Auth")
+                .RequireRateLimiting("Api")
                 .WithDescription("Version 1 authentication routes."),
             "V1Auth");
 
@@ -33,7 +34,52 @@ public static class AuthEndpoints
         RouteGroupBuilder group,
         string routeVersion)
     {
-        group.MapPost("/register", RegisterAsync)
+        group.MapPost("/me/avatar", async (HttpRequest request, ClaimsPrincipal principal, IConfiguration configuration,
+            IFileStorageService storage, IAccountService accounts, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(principal.FindFirstValue("sub"), out var id)) return Results.Unauthorized();
+            if (!request.HasFormContentType) throw new CulinaryBlog.Application.Common.Exceptions.ValidationException("A multipart image is required.");
+            var form = await request.ReadFormAsync(ct);
+            var file = form.Files.GetFile("file") ?? throw new CulinaryBlog.Application.Common.Exceptions.ValidationException("file is required.");
+            var limit = configuration.GetValue<long>("FileUpload:MaxFileSizeBytes", 5 * 1024 * 1024);
+            if (file.Length <= 0 || file.Length > limit) throw new CulinaryBlog.Application.Common.Exceptions.ValidationException("Invalid image size.");
+            using var buffer = new MemoryStream();
+            await file.CopyToAsync(buffer, ct);
+            var content = buffer.ToArray();
+            var extension = RecipeImageUploadValidator.Validate(file.FileName, file.ContentType, file.Length, limit, content);
+            var url = await storage.UploadAsync(content, extension, $"avatars/{id}", ct);
+            return Results.Ok(await accounts.UpdateAvatarAsync(id, url, ct));
+        }).RequireAuthorization().RequireRateLimiting("Upload");
+        group.MapPost("/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, IAccountService accounts, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(principal.FindFirstValue("sub"), out var id)) return Results.Unauthorized();
+            await accounts.ChangePasswordAsync(id, request.CurrentPassword, request.NewPassword, request.ConfirmPassword, ct);
+            return Results.Ok(new { message = "Password changed. Sign in again." });
+        }).RequireAuthorization();
+        group.MapPost("/forgot-password", async (ForgotPasswordRequest request, IAccountService accounts, CancellationToken ct) =>
+        {
+            await accounts.ForgotPasswordAsync(request.Email, ct);
+            return Results.Ok(new { message = "If the account exists, a reset link will be sent. Check your email." });
+        }).AllowAnonymous().RequireRateLimiting("PasswordReset");
+        group.MapPost("/reset-password", async (ResetPasswordRequest request, IAccountService accounts, CancellationToken ct) =>
+        {
+            await accounts.ResetPasswordAsync(request.Email, request.Token, request.NewPassword, request.ConfirmPassword, ct);
+            return Results.Ok(new { message = "Password reset. Sign in again." });
+        }).AllowAnonymous().RequireRateLimiting("PasswordReset");
+        group.MapPatch("/me", async (UpdateProfileRequest request, ClaimsPrincipal principal, IAccountService accounts, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(principal.FindFirstValue("sub"), out var id)) return Results.Unauthorized();
+            return Results.Ok(await accounts.UpdateProfileAsync(id, request.DisplayName, request.Bio, request.AvatarUrl, ct));
+        }).RequireAuthorization();
+
+        // Compatibility with clients from develop that update profiles using PUT.
+        group.MapPut("/me", async (UpdateProfileRequest request, ClaimsPrincipal principal, IAccountService accounts, CancellationToken ct) =>
+        {
+            if (!Guid.TryParse(principal.FindFirstValue("sub"), out var id)) return Results.Unauthorized();
+            return Results.Ok(await accounts.UpdateProfileAsync(id, request.DisplayName, request.Bio, request.AvatarUrl, ct));
+        }).RequireAuthorization();
+
+        group.MapPost("/register", RegisterAsync).RequireRateLimiting("Auth")
             .WithName($"{routeVersion}Register")
             .WithSummary("Register a new user account.")
             .WithDescription(
@@ -43,7 +89,7 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-        group.MapPost("/login", LoginAsync)
+        group.MapPost("/login", LoginAsync).RequireRateLimiting("Auth")
             .WithName($"{routeVersion}Login")
             .WithSummary("Sign in using an email address and password.")
             .WithDescription(
@@ -140,3 +186,8 @@ public sealed record RegisterRequest(
 public sealed record LoginRequest(
     string Email,
     string Password);
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword, string ConfirmPassword);
+public sealed record ForgotPasswordRequest(string Email);
+public sealed record ResetPasswordRequest(string Email, string Token, string NewPassword, string ConfirmPassword);
+public sealed record UpdateProfileRequest(string DisplayName, string? Bio, string? AvatarUrl);

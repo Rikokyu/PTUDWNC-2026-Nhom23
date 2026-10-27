@@ -20,15 +20,18 @@ public sealed class IdentityService : IIdentityService
     private readonly CulinaryBlogDbContext _context;
     private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
     private readonly IConfiguration _configuration;
+    private readonly IAccountService _accounts;
 
     public IdentityService(
         CulinaryBlogDbContext context,
         IPasswordHasher<ApplicationUser> passwordHasher,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IAccountService accounts)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _configuration = configuration;
+        _accounts = accounts;
     }
 
     public async Task<AuthSessionDto> RegisterAsync(
@@ -109,6 +112,19 @@ public sealed class IdentityService : IIdentityService
                 user.Role,
                 user.CreatedAt);
     }
+
+    // Preserve develop's command contracts using the validated account implementation.
+    public Task<UserDto> UpdateProfileAsync(Guid userId, string displayName, string? avatarUrl, string? bio, CancellationToken ct)
+        => _accounts.UpdateProfileAsync(userId, displayName, bio, avatarUrl, ct);
+
+    public Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct)
+        => _accounts.ChangePasswordAsync(userId, currentPassword, newPassword, newPassword, ct);
+
+    public Task RequestPasswordResetAsync(string email, CancellationToken ct)
+        => _accounts.ForgotPasswordAsync(email, ct);
+
+    public Task ResetPasswordAsync(string email, string token, string newPassword, CancellationToken ct)
+        => _accounts.ResetPasswordAsync(email, token, newPassword, newPassword, ct);
 
     public async Task RevokeRefreshTokensAsync(
         Guid userId,
@@ -191,7 +207,8 @@ public sealed class IdentityService : IIdentityService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim("email", user.Email),
-            new Claim("role", user.Role)
+            new Claim("role", user.Role),
+            new Claim("pwdv", AccountService.PasswordVersion(user.PasswordHash))
         };
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),

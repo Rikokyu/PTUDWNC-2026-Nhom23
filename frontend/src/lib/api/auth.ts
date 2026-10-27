@@ -1,5 +1,5 @@
 import apiClient from "./axios";
-import type { AuthSessionDto } from "@/types/api";
+import type { AuthSessionDto, UserProfileDto } from "@/types/api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AUTH_CHANGED } from "@/lib/auth/session";
 
@@ -24,6 +24,42 @@ export const authApi = {
   },
   logout: async (): Promise<void> => {
     await apiClient.post("/api/v1/auth/logout");
+  },
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> => {
+    await apiClient.post("/api/v1/auth/change-password", {
+      currentPassword,
+      newPassword,
+      confirmPassword: newPassword,
+    });
+  },
+  forgotPassword: async (email: string): Promise<void> => {
+    await apiClient.post("/api/v1/auth/forgot-password", { email });
+  },
+  resetPassword: async (
+    email: string,
+    token: string,
+    newPassword: string,
+  ): Promise<void> => {
+    await apiClient.post("/api/v1/auth/reset-password", {
+      email,
+      token,
+      newPassword,
+      confirmPassword: newPassword,
+    });
+  },
+  updateProfile: async (profile: {
+    displayName: string;
+    bio: string | null;
+    avatarUrl: string | null;
+  }): Promise<UserProfileDto> => {
+    const response = await apiClient.put<UserProfileDto>(
+      "/api/v1/auth/me",
+      profile,
+    );
+    return response.data;
   },
 };
 

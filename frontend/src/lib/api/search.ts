@@ -6,6 +6,9 @@ import type { PaginatedResult, RecipeSearchFilters } from "@/types/custom-api";
 export async function searchRecipes(filters: RecipeSearchFilters) {
   const params = new URLSearchParams();
 
+  if (filters.categoryId) params.set("categoryId", filters.categoryId);
+  if (filters.difficulty) params.set("difficulty", filters.difficulty);
+  if (filters.maxCookTime !== undefined) params.set("maxCookTime", String(filters.maxCookTime));
   if (filters.q) params.set("q", filters.q);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.pageSize) params.set("pageSize", String(filters.pageSize));

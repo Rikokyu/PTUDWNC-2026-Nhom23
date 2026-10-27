@@ -2,9 +2,12 @@ using CulinaryBlog.API.Extensions;
 using CulinaryBlog.API.Authorization;
 using CulinaryBlog.API.HealthChecks;
 using CulinaryBlog.API.Middleware;
+using CulinaryBlog.Domain.Entities;
+using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Infrastructure.Persistence.Seed;
 using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.OpenApi;
@@ -170,16 +173,17 @@ using (var scope =
 {
     var context =
         scope.ServiceProvider
-            .GetRequiredService<
-                CulinaryBlog.Infrastructure
-                    .Persistence
-                    .CulinaryBlogDbContext>();
+            .GetRequiredService<CulinaryBlogDbContext>();
+    var passwordHasher =
+        scope.ServiceProvider
+            .GetRequiredService<IPasswordHasher<ApplicationUser>>();
 
     try
     {
         await DatabaseSeeder
             .SeedAsync(
                 context,
+                passwordHasher,
                 app.Lifetime.ApplicationStopping);
     }
     catch (DbUpdateConcurrencyException ex)

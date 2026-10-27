@@ -13,19 +13,26 @@ type AuthState = {
   user: AuthUserDto | null;
   status: "loading" | "authenticated" | "guest" | "error";
 };
-const AuthContext = createContext<(AuthState & {
+type AuthContextValue = AuthState & {
   retry: () => void;
   logout: () => Promise<void>;
-}) | null>(null);
+  updateUser: (user: AuthUserDto) => void;
+};
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({ user: null, status: "loading" });
   const [revision, setRevision] = useState(0);
   const accessToken = useAuthStore((store) => store.accessToken);
   const setSession = useAuthStore((store) => store.setSession);
+  const setUser = useAuthStore((store) => store.setUser);
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const retry = useCallback(() => setRevision((value) => value + 1), []);
+  const updateUser = useCallback((user: AuthUserDto) => {
+    setUser(user);
+    setState((current) => ({ ...current, user }));
+  }, [setUser]);
 
   useEffect(() => {
     const changed = () => {
@@ -106,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  return <AuthContext.Provider value={{ ...state, retry, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, retry, logout, updateUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

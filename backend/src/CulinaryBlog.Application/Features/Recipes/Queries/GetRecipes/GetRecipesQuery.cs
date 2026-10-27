@@ -11,6 +11,7 @@ public sealed record GetRecipesQuery(
     Guid? CategoryId,
     DifficultyLevel? Difficulty,
     int? MaxCookTime,
+    string? Search,
     string Sort,
     bool OwnRecipesOnly = false,
     bool IncludeAllStatuses = false

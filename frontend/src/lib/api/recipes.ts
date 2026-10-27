@@ -22,6 +22,24 @@ export const recipeApi = {
     );
     return response.data;
   },
+  getMine: async (
+    filters: RecipeFilters = {},
+  ): Promise<PaginatedResult<RecipeApiSummaryDto>> => {
+    const response = await apiClient.get<PaginatedResult<RecipeApiSummaryDto>>(
+      "/api/v1/me/recipes",
+      { params: filters },
+    );
+    return response.data;
+  },
+  getAdmin: async (
+    filters: RecipeFilters = {},
+  ): Promise<PaginatedResult<RecipeApiSummaryDto>> => {
+    const response = await apiClient.get<PaginatedResult<RecipeApiSummaryDto>>(
+      "/api/v1/admin/recipes",
+      { params: filters },
+    );
+    return response.data;
+  },
   search: async (
     searchTerm: string,
     page = 1,

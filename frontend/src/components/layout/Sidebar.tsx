@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChefHat, Grid, PlusCircle, User, Bookmark, Settings, LogOut } from "lucide-react";
+import { Bookmark, ChefHat, Grid, LogOut, PlusCircle, Settings, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -15,16 +15,22 @@ export const Sidebar: React.FC = () => {
     { label: "Tổng quan", href: "/dashboard", icon: Grid },
     { label: "Công thức của tôi", href: "/dashboard/recipes", icon: ChefHat },
     { label: "Tạo công thức mới", href: "/dashboard/recipes/new", icon: PlusCircle },
-    ...(user?.role === "Admin" ? [{ label: "Danh mục quản lý", href: "/dashboard/categories", icon: Grid }] : []),
+    ...(user?.role === "Admin"
+      ? [
+          { label: "Quản lý danh mục", href: "/dashboard/categories", icon: Grid },
+          { label: "Quản lý công thức", href: "/dashboard/admin-recipes", icon: ChefHat },
+          { label: "Quản lý tài khoản", href: "/dashboard/users", icon: Users },
+        ]
+      : []),
     { label: "Hồ sơ cá nhân", href: "/dashboard/profile", icon: User },
     { label: "Công thức đã lưu", href: "/saved", icon: Bookmark },
   ];
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between shrink-0 hidden md:flex">
+    <aside className="hidden min-h-[calc(100vh-4rem)] w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white p-4 md:flex">
       <div className="space-y-6">
         <div>
-          <p className="px-3 text-[11px] font-semibold text-content-tertiary uppercase tracking-wider mb-2">
+          <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-content-tertiary">
             Quản trị cá nhân
           </p>
           <nav className="space-y-1">
@@ -36,13 +42,13 @@ export const Sidebar: React.FC = () => {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors",
                     isActive
-                      ? "bg-brand-light text-brand-hover font-semibold"
-                      : "text-content-secondary hover:text-content-primary hover:bg-slate-50"
+                      ? "bg-brand-light font-semibold text-brand-hover"
+                      : "text-content-secondary hover:bg-slate-50 hover:text-content-primary",
                   )}
                 >
-                  <Icon className={cn("w-4 h-4", isActive ? "text-brand" : "text-content-tertiary")} />
+                  <Icon className={cn("h-4 w-4", isActive ? "text-brand" : "text-content-tertiary")} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -51,19 +57,19 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      <div className="pt-4 border-t border-slate-100 space-y-1">
+      <div className="space-y-1 border-t border-slate-100 pt-4">
         <Link
           href="/dashboard/settings"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-content-secondary hover:text-content-primary hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium text-content-secondary transition-colors hover:bg-slate-50 hover:text-content-primary"
         >
-          <Settings className="w-4 h-4 text-content-tertiary" />
+          <Settings className="h-4 w-4 text-content-tertiary" />
           <span>Cài đặt tài khoản</span>
         </Link>
         <button
           onClick={() => void logout()}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors text-left"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50"
         >
-          <LogOut className="w-4 h-4 text-rose-500" />
+          <LogOut className="h-4 w-4 text-rose-500" />
           <span>Đăng xuất</span>
         </button>
       </div>

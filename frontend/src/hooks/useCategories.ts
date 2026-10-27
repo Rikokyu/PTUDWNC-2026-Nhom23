@@ -7,7 +7,8 @@ export const categoryKeys = {
   all: () => ["categories"] as const,
   lists: () => [...categoryKeys.all(), "list"] as const,
   details: () => [...categoryKeys.all(), "detail"] as const,
-  detail: (slug: string) => [...categoryKeys.details(), slug] as const,
+  detail: (slug: string, page: number) =>
+    [...categoryKeys.details(), slug, page] as const,
 };
 
 export function useCategories() {
@@ -17,10 +18,10 @@ export function useCategories() {
   });
 }
 
-export function useCategory(slug: string) {
+export function useCategory(slug: string, page = 1) {
   return useQuery({
-    queryKey: categoryKeys.detail(slug),
-    queryFn: () => categoryApi.getBySlug(slug),
+    queryKey: categoryKeys.detail(slug, page),
+    queryFn: () => categoryApi.getBySlug(slug, page),
     enabled: Boolean(slug),
   });
 }

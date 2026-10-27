@@ -119,7 +119,7 @@ public sealed class RecipeCommandHandler :
         UpdateRecipeCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
 
@@ -210,7 +210,7 @@ public sealed class RecipeCommandHandler :
         AddRecipeIngredientCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var ingredient = CreateIngredient(
@@ -233,7 +233,7 @@ public sealed class RecipeCommandHandler :
         UpdateRecipeIngredientCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var ingredient = recipe.Ingredients
@@ -253,7 +253,7 @@ public sealed class RecipeCommandHandler :
         DeleteRecipeIngredientCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var ingredient = recipe.Ingredients
@@ -276,7 +276,7 @@ public sealed class RecipeCommandHandler :
         AddRecipeStepCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var step = CreateStep(
@@ -305,7 +305,7 @@ public sealed class RecipeCommandHandler :
         UpdateRecipeStepCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var step = recipe.Steps
@@ -331,7 +331,7 @@ public sealed class RecipeCommandHandler :
         DeleteRecipeStepCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var step = recipe.Steps
@@ -365,7 +365,7 @@ public sealed class RecipeCommandHandler :
         ReorderRecipeStepsCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var stepsById = recipe.Steps.ToDictionary(step => step.Id);
@@ -402,7 +402,7 @@ public sealed class RecipeCommandHandler :
         UpdateRecipeImageCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var image = recipe.Images
@@ -432,7 +432,7 @@ public sealed class RecipeCommandHandler :
         DeleteRecipeImageCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         var image = recipe.Images
@@ -490,12 +490,34 @@ public sealed class RecipeCommandHandler :
             ?? throw new NotFoundException("Recipe was not found.");
 
         if (!_currentUser.IsAuthenticated
-            || (!_currentUser.IsAdmin
-                && (!_currentUser.UserId.HasValue
-                    || recipe.AuthorId != _currentUser.UserId)))
+            || !_currentUser.UserId.HasValue
+            || recipe.AuthorId != _currentUser.UserId)
         {
             throw new ForbiddenException(
                 "You do not have permission to modify this recipe.");
+        }
+
+        return recipe;
+    }
+
+    private async Task<Recipe> GetEditableRecipeAsync(
+        Guid recipeId,
+        CancellationToken cancellationToken)
+    {
+        var recipe = await _recipes.GetByIdWithDetailsAsync(
+            recipeId,
+            cancellationToken)
+            ?? throw new NotFoundException("Recipe was not found.");
+        var isOwner = _currentUser.UserId.HasValue
+            && recipe.AuthorId == _currentUser.UserId;
+        var adminCanEditPublished = _currentUser.IsAdmin
+            && recipe.Status == RecipeStatus.Published;
+
+        if (!_currentUser.IsAuthenticated
+            || (!isOwner && !adminCanEditPublished))
+        {
+            throw new ForbiddenException(
+                "You can edit only your own recipes or, as an administrator, another author's published recipe.");
         }
 
         return recipe;

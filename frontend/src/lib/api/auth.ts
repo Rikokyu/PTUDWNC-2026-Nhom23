@@ -4,6 +4,10 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { AUTH_CHANGED } from "@/lib/auth/session";
 
 export const authApi = {
+  getMe: async (): Promise<UserProfileDto> => {
+    const response = await apiClient.get<UserProfileDto>("/api/v1/auth/me");
+    return response.data;
+  },
   login: async (email: string, password: string): Promise<AuthSessionDto> => {
     const response = await apiClient.post<AuthSessionDto>(
       "/api/v1/auth/login",

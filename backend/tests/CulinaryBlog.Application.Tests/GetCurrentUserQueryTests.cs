@@ -20,6 +20,7 @@ public sealed class GetCurrentUserQueryTests
             null,
             null,
             "Author",
+            true,
             DateTime.UtcNow);
         var identityService = new FakeIdentityService(expectedUser);
         var handler = new GetCurrentUserQueryHandler(

@@ -23,6 +23,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             Guid? categoryId,
             DifficultyLevel? difficulty,
             int? maxCookTime,
+            string? search,
             string sort,
             Guid? currentUserId,
             bool isAuthenticated,
@@ -50,6 +51,10 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         }
         else if (isAdmin && includeAllStatuses)
         {
+            query = query.Where(x =>
+                x.Status == RecipeStatus.Published
+                || (currentUserId.HasValue
+                    && x.AuthorId == currentUserId.Value));
         }
         else if (isAuthenticated && currentUserId.HasValue)
         {
@@ -82,6 +87,16 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         {
             query = query.Where(x =>
                 x.CookTimeMinutes <= maxCookTime.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.Trim().ToLower();
+            query = query.Where(recipe =>
+                recipe.Title.ToLower().Contains(normalizedSearch)
+                || recipe.Description.ToLower().Contains(normalizedSearch)
+                || recipe.Ingredients.Any(ingredient =>
+                    ingredient.Name.ToLower().Contains(normalizedSearch)));
         }
 
         // Sorting
@@ -137,7 +152,6 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 && !recipe.IsDeleted
                 && !recipe.Category.IsDeleted
                 && (recipe.Status == RecipeStatus.Published
-                    || isAdmin
                     || (isAuthenticated
                         && currentUserId.HasValue
                         && recipe.AuthorId == currentUserId.Value)))

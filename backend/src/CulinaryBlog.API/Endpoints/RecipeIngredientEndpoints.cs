@@ -44,7 +44,7 @@ public static class RecipeIngredientEndpoints
 					new { id });
 			})
 			.WithSummary("Add an ingredient to a recipe.")
-			.RequireAuthorization();
+			.RequireAuthorization("AuthorOrAdmin");
 
 		group.MapPut(
 			"/{ingredientId:guid}",
@@ -72,7 +72,7 @@ public static class RecipeIngredientEndpoints
 			})
 			.WithSummary("Update a recipe ingredient.")
 			.Produces(StatusCodes.Status200OK)
-			.RequireAuthorization();
+			.RequireAuthorization("AuthorOrAdmin");
 
 		group.MapDelete(
 			"/{ingredientId:guid}",
@@ -92,7 +92,7 @@ public static class RecipeIngredientEndpoints
 				return Results.NoContent();
 			})
 			.WithSummary("Delete a recipe ingredient.")
-			.RequireAuthorization();
+			.RequireAuthorization("AuthorOrAdmin");
 
 		return endpoints;
 	}

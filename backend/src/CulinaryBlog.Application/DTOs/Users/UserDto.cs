@@ -8,4 +8,5 @@ public sealed record UserDto(
     string? AvatarUrl,
     string? Bio,
     string Role,
+    bool IsActive,
     DateTime CreatedAt);

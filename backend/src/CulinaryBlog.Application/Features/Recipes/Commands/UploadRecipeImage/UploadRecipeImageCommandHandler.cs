@@ -51,11 +51,13 @@ public sealed class UploadRecipeImageCommandHandler
                 $"Recipe with id '{request.RecipeId}' was not found.");
         }
 
-        if (!_currentUser.IsAdmin
-            && recipe.AuthorId != _currentUser.UserId)
+        var isOwner = recipe.AuthorId == _currentUser.UserId;
+        var adminCanEditPublished = _currentUser.IsAdmin
+            && recipe.Status == Domain.Enums.RecipeStatus.Published;
+        if (!isOwner && !adminCanEditPublished)
         {
             throw new ForbiddenException(
-                "Only the recipe owner or an administrator can upload images.");
+                "You can upload images only to your own recipe or, as an administrator, another author's published recipe.");
         }
 
         var shouldBePrimary =

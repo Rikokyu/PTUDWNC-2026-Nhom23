@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { LoginForm } from "@/components/forms/LoginForm";
 
@@ -14,7 +15,9 @@ export default function LoginPage() {
             Đăng nhập để quản lý và chia sẻ công thức của bạn.
           </p>
         </header>
-        <LoginForm />
+        <Suspense fallback={<p className="text-center text-sm text-gray-500">Loading...</p>}>
+          <LoginForm />
+        </Suspense>
       </section>
     </main>
   );

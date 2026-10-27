@@ -32,7 +32,7 @@
 |             | Quản lý Các bước Thực hiện (CRUD) | 6       |         | CRUD bước nấu và tự động đánh lại số thứ tự        |                 |
 | --- | --- | --- | --- | --- | --- |
 | **2312569** | Welcome Email Job                 | 1       |         | Thiết lập job gửi email chào mừng bằng Hangfire    |                 |
-|             | Image Resize / Thumbnail Job      | 2       |         | Tạo thumbnail và resize ảnh                        |                 |
+|             | Image Resize / Thumbnail Job      | 2       |  85%    | Tạo thumbnail và resize ảnh                        |                 |
 |             | Sitemap Generation Job            | 3       |         | Tạo sitemap tự động bằng Hangfire                  |                 |
 |             | Xem Danh sách Danh mục            | 4       |  80%    | Hoàn thành API xem danh sách danh mục              |                 |
 |             | Xem Chi tiết Danh mục & Công thức | 4       |  80%    | Xem chi tiết danh mục và danh sách công thức       |                 |

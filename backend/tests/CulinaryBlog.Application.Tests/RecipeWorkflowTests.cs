@@ -1,6 +1,9 @@
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Exceptions;
+using CulinaryBlog.Application.Common.Validation;
+using ApplicationValidationException =
+    CulinaryBlog.Application.Common.Exceptions.ValidationException;
 using CulinaryBlog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -81,6 +84,31 @@ public sealed class RecipeWorkflowTests
         Assert.Single(recipe.Ingredients);
         Assert.Single(recipe.Images);
         Assert.Equal("/uploads/recipe.png", recipe.Images.Single().OriginalUrl);
+    }
+
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("-0.5")]
+    [InlineData("-1/2")]
+    [InlineData("1/-2")]
+    [InlineData("about -2 cups")]
+    public void IngredientQuantity_RejectsNegativeAmounts(string quantity)
+    {
+        Assert.Throws<ApplicationValidationException>(
+            () => RecipeIngredientQuantityValidator.Validate(quantity));
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("0.5")]
+    [InlineData("1/2")]
+    [InlineData("3/4")]
+    [InlineData("vừa đủ")]
+    [InlineData("")]
+    public void IngredientQuantity_AllowsNonNegativeAndFreeTextAmounts(
+        string quantity)
+    {
+        RecipeIngredientQuantityValidator.Validate(quantity);
     }
 
     [Fact]

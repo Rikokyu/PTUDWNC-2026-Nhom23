@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Common.Interfaces;
+using CulinaryBlog.Application.Common.Validation;
 using CulinaryBlog.Application.DTOs.Recipes;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
@@ -612,6 +613,8 @@ public sealed class RecipeCommandHandler :
         string? unit,
         string? notes)
     {
+        RecipeIngredientQuantityValidator.Validate(quantity);
+
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 200)
         {
             throw new ValidationException("ingredient name is required and must be at most 200 characters.");

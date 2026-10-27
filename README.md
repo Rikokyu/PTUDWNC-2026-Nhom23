@@ -594,6 +594,17 @@ Frontend__BaseUrl
 
 Nếu SMTP chưa được cấu hình, endpoint quên mật khẩu trả `503 Service Unavailable`; đăng ký, đăng nhập, hồ sơ, đổi mật khẩu và các trang công khai vẫn dùng các API tương ứng. Khi triển khai production hoặc nhiều instance, cần cấu hình lưu trữ Data Protection keys dùng chung để token reset còn xác thực được sau khi restart/đổi instance.
 
+## Cấu hình Backend local
+
+Chuỗi kết nối PostgreSQL và các khóa bí mật không được lưu trong `appsettings*.json` hoặc commit vào Git. Khi chạy API trong môi trường Development, cấu hình bằng .NET User Secrets:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string-local>" --project backend\src\CulinaryBlog.API\CulinaryBlog.API.csproj
+dotnet user-secrets set "Jwt:Secret" "<random-secret-at-least-32-characters>" --project backend\src\CulinaryBlog.API\CulinaryBlog.API.csproj
+```
+
+ASP.NET Core tự nạp User Secrets trong Development; biến môi trường `ConnectionStrings__DefaultConnection` có thể dùng thay thế và được ưu tiên cao hơn. Công cụ EF design-time đọc biến môi trường này, vì vậy hãy cấp nó trong môi trường chạy lệnh migration mà không ghi giá trị vào file được theo dõi. `appsettings` chỉ chứa cấu hình không bí mật; `.env.example` chỉ chứa placeholder để sao chép vào file `.env` bị Git bỏ qua.
+
 ## Tài liệu tham chiếu
 
 - [PDF đặc tả gốc](./SRS_Culinary_Blog_v1.0.0.pdf): nguồn phạm vi chức năng và công nghệ.

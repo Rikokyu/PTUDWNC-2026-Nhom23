@@ -10,8 +10,13 @@ public sealed class CulinaryBlogDbContextFactory
     {
         var connectionString =
             Environment.GetEnvironmentVariable(
-                "ConnectionStrings__DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=culinary_blog;Username=postgres;Password=postgres";
+                "ConnectionStrings__DefaultConnection");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "Set ConnectionStrings__DefaultConnection for EF design-time operations.");
+        }
 
         var options = new DbContextOptionsBuilder<CulinaryBlogDbContext>()
             .UseNpgsql(connectionString)

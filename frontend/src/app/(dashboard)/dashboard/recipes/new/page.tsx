@@ -13,6 +13,8 @@ import { Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
 import { recipeApi } from "@/lib/api/recipes";
 import { getApiErrorMessage } from "@/lib/api/error";
+import { IngredientUnitField } from "@/components/recipes/IngredientUnitField";
+import { isNonNegativeIngredientQuantity } from "@/lib/recipeIngredient";
 import { recipeKeys } from "@/hooks/useRecipes";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -24,6 +26,9 @@ export default function NewRecipePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageAltText, setImageAltText] = useState("");
 
   // Form State
   const [title, setTitle] = useState("");
@@ -49,8 +54,8 @@ export default function NewRecipePage() {
 
   // Dynamic Ingredients State
   const [ingredients, setIngredients] = useState([
-    { name: "", quantity: 1, unit: "g" },
-    { name: "", quantity: 1, unit: "muỗng canh" },
+    { name: "", quantity: "1", unit: "g" },
+    { name: "", quantity: "1", unit: "muỗng canh" },
   ]);
 
   // Dynamic Steps State
@@ -59,7 +64,7 @@ export default function NewRecipePage() {
   ]);
 
   const addIngredientRow = () => {
-    setIngredients([...ingredients, { name: "", quantity: 1, unit: "g" }]);
+    setIngredients([...ingredients, { name: "", quantity: "", unit: "g" }]);
   };
 
   const removeIngredientRow = (index: number) => {
@@ -87,6 +92,21 @@ export default function NewRecipePage() {
       setSubmitError("Hãy chọn danh mục, nhập ít nhất một nguyên liệu và một bước hướng dẫn.");
       return;
     }
+    if (validIngredients.some((ingredient) => !isNonNegativeIngredientQuantity(ingredient.quantity))) {
+      setSubmitError("Số lượng nguyên liệu không được nhỏ hơn 0. Có thể nhập phân số hoặc mô tả như “vừa đủ”.");
+      return;
+    }
+    if (imageFile) {
+      const supportedTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+      if (!supportedTypes.includes(imageFile.type)) {
+        setSubmitError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
+        return;
+      }
+      if (imageFile.size > 5 * 1024 * 1024) {
+        setSubmitError("Kích thước ảnh không được vượt quá 5 MB.");
+        return;
+      }
+    }
     setIsSubmitting(true);
     try {
       const created = await recipeApi.create({
@@ -102,7 +122,7 @@ export default function NewRecipePage() {
           validSteps.map((step, index) => `${index + 1}. ${step.description.trim()}`).join("\n"),
         ingredients: validIngredients.map((ingredient) => ({
           name: ingredient.name.trim(),
-          quantity: String(ingredient.quantity),
+          quantity: ingredient.quantity.trim() || null,
           unit: ingredient.unit.trim() || null,
           notes: null,
         })),
@@ -113,6 +133,18 @@ export default function NewRecipePage() {
           imageUrl: null,
         })),
       });
+      if (imageFile) {
+        try {
+          await recipeApi.uploadImage(created.id, imageFile, imageAltText.trim());
+        } catch (uploadError) {
+          setCreatedRecipeId(created.id);
+          setSubmitError(
+            `Công thức nháp đã được tạo, nhưng ảnh chưa tải lên được: ${getApiErrorMessage(uploadError)}`,
+          );
+          await queryClient.invalidateQueries({ queryKey: recipeKeys.all() });
+          return;
+        }
+      }
       setSubmittedSuccess(true);
       await queryClient.invalidateQueries({ queryKey: recipeKeys.all() });
       router.push(`/dashboard/recipes/${created.id}/edit`);
@@ -148,16 +180,24 @@ export default function NewRecipePage() {
         <div className="p-4 rounded-xl bg-brand-light border border-brand-border text-brand-hover flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 shrink-0" />
           <span className="text-sm font-semibold">
-            Đăng công thức thành công! Đang mở công thức vừa tạo...
+            Đã tạo công thức ở trạng thái nháp. Đang mở trang quản lý...
           </span>
         </div>
       )}
 
       {submitError && (
         <ErrorState
-          title="Không thể tạo công thức"
+          title={createdRecipeId ? "Công thức đã tạo, upload ảnh chưa thành công" : "Không thể tạo công thức"}
           message={submitError}
         />
+      )}
+      {createdRecipeId && submitError && (
+        <Link
+          href={`/dashboard/recipes/${createdRecipeId}/edit`}
+          className="inline-flex text-sm font-semibold text-brand hover:underline"
+        >
+          Mở trang quản lý để tải ảnh lên
+        </Link>
       )}
       {categoriesQuery.isError && (
         <ErrorState
@@ -243,9 +283,24 @@ export default function NewRecipePage() {
             />
           </div>
 
-          <p className="text-xs text-content-tertiary">
-            Tải ảnh công thức chưa được hỗ trợ bởi API tạo công thức hiện tại.
-          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block space-y-1.5 text-xs font-semibold uppercase tracking-wider text-content-secondary">
+              Ảnh công thức (không bắt buộc, tối đa 5 MB)
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                className="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal normal-case"
+              />
+            </label>
+            <Input
+              label="Mô tả ảnh"
+              value={imageAltText}
+              maxLength={200}
+              onChange={(event) => setImageAltText(event.target.value)}
+              helperText={imageFile?.name}
+            />
+          </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6">
@@ -281,8 +336,11 @@ export default function NewRecipePage() {
 
           <div className="space-y-3">
             {ingredients.map((ing, idx) => (
-              <div key={idx} className="flex items-center gap-3">
-                <div className="flex-1">
+              <div
+                key={idx}
+                className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_10rem_auto]"
+              >
+                <div>
                   <Input
                     placeholder="Tên nguyên liệu (VD: Thịt bò, Hành tây...)"
                     value={ing.name}
@@ -293,26 +351,30 @@ export default function NewRecipePage() {
                     }}
                   />
                 </div>
-                <div className="w-24">
+                <div>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="Số lượng"
                     value={ing.quantity}
                     onChange={(e) => {
-                      const updated = [...ingredients];
-                      updated[idx].quantity = Number(e.target.value);
-                      setIngredients(updated);
+                      setIngredients((current) =>
+                        current.map((item, index) =>
+                          index === idx ? { ...item, quantity: e.target.value } : item,
+                        ),
+                      );
                     }}
                   />
                 </div>
-                <div className="w-32">
-                  <Input
-                    placeholder="Đơn vị (g, ml, muỗng...)"
+                <div>
+                  <IngredientUnitField
                     value={ing.unit}
-                    onChange={(e) => {
-                      const updated = [...ingredients];
-                      updated[idx].unit = e.target.value;
-                      setIngredients(updated);
+                    onChange={(value) => {
+                      setIngredients((current) =>
+                        current.map((item, index) =>
+                          index === idx ? { ...item, unit: value } : item,
+                        ),
+                      );
                     }}
                   />
                 </div>
@@ -392,6 +454,7 @@ export default function NewRecipePage() {
             variant="primary"
             size="lg"
             isLoading={isSubmitting}
+          disabled={Boolean(createdRecipeId)}
           >
             Đăng công thức bài viết
           </Button>

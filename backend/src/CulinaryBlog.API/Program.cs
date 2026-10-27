@@ -7,6 +7,7 @@ using CulinaryBlog.Application;
 using CulinaryBlog.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.OpenApi;
 using Hangfire;
 using Asp.Versioning;
@@ -144,7 +145,12 @@ app.UseCors("Frontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseStaticFiles();
+var staticContentTypes = new FileExtensionContentTypeProvider();
+staticContentTypes.Mappings[".avif"] = "image/avif";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = staticContentTypes
+});
 
 // Output cache
 app.UseOutputCache();

@@ -147,6 +147,7 @@ export const recipeApi = {
     const response = await apiClient.post<{ data: RecipeApiImageDto }>(
       `/api/v1/recipes/${recipeId}/images`,
       formData,
+      { headers: { "Content-Type": undefined } },
     );
     return response.data.data;
   },
@@ -160,5 +161,14 @@ export const recipeApi = {
   },
   deleteImage: async (recipeId: string, imageId: string): Promise<void> => {
     await apiClient.delete(`/api/v1/recipes/${recipeId}/images/${imageId}`);
+  },
+  setStatus: async (
+    recipeId: string,
+    action: "publish" | "unpublish" | "archive",
+  ): Promise<RecipeApiDetailDto> => {
+    const response = await apiClient.patch<{ data: RecipeApiDetailDto }>(
+      `/api/v1/recipes/${recipeId}/${action}`,
+    );
+    return response.data.data;
   },
 };

@@ -12,6 +12,8 @@ import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
 import { recipeApi } from "@/lib/api/recipes";
 import { resolveApiAssetUrl } from "@/lib/api/axios";
 import { getApiErrorMessage } from "@/lib/api/error";
+import { IngredientUnitField } from "@/components/recipes/IngredientUnitField";
+import { isNonNegativeIngredientQuantity } from "@/lib/recipeIngredient";
 import { useAuthStore } from "@/store/useAuthStore";
 import type {
   RecipeApiDetailDto,
@@ -112,6 +114,8 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
     try {
       await operation();
       await queryClient.invalidateQueries({ queryKey });
+      await queryClient.invalidateQueries({ queryKey: ["managed-recipes"] });
+      await queryClient.invalidateQueries({ queryKey: ["recipes"] });
       setSuccess(successMessage);
       return true;
     } catch (requestError) {
@@ -124,6 +128,12 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
 
   async function addIngredient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isNonNegativeIngredientQuantity(newIngredient.quantity)) {
+      setError("Số lượng nguyên liệu không được nhỏ hơn 0.");
+      setSuccess(null);
+      return;
+    }
+
     const succeeded = await runMutation(
       () => recipeApi.addIngredient(recipeId, toIngredientRequest(newIngredient)),
       "Đã thêm nguyên liệu.",
@@ -147,6 +157,15 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       setError("Hãy chọn một ảnh trước khi tải lên.");
       return;
     }
+    if (!["image/jpeg", "image/png", "image/webp", "image/avif"].includes(imageFile.type)) {
+      setError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
+      return;
+    }
+    if (imageFile.size > 5 * 1024 * 1024) {
+      setError("Kích thước ảnh không được vượt quá 5 MB.");
+      return;
+    }
+
     const succeeded = await runMutation(
       () => recipeApi.uploadImage(recipeId, imageFile, altText),
       "Đã tải ảnh lên.",
@@ -155,6 +174,25 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
     setImageFile(null);
     setAltText("");
     form.reset();
+  }
+
+  async function changeStatus(action: "publish" | "unpublish" | "archive") {
+    const confirmations = {
+      publish: null,
+      unpublish: "Hủy xuất bản công thức này? Công thức sẽ không còn hiển thị công khai.",
+      archive: "Lưu trữ công thức này? Công thức sẽ không còn hiển thị công khai.",
+    };
+    const confirmation = confirmations[action];
+    if (confirmation && !window.confirm(confirmation)) return;
+
+    await runMutation(
+      () => recipeApi.setStatus(recipeId, action),
+      action === "publish"
+        ? "Đã xuất bản công thức."
+        : action === "unpublish"
+          ? "Đã chuyển công thức về bản nháp."
+          : "Đã lưu trữ công thức.",
+    );
   }
 
   if (!accessToken) {
@@ -194,9 +232,47 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
             Quản lý ảnh, nguyên liệu và các bước thực hiện.
           </p>
         </div>
-        <Link href={`/recipes/${encodeURIComponent(recipe.slug)}`}>
-          <Button variant="outline">Xem công thức</Button>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-content-secondary">
+            {recipe.status === 0
+              ? "Bản nháp"
+              : recipe.status === 1
+                ? "Đã đăng"
+                : "Đã lưu trữ"}
+          </span>
+          {recipe.status === 0 && (
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => void changeStatus("publish")}
+            >
+              Xuất bản
+            </Button>
+          )}
+          {recipe.status === 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => void changeStatus("unpublish")}
+            >
+              Hủy xuất bản
+            </Button>
+          )}
+          {recipe.status !== 2 && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => void changeStatus("archive")}
+            >
+              Lưu trữ
+            </Button>
+          )}
+          <Link href={`/recipes/${encodeURIComponent(recipe.slug)}`}>
+            <Button variant="outline">Xem công thức</Button>
+          </Link>
+        </div>
       </div>
 
       {error && <ErrorState title="Không thể lưu thay đổi" message={error} />}
@@ -299,7 +375,10 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
         <form onSubmit={addIngredient} className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2">
           <Input label="Tên nguyên liệu" required maxLength={200} value={newIngredient.name} onChange={(event) => setNewIngredient({ ...newIngredient, name: event.target.value })} />
           <Input label="Số lượng" maxLength={50} value={newIngredient.quantity} onChange={(event) => setNewIngredient({ ...newIngredient, quantity: event.target.value })} />
-          <Input label="Đơn vị" maxLength={50} value={newIngredient.unit} onChange={(event) => setNewIngredient({ ...newIngredient, unit: event.target.value })} />
+          <IngredientUnitField
+            value={newIngredient.unit}
+            onChange={(unit) => setNewIngredient({ ...newIngredient, unit })}
+          />
           <Input label="Ghi chú" maxLength={500} value={newIngredient.notes} onChange={(event) => setNewIngredient({ ...newIngredient, notes: event.target.value })} />
           <Button type="submit" isLoading={busy} leftIcon={<Plus className="h-4 w-4" />} className="sm:col-span-2">
             Thêm nguyên liệu
@@ -313,6 +392,10 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
               ingredient={ingredient}
               busy={busy}
               runMutation={runMutation}
+              onValidationError={(message) => {
+                setError(message);
+                setSuccess(null);
+              }}
             />
           ))}
         </div>
@@ -368,17 +451,24 @@ function IngredientEditor({
   ingredient,
   busy,
   runMutation,
+  onValidationError,
 }: {
   recipeId: string;
   ingredient: RecipeApiIngredientDto;
   busy: boolean;
   runMutation: (operation: () => Promise<unknown>, message: string) => Promise<boolean>;
+  onValidationError: (message: string) => void;
 }) {
   const [fields, setFields] = useState(() => ingredientFields(ingredient));
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
+        if (!isNonNegativeIngredientQuantity(fields.quantity)) {
+          onValidationError("Số lượng nguyên liệu không được nhỏ hơn 0.");
+          return;
+        }
+
         void runMutation(
           () => recipeApi.updateIngredient(recipeId, ingredient.id, toIngredientRequest(fields)),
           "Đã cập nhật nguyên liệu.",
@@ -388,7 +478,10 @@ function IngredientEditor({
     >
       <Input label="Tên" required maxLength={200} value={fields.name} onChange={(event) => setFields({ ...fields, name: event.target.value })} />
       <Input label="Số lượng" maxLength={50} value={fields.quantity} onChange={(event) => setFields({ ...fields, quantity: event.target.value })} />
-      <Input label="Đơn vị" maxLength={50} value={fields.unit} onChange={(event) => setFields({ ...fields, unit: event.target.value })} />
+      <IngredientUnitField
+        value={fields.unit}
+        onChange={(unit) => setFields({ ...fields, unit })}
+      />
       <Input label="Ghi chú" maxLength={500} value={fields.notes} onChange={(event) => setFields({ ...fields, notes: event.target.value })} />
       <div className="flex gap-2 sm:col-span-2">
         <Button type="submit" variant="outline" size="sm" disabled={busy}>Lưu</Button>

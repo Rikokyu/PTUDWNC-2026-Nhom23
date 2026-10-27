@@ -1,5 +1,184 @@
 export type Difficulty = "Easy" | "Medium" | "Hard";
 
+export type ApiDifficultyLevel = 1 | 2 | 3 | 4;
+export type ApiRecipeStatus = 0 | 1 | 2;
+
+export interface AuthUserDto {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+}
+
+export interface UserProfileDto extends AuthUserDto {
+  avatarUrl: string | null;
+  bio: string | null;
+  createdAt: string;
+}
+
+export interface AuthSessionDto {
+  accessToken: string;
+  accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
+  user: AuthUserDto;
+}
+
+export interface UserProfileDto {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  role: string;
+  createdAt: string;
+}
+
+export interface UpdateProfileRequest {
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+}
+
+export interface CreateRecipeRequest {
+  title: string;
+  description: string;
+  categoryId: string;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  difficulty: ApiDifficultyLevel;
+  instructions: string;
+  ingredients: Array<{
+    name: string;
+    quantity: string | null;
+    unit: string | null;
+    notes: string | null;
+  }>;
+  steps: Array<{
+    title: string;
+    description: string;
+    timerMinutes: number | null;
+    imageUrl: string | null;
+  }>;
+}
+
+export interface RecipeApiSummaryDto {
+  id: string;
+  title: string;
+  slug: string;
+  thumbnailUrl: string | null;
+  categoryName: string;
+  categoryId: string;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  difficulty: ApiDifficultyLevel;
+  status: ApiRecipeStatus;
+  createdAt: string;
+}
+
+export interface RecipeApiDetailDto {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  instructions: string;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  difficulty: ApiDifficultyLevel;
+  status: ApiRecipeStatus;
+  createdAt: string;
+  rowVersion: number;
+  category: RecipeApiCategoryDto;
+  author: RecipeApiAuthorDto | null;
+  ingredients: RecipeApiIngredientDto[];
+  steps: RecipeApiStepDto[];
+  images: RecipeApiImageDto[];
+  nutrition: RecipeApiNutritionDto | null;
+}
+
+export interface RecipeApiCategoryDto {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface RecipeApiAuthorDto {
+  id: string;
+  displayName: string;
+  email: string;
+}
+
+export interface RecipeApiIngredientDto {
+  id: string;
+  name: string;
+  quantity: string | null;
+  unit: string | null;
+  notes: string | null;
+  orderIndex: number;
+}
+
+export interface RecipeApiStepDto {
+  id: string;
+  stepNumber: number;
+  title: string;
+  description: string;
+  timerMinutes: number | null;
+  imageUrl: string | null;
+}
+
+export interface RecipeApiImageDto {
+  id: string;
+  originalUrl: string;
+  mediumUrl: string | null;
+  thumbnailUrl: string | null;
+  altText: string | null;
+  isPrimary: boolean;
+  orderIndex: number;
+}
+
+export interface RecipeIngredientRequest {
+  name: string;
+  quantity: string | null;
+  unit: string | null;
+  notes: string | null;
+}
+
+export interface RecipeStepRequest {
+  title: string;
+  description: string;
+  timerMinutes: number | null;
+  imageUrl: string | null;
+}
+
+export interface RecipeApiNutritionDto {
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  fiber: number | null;
+  sodium: number | null;
+}
+
+export interface CategoryApiDto {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  imageUrl: string | null;
+  orderIndex: number;
+  recipeCount: number;
+}
+
+export interface CategoryDetailApiDto {
+  category: CategoryApiDto;
+  recipes: PaginatedResult<RecipeApiSummaryDto>;
+}
+
 export interface RecipeListDto {
   id: string;
   title: string;
@@ -57,6 +236,8 @@ export interface RecipeFilters {
   page?: number;
   pageSize?: number;
   categoryId?: string;
-  difficulty?: Difficulty;
+  difficulty?: Difficulty | "Expert";
+  maxCookTime?: number;
+  sort?: "-createdAt" | "createdAt" | "title" | "cookTime" | "-cookTime";
   search?: string;
 }

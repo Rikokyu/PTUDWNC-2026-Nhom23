@@ -1,5 +1,6 @@
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
+using CulinaryBlog.Domain.Exceptions;
 
 namespace CulinaryBlog.Domain.Entities;
 
@@ -8,6 +9,8 @@ public class Recipe : BaseEntity
     public string Title { get; set; } = string.Empty;
 
     public string Slug { get; set; } = string.Empty;
+
+    public uint RowVersion { get; set; }
 
     public string Description { get; set; } = string.Empty;
 
@@ -23,9 +26,17 @@ public class Recipe : BaseEntity
 
     public RecipeStatus Status { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public Guid CategoryId { get; set; }
 
     public Category Category { get; set; } = null!;
+
+    public RecipeNutrition? Nutrition { get; set; }
+
+    public Guid? AuthorId { get; set; }
+
+    public ApplicationUser? Author { get; set; }
 
     public ICollection<RecipeIngredient> Ingredients { get; set; }
         = new List<RecipeIngredient>();
@@ -35,4 +46,72 @@ public class Recipe : BaseEntity
 
     public ICollection<RecipeImage> Images { get; set; }
         = new List<RecipeImage>();
+
+    public void Publish()
+    {
+        if (Status == RecipeStatus.Published)
+        {
+            return;
+        }
+
+        if (Status != RecipeStatus.Draft)
+        {
+            throw new ValidationException(
+                "Only draft recipes can be published.");
+        }
+
+        if (Steps.Count == 0)
+        {
+            throw new ValidationException(
+                "A recipe must have at least one step before publishing.");
+        }
+
+        Status = RecipeStatus.Published;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Unpublish()
+    {
+        if (Status == RecipeStatus.Draft)
+        {
+            return;
+        }
+
+        if (Status != RecipeStatus.Published)
+        {
+            throw new ValidationException(
+                "Only published recipes can be unpublished.");
+        }
+
+        Status = RecipeStatus.Draft;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Archive()
+    {
+        if (Status == RecipeStatus.Archived)
+        {
+            return;
+        }
+
+        if (Status is not (RecipeStatus.Draft or RecipeStatus.Published))
+        {
+            throw new ValidationException(
+                "Only draft or published recipes can be archived.");
+        }
+
+        Status = RecipeStatus.Archived;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SoftDelete()
+    {
+        if (IsDeleted)
+        {
+            return;
+        }
+
+        IsDeleted = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

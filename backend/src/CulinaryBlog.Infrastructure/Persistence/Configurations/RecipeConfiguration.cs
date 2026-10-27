@@ -22,6 +22,9 @@ public class RecipeConfiguration
             .HasMaxLength(220)
             .IsRequired();
 
+        builder.Property(x => x.RowVersion)
+            .IsRowVersion();
+
         builder.HasIndex(x => x.Slug)
             .IsUnique();
 
@@ -37,6 +40,17 @@ public class RecipeConfiguration
         builder.Property(x => x.Status)
             .HasConversion<int>();
 
+        builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
+
+        builder.HasIndex(x => x.CategoryId);
+
+        builder.HasIndex(x => new
+        {
+            x.Status,
+            x.CreatedAt
+        });
+
         builder.HasMany(x => x.Ingredients)
             .WithOne(x => x.Recipe)
             .HasForeignKey(x => x.RecipeId)
@@ -51,5 +65,33 @@ public class RecipeConfiguration
             .WithOne(x => x.Recipe)
             .HasForeignKey(x => x.RecipeId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Author)
+            .WithMany()
+            .HasForeignKey(x => x.AuthorId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.OwnsOne(
+            x => x.Nutrition,
+            nutrition =>
+            {
+                nutrition.Property(x => x.Calories)
+                    .HasPrecision(10, 2);
+
+                nutrition.Property(x => x.Protein)
+                    .HasPrecision(10, 2);
+
+                nutrition.Property(x => x.Carbs)
+                    .HasPrecision(10, 2);
+
+                nutrition.Property(x => x.Fat)
+                    .HasPrecision(10, 2);
+
+                nutrition.Property(x => x.Fiber)
+                    .HasPrecision(10, 2);
+
+                nutrition.Property(x => x.Sodium)
+                    .HasPrecision(10, 2);
+            });
     }
 }

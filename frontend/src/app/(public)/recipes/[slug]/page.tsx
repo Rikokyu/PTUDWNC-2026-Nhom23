@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { RecipeDetailPageContent } from "@/components/recipes/RecipeDetailPageContent";
 
 export default async function RecipeDetailPage({
   params,
@@ -6,12 +6,5 @@ export default async function RecipeDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (!slug) notFound();
-
-  return (
-    <main>
-      <h1>Chi tiet cong thuc</h1>
-      <p>Slug: {slug}</p>
-    </main>
-  );
+  return <RecipeDetailPageContent slug={slug} />;
 }

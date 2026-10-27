@@ -11,20 +11,29 @@ public class CulinaryBlogDbContext : DbContext
     {
     }
 
-    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<ApplicationUser> ApplicationUsers =>
+        Set<ApplicationUser>();
 
-    public DbSet<Recipe> Recipes => Set<Recipe>();
+    public DbSet<RefreshToken> RefreshTokens =>
+        Set<RefreshToken>();
 
-    public DbSet<RecipeIngredient> RecipeIngredients
-        => Set<RecipeIngredient>();
+    public DbSet<Category> Categories =>
+        Set<Category>();
 
-    public DbSet<RecipeStep> RecipeSteps
-        => Set<RecipeStep>();
+    public DbSet<Recipe> Recipes =>
+        Set<Recipe>();
 
-    public DbSet<RecipeImage> RecipeImages
-        => Set<RecipeImage>();
+    public DbSet<RecipeIngredient> RecipeIngredients =>
+        Set<RecipeIngredient>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public DbSet<RecipeStep> RecipeSteps =>
+        Set<RecipeStep>();
+
+    public DbSet<RecipeImage> RecipeImages =>
+        Set<RecipeImage>();
+
+    protected override void OnModelCreating(
+        ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 

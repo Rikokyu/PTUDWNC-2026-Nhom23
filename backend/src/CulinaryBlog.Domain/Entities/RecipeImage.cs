@@ -1,5 +1,3 @@
-using CulinaryBlog.Domain.Entities;
-
 namespace CulinaryBlog.Domain.Entities;
 
 public class RecipeImage : BaseEntity
@@ -19,4 +17,23 @@ public class RecipeImage : BaseEntity
     public bool IsPrimary { get; set; }
 
     public int OrderIndex { get; set; }
+
+    public static RecipeImage Create(
+        Guid recipeId,
+        string originalUrl,
+        string? altText,
+        bool isPrimary,
+        int orderIndex)
+    {
+        return new RecipeImage
+        {
+            Id = Guid.NewGuid(),
+            RecipeId = recipeId,
+            OriginalUrl = originalUrl,
+            AltText = altText,
+            IsPrimary = isPrimary,
+            OrderIndex = orderIndex,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
 }

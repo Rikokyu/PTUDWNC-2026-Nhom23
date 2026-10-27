@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isNonNegativeIngredientQuantity } from "@/lib/recipeIngredient";
 
 export const createRecipeSchema = z.object({
   title: z.string().min(5).max(200),
@@ -20,8 +21,16 @@ export const createRecipeSchema = z.object({
     .array(
       z.object({
         name: z.string().min(2),
-        quantity: z.number().positive(),
-        unit: z.string().min(1),
+        quantity: z
+          .string()
+          .max(50)
+          .nullable()
+          .optional()
+          .refine(
+            (value) => value == null || isNonNegativeIngredientQuantity(value),
+            "Số lượng không được nhỏ hơn 0.",
+          ),
+        unit: z.string().max(50).nullable().optional(),
         notes: z.string().optional(),
       }),
     )

@@ -1,3 +1,13 @@
+## Chạy ứng dụng cục bộ
+
+Yêu cầu: Node.js, .NET 10 SDK và Docker Desktop đang chạy. Từ thư mục gốc dự án, dùng một lệnh:
+
+```powershell
+npm run dev
+```
+
+Lệnh này tự khởi động PostgreSQL/Mailpit, API và frontend; nếu frontend chưa có dependencies, chúng sẽ được cài từ `frontend/package-lock.json`. Trình duyệt mở tại `http://localhost:3000` (nếu cổng này bận, URL thay thế sẽ được in trong terminal). Nhấn `Ctrl+C` để dừng ứng dụng và các container mà lệnh đã khởi động.
+
 ## Thông tin sinh viên
 
 | MSSV    | Họ tên sinh viên      | Mail cá nhân       | Github cá nhân                 | Số điện thoại |
@@ -451,6 +461,7 @@ Recipe có token phiên bản `RowVersion` do backend cập nhật mỗi khi cô
 ### 8.1. Quy ước chung
 
 - API nghiệp vụ có tiền tố `/api/v1`; JSON dùng camelCase; upload ảnh dùng `multipart/form-data`.
+- Backend khai báo API version `1.0`; client có thể chọn version bằng header `api-version` (mặc định `1.0`). Đường dẫn `/api/v1` hiện tại được giữ nguyên.
 - Thành công trả `{ "data": ... }`; danh sách phân trang thêm `meta` gồm `page`, `pageSize`, `total`, `totalPages`. `204` không có body.
 - Lỗi dùng Problem Details, gồm status, mô tả và mã lỗi để frontend xử lý: `400` cho JSON/tệp không hợp lệ; `401` cho xác thực thất bại; `403` thiếu quyền; `404` không có tài nguyên hoặc đã xóa; `409` xung đột phiên bản/dữ liệu duy nhất/danh mục còn công thức; `422` dữ liệu hoặc điều kiện nghiệp vụ không hợp lệ.
 - Khi thay đổi công thức đã tồn tại hoặc dữ liệu con, client gửi phiên bản công thức qua `If-Match`; thiếu hoặc sai định dạng trả `400`, phiên bản cũ trả `409`. Backend cập nhật phiên bản trong cùng giao dịch; response thành công trả ETag mới. CORS cho phép `If-Match` và cho frontend đọc ETag.
@@ -566,6 +577,43 @@ Các tình huống phải kiểm tra trước khi coi 5 điểm góp ý đã x�
 | Dinh dưỡng  | Một POST lưu đủ dữ liệu; nutrition sai làm cả giao dịch không được lưu; PATCH bỏ qua, gửi null và gửi object có ba ý nghĩa đúng như mục 3.5 |
 | Bước nấu    | Client không cần số bước; xóa bước giữa vẫn liên tục; thêm/xóa đồng thời không tạo trùng số hoặc ghi đè phiên bản                           |
 | Nguyên liệu | `0.5` và đơn vị chuỗi được lưu đúng; “vừa đủ” đúng cặp null; lượng âm, 0, số quá giới hạn, thiếu đơn vị hoặc chuỗi lượng bị từ chối         |
+
+## Chạy Frontend (Lab 6)
+
+Frontend hiện dùng Next.js App Router, React, TypeScript, Tailwind CSS và các component UI dùng chung trong `frontend/src/components/ui`. Axios gọi API, TanStack Query quản lý truy vấn, Zustand quản lý UI và phiên đăng nhập trong bộ nhớ; các thư viện này đã có trong `frontend/package.json`, không cần cài thêm bộ UI hoặc state trùng lặp.
+
+```powershell
+Copy-Item frontend\.env.example frontend\.env.local
+npm --prefix frontend install
+npm --prefix frontend run dev
+```
+
+Mặc định frontend gọi backend tại `http://localhost:5080`; có thể đổi bằng `NEXT_PUBLIC_API_BASE_URL`. Phiên đăng nhập chỉ tồn tại trong Zustand ở bộ nhớ trình duyệt; người dùng cần đăng nhập lại sau khi tải lại trang. Trang chủ, danh sách/chi tiết danh mục, công thức, tìm kiếm, hồ sơ và các luồng xác thực sử dụng API thật. Tìm kiếm công khai qua `GET /api/v1/recipes/search?q=...` chỉ trả công thức Published. Không bật dữ liệu mẫu trong môi trường cần xác minh API thật.
+
+Quên mật khẩu gửi email qua SMTP. Cấu hình Backend bằng biến môi trường (không commit thông tin SMTP):
+
+```text
+Email__Smtp__Host
+Email__Smtp__Port
+Email__Smtp__Username
+Email__Smtp__Password
+Email__Smtp__From
+Email__Smtp__EnableSsl
+Frontend__BaseUrl
+```
+
+Nếu SMTP chưa được cấu hình, endpoint quên mật khẩu trả `503 Service Unavailable`; đăng ký, đăng nhập, hồ sơ, đổi mật khẩu và các trang công khai vẫn dùng các API tương ứng. Khi triển khai production hoặc nhiều instance, cần cấu hình lưu trữ Data Protection keys dùng chung để token reset còn xác thực được sau khi restart/đổi instance.
+
+## Cấu hình Backend local
+
+Chuỗi kết nối PostgreSQL và các khóa bí mật không được lưu trong `appsettings*.json` hoặc commit vào Git. Khi chạy API trong môi trường Development, cấu hình bằng .NET User Secrets:
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<connection-string-local>" --project backend\src\CulinaryBlog.API\CulinaryBlog.API.csproj
+dotnet user-secrets set "Jwt:Secret" "<random-secret-at-least-32-characters>" --project backend\src\CulinaryBlog.API\CulinaryBlog.API.csproj
+```
+
+ASP.NET Core tự nạp User Secrets trong Development; biến môi trường `ConnectionStrings__DefaultConnection` có thể dùng thay thế và được ưu tiên cao hơn. Công cụ EF design-time đọc biến môi trường này, vì vậy hãy cấp nó trong môi trường chạy lệnh migration mà không ghi giá trị vào file được theo dõi. `appsettings` chỉ chứa cấu hình không bí mật; `.env.example` chỉ chứa placeholder để sao chép vào file `.env` bị Git bỏ qua.
 
 ## Tài liệu tham chiếu
 

@@ -1,167 +1,240 @@
-﻿using Bogus;
+using Bogus;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Seed;
 
 public static class DatabaseSeeder
 {
-    public static async Task SeedAsync(
-        CulinaryBlogDbContext context)
-    {
-        await context.Database.MigrateAsync();
+    private const int MinimumCategoryCount = 20;
+    private const int MinimumRecipeCount = 100;
 
-        if (await context.Categories.AnyAsync())
-            return;
+    public static async Task SeedAsync(
+        CulinaryBlogDbContext context,
+        IPasswordHasher<ApplicationUser> passwordHasher,
+        CancellationToken cancellationToken = default)
+    {
+        await context.Database.MigrateAsync(cancellationToken);
 
         Randomizer.Seed = new Random(12345);
 
-        var categories = GenerateCategories();
+        await EnsureUsersAsync(
+            context,
+            passwordHasher,
+            cancellationToken);
 
-        await context.Categories.AddRangeAsync(categories);
-        await context.SaveChangesAsync();
-
-        var recipes = GenerateRecipes(categories);
-
-        await context.Recipes.AddRangeAsync(recipes);
-        await context.SaveChangesAsync();
+        var categories = await EnsureCategoriesAsync(
+            context,
+            cancellationToken);
+        await EnsureRecipesAsync(
+            context,
+            categories,
+            cancellationToken);
     }
 
-    private static List<Category> GenerateCategories()
+    private static async Task EnsureUsersAsync(
+        CulinaryBlogDbContext context,
+        IPasswordHasher<ApplicationUser> passwordHasher,
+        CancellationToken cancellationToken)
     {
-        var faker = new Faker("vi");
-
-        var categories = new List<Category>();
-
-        for (int i = 1; i <= 20; i++)
+        var seedUsers = new (string Email, string UserName, string DisplayName, string Password, string Role)[]
         {
-            categories.Add(new Category
+            ("admin@culinaryblog.com", "admin", "System Admin", "Admin@123", "Admin"),
+            ("author@culinaryblog.com", "author", "Sample Author", "Author@123", "Author"),
+            ("user@culinaryblog.com", "user", "Sample User", "User@123", "User")
+        };
+
+        foreach (var seedUser in seedUsers)
+        {
+            var emailExists = await context.ApplicationUsers.AnyAsync(
+                user => user.Email.ToLower() == seedUser.Email,
+                cancellationToken);
+
+            if (emailExists)
+            {
+                continue;
+            }
+
+            var user = new ApplicationUser
             {
                 Id = Guid.NewGuid(),
-
-                Name = $"Danh mục món ăn {i}",
-
-                Slug = $"danh-muc-mon-an-{i}",
-
-                Description =
-                    faker.Lorem.Sentence(),
-
-                OrderIndex = i,
-
+                Email = seedUser.Email,
+                UserName = seedUser.UserName,
+                DisplayName = seedUser.DisplayName,
+                Role = seedUser.Role,
                 CreatedAt = DateTime.UtcNow
-            });
+            };
+            user.PasswordHash = passwordHasher.HashPassword(user, seedUser.Password);
+
+            await context.ApplicationUsers.AddAsync(user, cancellationToken);
+        }
+
+        if (context.ChangeTracker.HasChanges())
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static async Task<List<Category>> EnsureCategoriesAsync(
+        CulinaryBlogDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var categories = await context.Categories
+            .OrderBy(category => category.OrderIndex)
+            .ToListAsync(cancellationToken);
+        var names = categories
+            .Select(category => category.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var slugs = categories
+            .Select(category => category.Slug)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var nextNumber = 1;
+        var faker = new Faker("vi");
+
+        while (categories.Count < MinimumCategoryCount)
+        {
+            var name = $"Danh mục món ăn {nextNumber}";
+            var slug = $"danh-muc-mon-an-{nextNumber++}";
+            if (!names.Add(name) || !slugs.Add(slug))
+            {
+                continue;
+            }
+
+            var category = new Category
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Slug = slug,
+                Description = faker.Lorem.Sentence(),
+                OrderIndex = categories.Count + 1,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            categories.Add(category);
+            context.Categories.Add(category);
+        }
+
+        if (context.ChangeTracker.HasChanges())
+        {
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         return categories;
     }
 
-    private static List<Recipe> GenerateRecipes(
-        List<Category> categories)
+    private static async Task EnsureRecipesAsync(
+        CulinaryBlogDbContext context,
+        IReadOnlyList<Category> categories,
+        CancellationToken cancellationToken)
     {
-        var recipes = new List<Recipe>();
-
-        var faker = new Faker("vi");
-
-        for (int i = 1; i <= 100; i++)
+        var existingSlugs = await context.Recipes
+            .Select(recipe => recipe.Slug)
+            .ToListAsync(cancellationToken);
+        var slugs = existingSlugs.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missingCount = MinimumRecipeCount - existingSlugs.Count;
+        if (missingCount <= 0)
         {
-            var recipeId = Guid.NewGuid();
+            return;
+        }
 
+        var recipes = GenerateRecipes(
+            categories,
+            missingCount,
+            slugs);
+        await context.Recipes.AddRangeAsync(recipes, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static List<Recipe> GenerateRecipes(
+        IReadOnlyList<Category> categories,
+        int count,
+        HashSet<string> existingSlugs)
+    {
+        var recipes = new List<Recipe>(count);
+        var faker = new Faker("vi");
+        var recipeNumber = 1;
+
+        while (recipes.Count < count)
+        {
+            var slug = $"cong-thuc-mon-an-{recipeNumber}";
+            var currentNumber = recipeNumber++;
+            if (!existingSlugs.Add(slug))
+            {
+                continue;
+            }
+
+            var recipeId = Guid.NewGuid();
+            var now = DateTime.UtcNow;
             var recipe = new Recipe
             {
                 Id = recipeId,
-
-                Title = $"Công thức món ăn {i}",
-
-                Slug = $"cong-thuc-mon-an-{i}",
-
-                Description =
-                    faker.Lorem.Paragraph(),
-
-                Instructions =
-                    faker.Lorem.Paragraphs(2),
-
-                PrepTimeMinutes =
-                    faker.Random.Int(5, 60),
-
-                CookTimeMinutes =
-                    faker.Random.Int(10, 180),
-
-                Servings =
-                    faker.Random.Int(1, 8),
-
-                Difficulty =
-                    faker.PickRandom<DifficultyLevel>(),
-
-                Status =
-                    RecipeStatus.Published,
-
-                CategoryId =
-                    faker.PickRandom(categories).Id,
-
-                CreatedAt =
-                    DateTime.UtcNow
+                Title = $"Công thức món ăn {currentNumber}",
+                Slug = slug,
+                Description = faker.Lorem.Paragraph(),
+                Instructions = faker.Lorem.Paragraphs(2),
+                PrepTimeMinutes = faker.Random.Int(5, 60),
+                CookTimeMinutes = faker.Random.Int(10, 180),
+                Servings = faker.Random.Int(1, 8),
+                Difficulty = faker.PickRandom<DifficultyLevel>(),
+                Status = RecipeStatus.Published,
+                CategoryId = categories[
+                    faker.Random.Int(0, categories.Count - 1)].Id,
+                CreatedAt = now,
+                Nutrition = new RecipeNutrition
+                {
+                    Calories = faker.Random.Decimal(100, 900),
+                    Protein = faker.Random.Decimal(5, 80),
+                    Carbs = faker.Random.Decimal(10, 120),
+                    Fat = faker.Random.Decimal(5, 60),
+                    Fiber = faker.Random.Decimal(1, 20),
+                    Sodium = faker.Random.Decimal(10, 1500)
+                },
+                Images =
+                [
+                    new RecipeImage
+                    {
+                        Id = Guid.NewGuid(),
+                        RecipeId = recipeId,
+                        OriginalUrl = $"https://picsum.photos/seed/recipe-{recipeId}/1200/800",
+                        MediumUrl = $"https://picsum.photos/seed/recipe-{recipeId}/800/600",
+                        ThumbnailUrl = $"https://picsum.photos/seed/recipe-{recipeId}/300/300",
+                        AltText = $"Công thức món ăn {currentNumber}",
+                        IsPrimary = true,
+                        OrderIndex = 1,
+                        CreatedAt = now
+                    }
+                ]
             };
 
-            // 10 ingredients
-            for (int j = 1; j <= 10; j++)
+            for (var index = 1; index <= 10; index++)
             {
-                recipe.Ingredients.Add(
-                    new RecipeIngredient
-                    {
-                        Id = Guid.NewGuid(),
-
-                        RecipeId = recipeId,
-
-                        Name = $"Nguyên liệu {j}",
-
-                        Quantity =
-                            faker.Random.Int(1, 500).ToString(),
-
-                        Unit =
-                            faker.PickRandom(
-                                "g",
-                                "kg",
-                                "ml",
-                                "l",
-                                "quả",
-                                "cái",
-                                "thìa"),
-
-                        Notes =
-                            faker.Lorem.Sentence(),
-
-                        OrderIndex = j,
-
-                        CreatedAt =
-                            DateTime.UtcNow
-                    });
+                recipe.Ingredients.Add(new RecipeIngredient
+                {
+                    Id = Guid.NewGuid(),
+                    RecipeId = recipeId,
+                    Name = $"Nguyên liệu {index}",
+                    Quantity = faker.Random.Int(1, 500).ToString(),
+                    Unit = faker.PickRandom("g", "kg", "ml", "l", "quả", "cái", "thìa"),
+                    Notes = faker.Lorem.Sentence(),
+                    OrderIndex = index,
+                    CreatedAt = now
+                });
             }
 
-            // 5 steps
-            for (int j = 1; j <= 5; j++)
+            for (var stepNumber = 1; stepNumber <= 5; stepNumber++)
             {
-                recipe.Steps.Add(
-                    new RecipeStep
-                    {
-                        Id = Guid.NewGuid(),
-
-                        RecipeId = recipeId,
-
-                        StepNumber = j,
-
-                        Title =
-                            $"Bước thực hiện {j}",
-
-                        Description =
-                            faker.Lorem.Paragraph(),
-
-                        TimerMinutes =
-                            faker.Random.Int(1, 30),
-
-                        CreatedAt =
-                            DateTime.UtcNow
-                    });
+                recipe.Steps.Add(new RecipeStep
+                {
+                    Id = Guid.NewGuid(),
+                    RecipeId = recipeId,
+                    StepNumber = stepNumber,
+                    Title = $"Bước thực hiện {stepNumber}",
+                    Description = faker.Lorem.Paragraph(),
+                    TimerMinutes = faker.Random.Int(1, 30),
+                    CreatedAt = now
+                });
             }
 
             recipes.Add(recipe);

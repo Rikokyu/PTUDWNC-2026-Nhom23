@@ -86,8 +86,8 @@ public sealed class GetCurrentUserQueryTests
         public Task<UserDto> UpdateProfileAsync(
             Guid userId,
             string displayName,
-            string? avatarUrl,
             string? bio,
+            string? avatarUrl,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
@@ -104,17 +104,8 @@ public sealed class GetCurrentUserQueryTests
             throw new NotSupportedException();
 
         public Task ResetPasswordAsync(
-            string email,
             string token,
             string newPassword,
-            CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task<UserDto> UpdateProfileAsync(
-            Guid userId,
-            string displayName,
-            string? bio,
-            string? avatarUrl,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 

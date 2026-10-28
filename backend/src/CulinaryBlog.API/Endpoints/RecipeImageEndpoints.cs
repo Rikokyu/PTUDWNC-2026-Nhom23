@@ -10,7 +10,7 @@ namespace CulinaryBlog.API.Endpoints;
 
 public static class RecipeImageEndpoints
 {
-    private const long MaximumMultipartRequestSize = 6 * 1024 * 1024;
+    private const long MaximumMultipartRequestSize = 21 * 1024 * 1024;
 
     public static IEndpointRouteBuilder MapRecipeImageEndpoints(
         this IEndpointRouteBuilder endpoints,
@@ -38,10 +38,10 @@ public static class RecipeImageEndpoints
                     throw new ArgumentException("Image file is required.");
                 }
 
-                if (request.File.Length > 5 * 1024 * 1024)
+                if (request.File.Length > 20 * 1024 * 1024)
                 {
                     throw new ArgumentException(
-                        "Image size cannot exceed 5 MB.");
+                        "Image size cannot exceed 20 MB.");
                 }
 
                 await using var stream = new MemoryStream();

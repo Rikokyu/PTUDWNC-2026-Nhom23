@@ -12,7 +12,7 @@ namespace CulinaryBlog.Application.Features.Recipes.Commands.UploadRecipeImage;
 public sealed class UploadRecipeImageCommandHandler
     : IRequestHandler<UploadRecipeImageCommand, RecipeImageDto>
 {
-    private const int MaxFileSize = 5 * 1024 * 1024;
+    private const int MaxFileSize = 20 * 1024 * 1024;
 
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -154,7 +154,7 @@ public sealed class UploadRecipeImageCommandHandler
         if (content.Length > MaxFileSize)
         {
             throw new ArgumentException(
-                "Image size cannot exceed 5 MB.");
+                "Image size cannot exceed 20 MB.");
         }
 
         if (altText?.Length > 200)

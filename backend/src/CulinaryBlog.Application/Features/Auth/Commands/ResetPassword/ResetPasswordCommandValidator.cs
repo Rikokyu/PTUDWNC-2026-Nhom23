@@ -7,11 +7,6 @@ public sealed class ResetPasswordCommandValidator
 {
     public ResetPasswordCommandValidator()
     {
-        RuleFor(command => command.Email)
-            .NotEmpty()
-            .EmailAddress()
-            .MaximumLength(320);
-
         RuleFor(command => command.Token)
             .NotEmpty()
             .MaximumLength(4096);

@@ -119,6 +119,7 @@ public sealed class IdentityService : IIdentityService
                 user.AvatarUrl,
                 user.Bio,
                 user.Role,
+                user.IsActive,
                 user.CreatedAt);
     }
 
@@ -336,6 +337,7 @@ public sealed class IdentityService : IIdentityService
             user.AvatarUrl,
             user.Bio,
             user.Role,
+            user.IsActive,
             user.CreatedAt);
 
     private string CreatePasswordResetToken(ApplicationUser user)
@@ -435,6 +437,11 @@ public sealed class IdentityService : IIdentityService
         DateTime ExpiresAtUtc,
         string Nonce);
 
+    private sealed record PasswordResetPayload(
+        Guid UserId,
+        string Email,
+        string PasswordHash);
+
     public async Task RevokeRefreshTokensAsync(
         Guid userId,
         CancellationToken cancellationToken)
@@ -516,7 +523,8 @@ public sealed class IdentityService : IIdentityService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim("email", user.Email),
-            new Claim("role", user.Role)
+            new Claim("role", user.Role),
+            new Claim("token_version", user.TokenVersion.ToString())
         };
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),

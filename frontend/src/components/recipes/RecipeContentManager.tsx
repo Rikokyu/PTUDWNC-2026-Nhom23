@@ -161,8 +161,8 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       setError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
       return;
     }
-    if (imageFile.size > 5 * 1024 * 1024) {
-      setError("Kích thước ảnh không được vượt quá 5 MB.");
+    if (imageFile.size > 20 * 1024 * 1024) {
+      setError("Kích thước ảnh không được vượt quá 20 MB.");
       return;
     }
 
@@ -291,7 +291,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
         </header>
         <form onSubmit={uploadImage} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <label className="block space-y-1.5 text-xs font-semibold text-content-secondary">
-            Chọn ảnh (JPEG, PNG, WebP, AVIF; tối đa 5 MB)
+            Chọn ảnh (JPEG, PNG, WebP, AVIF; tối đa 20 MB)
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/avif"

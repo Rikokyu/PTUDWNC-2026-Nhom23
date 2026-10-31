@@ -16,6 +16,55 @@ namespace CulinaryBlog.Application.Tests;
 public sealed class CategoryModuleTests
 {
     [Fact]
+    public async Task GetCategoriesHandler_CacheMiss_MapsAndCachesCategories()
+    {
+        var repository = new FakeCategoryRepository();
+        var soup = Category.Create("Súp", "sup", "Món súp", null, 2);
+        var salad = Category.Create("Salad", "salad", "Món salad", null, 1);
+        repository.Categories.AddRange([soup, salad]);
+        repository.RecipeCounts[soup.Id] = 4;
+        repository.RecipeCounts[salad.Id] = 7;
+
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var handler = new GetCategoriesQueryHandler(
+            new FakeUnitOfWork(repository),
+            cache);
+
+        var firstResult = await handler.Handle(
+            new GetCategoriesQuery(),
+            CancellationToken.None);
+        var secondResult = await handler.Handle(
+            new GetCategoriesQuery(),
+            CancellationToken.None);
+
+        Assert.Equal(["Salad", "Súp"], firstResult.Select(item => item.Name));
+        Assert.Equal([7, 4], firstResult.Select(item => item.RecipeCount));
+        Assert.Equal(firstResult, secondResult);
+        Assert.Equal(1, repository.PublishedRecipeCountQueryCount);
+        Assert.True(cache.TryGetValue(
+            GetCategoriesQueryHandler.CacheKey,
+            out IReadOnlyList<CulinaryBlog.Application.DTOs.Categories.CategoryDto>? cached));
+        Assert.Equal(firstResult, cached);
+    }
+
+    [Fact]
+    public async Task GetCategoriesHandler_WhenNoCategories_ReturnsEmptyList()
+    {
+        var repository = new FakeCategoryRepository();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var handler = new GetCategoriesQueryHandler(
+            new FakeUnitOfWork(repository),
+            cache);
+
+        var result = await handler.Handle(
+            new GetCategoriesQuery(),
+            CancellationToken.None);
+
+        Assert.Empty(result);
+        Assert.Equal(1, repository.PublishedRecipeCountQueryCount);
+    }
+
+    [Fact]
     public void SlugHelper_RemovesVietnameseDiacritics()
     {
         var slug = SlugHelper.Generate("  Món Chính Đặc Biệt!  ");
@@ -238,6 +287,7 @@ public sealed class CategoryModuleTests
     {
         public List<Category> Categories { get; } = [];
         public Dictionary<Guid, int> RecipeCounts { get; } = [];
+        public int PublishedRecipeCountQueryCount { get; private set; }
 
         public Task<Category?> GetByIdAsync(
             Guid id,
@@ -284,7 +334,14 @@ public sealed class CategoryModuleTests
         public Task<IReadOnlyList<CategoryWithRecipeCount>>
             GetAllWithPublishedRecipeCountAsync(
                 CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<CategoryWithRecipeCount>>(
+            GetAllWithPublishedRecipeCountCoreAsync(cancellationToken);
+
+        private Task<IReadOnlyList<CategoryWithRecipeCount>>
+            GetAllWithPublishedRecipeCountCoreAsync(
+                CancellationToken cancellationToken)
+        {
+            PublishedRecipeCountQueryCount++;
+            return Task.FromResult<IReadOnlyList<CategoryWithRecipeCount>>(
                 Categories
                     .Where(category => !category.IsDeleted)
                     .OrderBy(category => category.Name)
@@ -292,6 +349,7 @@ public sealed class CategoryModuleTests
                         category,
                         RecipeCounts.GetValueOrDefault(category.Id)))
                     .ToList());
+        }
 
         public Task<int> GetPublishedRecipeCountAsync(
             Guid categoryId,

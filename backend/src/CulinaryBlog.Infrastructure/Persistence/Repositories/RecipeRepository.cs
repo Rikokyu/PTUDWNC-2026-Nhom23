@@ -2,6 +2,7 @@ using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace CulinaryBlog.Infrastructure.Persistence.Repositories;
 
@@ -150,11 +151,10 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             .Where(recipe =>
                 recipe.CategoryId == categoryId
                 && !recipe.IsDeleted
-                && !recipe.Category.IsDeleted
-                && (recipe.Status == RecipeStatus.Published
-                    || (isAuthenticated
-                        && currentUserId.HasValue
-                        && recipe.AuthorId == currentUserId.Value)))
+                && !recipe.Category.IsDeleted)
+            .Where(CreateCategoryVisibilityPredicate(
+                currentUserId,
+                isAuthenticated && !isAdmin))
             .Include(recipe => recipe.Category)
             .Include(recipe => recipe.Images);
 
@@ -167,6 +167,19 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             .ToListAsync(cancellationToken);
 
         return (items, totalCount);
+    }
+
+    public static Expression<Func<Recipe, bool>>
+        CreateCategoryVisibilityPredicate(
+            Guid? currentUserId,
+            bool includeOwnDrafts)
+    {
+        return recipe =>
+            recipe.Status == RecipeStatus.Published
+            || (includeOwnDrafts
+                && currentUserId.HasValue
+                && recipe.Status == RecipeStatus.Draft
+                && recipe.AuthorId == currentUserId.Value);
     }
 
     public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)>

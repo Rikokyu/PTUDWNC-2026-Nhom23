@@ -215,7 +215,9 @@ public sealed class RegistrationAndImageUploadTests
             new FakeCategoryStore(),
             repository,
             new FakeUnitOfWork(repository),
-            new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true));
+            new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true),
+            new FakeImageCleanupJobScheduler(),
+            NullLogger<RecipeCommandHandler>.Instance);
 
         await Assert.ThrowsAsync<ForbiddenException>(() =>
             handler.Handle(

@@ -46,6 +46,10 @@ public interface IRecipeRepository : IRepository<Recipe>
         Guid id,
         CancellationToken cancellationToken = default);
 
+    Task<RecipeImage?> GetImageByIdAsync(
+        Guid imageId,
+        CancellationToken cancellationToken = default);
+
     Task<Recipe?> GetByIdWithDetailsAsync(
         Guid id,
         CancellationToken cancellationToken = default);

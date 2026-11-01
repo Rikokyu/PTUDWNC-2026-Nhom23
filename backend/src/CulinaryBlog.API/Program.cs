@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.OpenApi;
 using Hangfire;
+using CulinaryBlog.Infrastructure.BackgroundJobs;
 using Asp.Versioning;
 
 var builder =
@@ -168,6 +169,24 @@ if (builder.Configuration.GetValue("Hangfire:Enabled", true)
         {
             Authorization = [new HangfireAdminAuthorizationFilter()]
         });
+}
+
+if (builder.Configuration.GetValue("Hangfire:Enabled", true))
+{
+    try
+    {
+        RecurringJob.AddOrUpdate<SitemapGenerationJob>(
+            "sitemap-generation",
+            job => job.GenerateAsync(CancellationToken.None),
+            "0 2 * * *",
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(
+            ex,
+            "Could not register the daily sitemap generation job.");
+    }
 }
 
 // API endpoints

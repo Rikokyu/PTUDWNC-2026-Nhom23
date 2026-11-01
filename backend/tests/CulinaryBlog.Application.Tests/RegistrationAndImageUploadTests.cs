@@ -8,11 +8,80 @@ using CulinaryBlog.Domain.Enums;
 using CulinaryBlog.Domain.Interfaces;
 using Xunit;
 using Microsoft.Extensions.Logging.Abstractions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using CulinaryBlog.Infrastructure.BackgroundJobs;
 
 namespace CulinaryBlog.Application.Tests;
 
 public sealed class RegistrationAndImageUploadTests
 {
+    [Fact]
+    public async Task ResizeJob_StoresVariantsAndPersistsTheirUrls()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        var image = RecipeImage.Create(
+            recipe.Id,
+            "/uploads/original.png",
+            null,
+            true,
+            1);
+        recipe.Images.Add(image);
+        var repository = new FakeRecipeRepository(recipe);
+        var unitOfWork = new FakeUnitOfWork(repository);
+        var storage = new FakeFileStorageService
+        {
+            ReadContent = await CreatePngAsync()
+        };
+        var job = new ImageResizeJob(
+            unitOfWork,
+            storage,
+            NullLogger<ImageResizeJob>.Instance);
+
+        await job.ProcessAsync(image.Id, CancellationToken.None);
+
+        Assert.Equal("/uploads/original.png", image.OriginalUrl);
+        Assert.Equal(2, storage.UploadCount);
+        Assert.EndsWith("test-1.webp", image.MediumUrl);
+        Assert.EndsWith("test-2.webp", image.ThumbnailUrl);
+        Assert.Equal(1, unitOfWork.SaveCount);
+        Assert.Empty(storage.DeletedUrls);
+    }
+
+    [Fact]
+    public async Task ResizeJob_WhenVariantUploadFails_LeavesOriginalAndDoesNotPersistPartialUrls()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        var image = RecipeImage.Create(
+            recipe.Id,
+            "/uploads/original.png",
+            null,
+            true,
+            1);
+        recipe.Images.Add(image);
+        var repository = new FakeRecipeRepository(recipe);
+        var unitOfWork = new FakeUnitOfWork(repository);
+        var storage = new FakeFileStorageService
+        {
+            ReadContent = await CreatePngAsync(),
+            FailUploadOnCall = 2
+        };
+        var job = new ImageResizeJob(
+            unitOfWork,
+            storage,
+            NullLogger<ImageResizeJob>.Instance);
+
+        await Assert.ThrowsAsync<IOException>(
+            () => job.ProcessAsync(image.Id, CancellationToken.None));
+
+        Assert.Equal("/uploads/original.png", image.OriginalUrl);
+        Assert.Null(image.MediumUrl);
+        Assert.Null(image.ThumbnailUrl);
+        Assert.Equal(0, unitOfWork.SaveCount);
+        Assert.Single(storage.DeletedUrls);
+        Assert.EndsWith("test-1.webp", storage.DeletedUrls[0]);
+    }
+
     [Fact]
     public async Task UploadImage_FirstValidImageBecomesPrimary()
     {
@@ -473,6 +542,18 @@ public sealed class RegistrationAndImageUploadTests
     private static byte[] ValidPngBytes() =>
         [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
 
+    private static async Task<byte[]> CreatePngAsync()
+    {
+        using var image = new Image<Rgba32>(
+            Configuration.Default,
+            64,
+            48,
+            new Rgba32(100, 149, 237));
+        await using var stream = new MemoryStream();
+        await image.SaveAsPngAsync(stream);
+        return stream.ToArray();
+    }
+
     private sealed class FakeCurrentUser(
         Guid userId,
         bool isAuthor = true,
@@ -487,11 +568,14 @@ public sealed class RegistrationAndImageUploadTests
     private sealed class FakeFileStorageService : IFileStorageService
     {
         public int UploadCount { get; private set; }
+        public byte[] ReadContent { get; init; } = [];
+        public int? FailUploadOnCall { get; init; }
+        public List<string> DeletedUrls { get; } = [];
 
         public Task<byte[]> ReadAsync(
             string fileUrl,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(Array.Empty<byte>());
+            Task.FromResult(ReadContent);
 
         public Task<string> UploadAsync(
             ReadOnlyMemory<byte> content,
@@ -500,14 +584,23 @@ public sealed class RegistrationAndImageUploadTests
             CancellationToken cancellationToken = default)
         {
             UploadCount++;
+
+            if (UploadCount == FailUploadOnCall)
+            {
+                throw new IOException("Simulated storage upload failure.");
+            }
+
             return Task.FromResult(
-                $"/uploads/{folder}/test{extension}");
+                $"/uploads/{folder}/test-{UploadCount}{extension}");
         }
 
         public Task DeleteAsync(
             string fileUrl,
-            CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+            CancellationToken cancellationToken = default)
+        {
+            DeletedUrls.Add(fileUrl);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeImageResizeJobScheduler
@@ -583,6 +676,12 @@ public sealed class RegistrationAndImageUploadTests
             Guid id,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(id == recipe.Id ? recipe : null);
+
+        public Task<RecipeImage?> GetImageByIdAsync(
+            Guid imageId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(recipe.Images.SingleOrDefault(
+                image => image.Id == imageId));
 
         public Task<Recipe?> GetByIdAsync(
             Guid id,

@@ -38,10 +38,10 @@ public static class RecipeImageEndpoints
                     throw new ArgumentException("Image file is required.");
                 }
 
-                if (request.File.Length > 20 * 1024 * 1024)
+                if (request.File.Length > 5 * 1024 * 1024)
                 {
                     throw new ArgumentException(
-                        "Image size cannot exceed 20 MB.");
+                        "Image size cannot exceed 5 MB.");
                 }
 
                 await using var stream = new MemoryStream();

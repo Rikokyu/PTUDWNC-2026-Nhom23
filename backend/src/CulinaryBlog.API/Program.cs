@@ -15,9 +15,19 @@ using Microsoft.OpenApi;
 using Hangfire;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
 using Asp.Versioning;
+using Serilog;
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
+});
 
 var webRootPath = Path.Combine(
     builder.Environment.ContentRootPath,
@@ -149,6 +159,7 @@ app.UseCors("Frontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<CorrelationIdMiddleware>();
 var staticContentTypes = new FileExtensionContentTypeProvider();
 staticContentTypes.Mappings[".avif"] = "image/avif";
 app.UseStaticFiles(new StaticFileOptions

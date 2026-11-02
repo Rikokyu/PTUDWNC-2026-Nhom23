@@ -29,6 +29,7 @@ export default function NewRecipePage() {
   const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageAltText, setImageAltText] = useState("");
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   // Form State
   const [title, setTitle] = useState("");
@@ -51,6 +52,17 @@ export default function NewRecipePage() {
       setCategoryId(categoriesQuery.data[0].id);
     }
   }, [categoryId, categoriesQuery.data]);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl]);
+
+  const handleImageFileChange = (file: File | null) => {
+    setImageFile(file);
+    setImagePreviewUrl(file ? URL.createObjectURL(file) : null);
+  };
 
   // Dynamic Ingredients State
   const [ingredients, setIngredients] = useState([
@@ -102,8 +114,8 @@ export default function NewRecipePage() {
         setSubmitError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
         return;
       }
-      if (imageFile.size > 5 * 1024 * 1024) {
-        setSubmitError("Kích thước ảnh không được vượt quá 5 MB.");
+      if (imageFile.size > 20 * 1024 * 1024) {
+        setSubmitError("Kích thước ảnh không được vượt quá 20 MB.");
         return;
       }
     }
@@ -208,10 +220,75 @@ export default function NewRecipePage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* SECTION 1: GENERAL INFORMATIONS */}
+        {/* SECTION 1: OPTIONAL RECIPE THUMBNAIL */}
+        <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-subtle">
+          <div className="border-b border-slate-100 pb-2">
+            <h2 className="text-base font-bold text-content-primary">
+              1. Ảnh thumbnail <span className="font-normal text-content-tertiary">(không bắt buộc)</span>
+            </h2>
+            <p className="mt-1 text-sm text-content-secondary">
+              Chọn ảnh đại diện cho công thức. Bạn có thể bỏ qua và thêm ảnh sau.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_220px] sm:items-start">
+            <div className="space-y-4">
+              <label className="block space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-content-secondary">
+                  Chọn ảnh (JPEG, PNG, WebP hoặc AVIF; tối đa 20 MB)
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  onChange={(event) => handleImageFileChange(event.target.files?.[0] ?? null)}
+                  className="block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal"
+                />
+              </label>
+              {imageFile && (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="min-w-0 truncate text-sm text-content-secondary">
+                    Đã chọn: {imageFile.name}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleImageFileChange(null)}
+                    leftIcon={<Trash2 className="h-4 w-4" />}
+                  >
+                    Bỏ ảnh
+                  </Button>
+                </div>
+              )}
+              <Input
+                label="Mô tả ảnh (không bắt buộc)"
+                value={imageAltText}
+                maxLength={200}
+                onChange={(event) => setImageAltText(event.target.value)}
+                disabled={!imageFile}
+              />
+            </div>
+
+            <div className="flex min-h-36 items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 p-2">
+              {imagePreviewUrl ? (
+                <img
+                  src={imagePreviewUrl}
+                  alt={imageAltText || `Ảnh xem trước ${title || "công thức"}`}
+                  className="h-36 w-full rounded-md object-cover"
+                />
+              ) : (
+                <p className="text-center text-sm text-content-tertiary">
+                  Chưa chọn ảnh
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 2: GENERAL INFORMATIONS */}
         <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-subtle space-y-5">
           <h2 className="text-base font-bold text-content-primary pb-2 border-b border-slate-100">
-            1. Thông tin chung
+            2. Thông tin chung
           </h2>
 
           <Input
@@ -283,24 +360,6 @@ export default function NewRecipePage() {
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block space-y-1.5 text-xs font-semibold uppercase tracking-wider text-content-secondary">
-              Ảnh công thức (không bắt buộc, tối đa 5 MB)
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/avif"
-                onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-                className="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal normal-case"
-              />
-            </label>
-            <Input
-              label="Mô tả ảnh"
-              value={imageAltText}
-              maxLength={200}
-              onChange={(event) => setImageAltText(event.target.value)}
-              helperText={imageFile?.name}
-            />
-          </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6">
@@ -317,11 +376,11 @@ export default function NewRecipePage() {
           </label>
         </div>
 
-        {/* SECTION 2: INGREDIENTS BUILDER */}
+        {/* SECTION 3: INGREDIENTS BUILDER */}
         <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-subtle space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <h2 className="text-base font-bold text-content-primary">
-              2. Danh sách nguyên liệu
+              3. Danh sách nguyên liệu
             </h2>
             <Button
               type="button"
@@ -392,11 +451,11 @@ export default function NewRecipePage() {
           </div>
         </div>
 
-        {/* SECTION 3: STEPS BUILDER */}
+        {/* SECTION 4: STEPS BUILDER */}
         <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-subtle space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <h2 className="text-base font-bold text-content-primary">
-              3. Các bước thực hiện
+              4. Các bước thực hiện
             </h2>
             <Button
               type="button"

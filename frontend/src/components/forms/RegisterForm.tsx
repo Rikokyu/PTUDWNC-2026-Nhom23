@@ -2,14 +2,16 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Lock, Mail, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
-import { authApi } from "@/lib/api/auth";
+import { authApi, saveAuthSession } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/error";
 
 export function RegisterForm() {
+  const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +25,9 @@ export function RegisterForm() {
     setRegistered(false);
     setIsLoading(true);
     try {
-      await authApi.register(displayName, email, password);
-      setRegistered(true);
+      const session = await authApi.register(displayName, email, password);
+      saveAuthSession(session);
+      router.push("/dashboard");
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));
     } finally {

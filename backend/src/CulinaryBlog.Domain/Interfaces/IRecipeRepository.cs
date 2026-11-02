@@ -12,6 +12,7 @@ public interface IRecipeRepository : IRepository<Recipe>
             Guid? categoryId,
             DifficultyLevel? difficulty,
             int? maxCookTime,
+            string? search,
             string sort,
             Guid? currentUserId,
             bool isAuthenticated,

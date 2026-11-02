@@ -44,7 +44,7 @@ public static class RecipeStepEndpoints
 					new { id });
 			})
 			.WithSummary("Add a preparation step to a recipe.")
-			.RequireAuthorization();
+			.RequireAuthorization("AuthorOrAdmin");
 
 		group.MapPut(
 			"/{stepId:guid}",
@@ -72,7 +72,7 @@ public static class RecipeStepEndpoints
 			})
 			.WithSummary("Update a recipe preparation step.")
 			.Produces(StatusCodes.Status200OK)
-			.RequireAuthorization();
+			.RequireAuthorization("AuthorOrAdmin");
 
 		group.MapDelete(
 			"/{stepId:guid}",
@@ -92,7 +92,7 @@ public static class RecipeStepEndpoints
 				return Results.NoContent();
 			})
 			.WithSummary("Delete a recipe preparation step.")
-			.RequireAuthorization();
+			.RequireAuthorization("AuthorOrAdmin");
 
 		group.MapPut(
 			"/order",
@@ -112,7 +112,7 @@ public static class RecipeStepEndpoints
 				return Results.Ok();
 			})
 			.WithSummary("Reorder recipe steps and assign consecutive step numbers.")
-			.RequireAuthorization();
+			.RequireAuthorization("AuthorOrAdmin");
 
 		return endpoints;
 	}

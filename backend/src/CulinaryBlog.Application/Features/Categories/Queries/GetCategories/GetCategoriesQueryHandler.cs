@@ -8,16 +8,16 @@ namespace CulinaryBlog.Application.Features.Categories.Queries.GetCategories;
 public sealed class GetCategoriesQueryHandler
 	: IRequestHandler<GetCategoriesQuery, IReadOnlyList<CategoryDto>>
 {
-	private readonly ICategoryRepository _categoryRepository;
+	private readonly IUnitOfWork _unitOfWork;
 	private readonly IMemoryCache _cache;
 
 	public const string CacheKey = "categories:all";
 
 	public GetCategoriesQueryHandler(
-		ICategoryRepository categoryRepository,
+		IUnitOfWork unitOfWork,
 		IMemoryCache cache)
 	{
-		_categoryRepository = categoryRepository;
+		_unitOfWork = unitOfWork;
 		_cache = cache;
 	}
 
@@ -33,7 +33,7 @@ public sealed class GetCategoriesQueryHandler
 			return cachedCategories;
 		}
 
-		var categories = await _categoryRepository
+		var categories = await _unitOfWork.Categories
 			.GetAllWithPublishedRecipeCountAsync(cancellationToken);
 
 		var result = categories

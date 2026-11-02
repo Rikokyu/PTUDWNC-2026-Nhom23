@@ -12,8 +12,8 @@ public sealed class SmtpEmailSender(
     ILogger<SmtpEmailSender> logger) : IEmailSender
 {
     public bool IsConfigured =>
-        !string.IsNullOrWhiteSpace(configuration["Email:Smtp:Host"])
-        && !string.IsNullOrWhiteSpace(configuration["Email:Smtp:From"]);
+        !string.IsNullOrWhiteSpace(configuration["Email:Smtp:Host"] ?? configuration["Smtp:Host"])
+        && !string.IsNullOrWhiteSpace(configuration["Email:Smtp:From"] ?? configuration["Smtp:FromAddress"]);
 
     public async Task SendAsync(
         string recipient,
@@ -21,21 +21,23 @@ public sealed class SmtpEmailSender(
         string htmlBody,
         CancellationToken cancellationToken)
     {
-        var host = configuration["Email:Smtp:Host"];
-        var from = configuration["Email:Smtp:From"];
+        var host = configuration["Email:Smtp:Host"] ?? configuration["Smtp:Host"];
+        var from = configuration["Email:Smtp:From"] ?? configuration["Smtp:FromAddress"];
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(from))
         {
             throw new EmailServiceUnavailableException(
                 "Password recovery email is unavailable because Email:Smtp:Host and Email:Smtp:From are not configured.");
         }
 
-        var port = configuration.GetValue("Email:Smtp:Port", 587);
+        var port = configuration.GetValue<int?>("Email:Smtp:Port")
+            ?? configuration.GetValue("Smtp:Port", 587);
         using var client = new SmtpClient(host, port)
         {
-            EnableSsl = configuration.GetValue("Email:Smtp:EnableSsl", true)
+            EnableSsl = configuration.GetValue<bool?>("Email:Smtp:EnableSsl")
+                ?? configuration.GetValue("Smtp:UseSsl", true)
         };
-        var username = configuration["Email:Smtp:Username"];
-        var password = configuration["Email:Smtp:Password"];
+        var username = configuration["Email:Smtp:Username"] ?? configuration["Smtp:UserName"];
+        var password = configuration["Email:Smtp:Password"] ?? configuration["Smtp:Password"];
         if (!string.IsNullOrWhiteSpace(username))
         {
             client.Credentials = new NetworkCredential(username, password);

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using ConflictException = CulinaryBlog.Domain.Exceptions.ConflictException;
 
@@ -42,7 +43,7 @@ public sealed class IdentityService : IIdentityService
             .ToTimeLimitedDataProtector();
     }
 
-    public async Task<AuthUserDto> RegisterAsync(
+    public async Task<AuthSessionDto> RegisterAsync(
         string displayName,
         string email,
         string password,
@@ -73,7 +74,7 @@ public sealed class IdentityService : IIdentityService
         await _context.ApplicationUsers.AddAsync(user, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return ToDto(user);
+        return await CreateSessionAsync(user, cancellationToken);
     }
 
     public async Task<AuthSessionDto?> LoginAsync(
@@ -118,14 +119,15 @@ public sealed class IdentityService : IIdentityService
                 user.AvatarUrl,
                 user.Bio,
                 user.Role,
+                user.IsActive,
                 user.CreatedAt);
     }
 
     public async Task<UserDto> UpdateProfileAsync(
         Guid userId,
         string displayName,
-        string? avatarUrl,
         string? bio,
+        string? avatarUrl,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(displayName))
@@ -335,7 +337,105 @@ public sealed class IdentityService : IIdentityService
             user.AvatarUrl,
             user.Bio,
             user.Role,
+            user.IsActive,
             user.CreatedAt);
+
+    private string CreatePasswordResetToken(ApplicationUser user)
+    {
+        var payload = JsonSerializer.SerializeToUtf8Bytes(
+            new PasswordResetTokenPayload(
+                user.Id,
+                user.Email,
+                GetPasswordHashFingerprint(user.PasswordHash),
+                DateTime.UtcNow.AddMinutes(30),
+                Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))));
+        var encodedPayload = Base64UrlEncode(payload);
+        var signature = HMACSHA256.HashData(
+            GetPasswordResetSigningKey(),
+            Encoding.UTF8.GetBytes(encodedPayload));
+
+        return $"{encodedPayload}.{Base64UrlEncode(signature)}";
+    }
+
+    private bool ValidatePasswordResetToken(ApplicationUser user, string token)
+    {
+        var parts = token.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2)
+        {
+            return false;
+        }
+
+        try
+        {
+            var signature = Base64UrlDecode(parts[1]);
+            var expectedSignature = HMACSHA256.HashData(
+                GetPasswordResetSigningKey(),
+                Encoding.UTF8.GetBytes(parts[0]));
+            if (signature.Length != expectedSignature.Length
+                || !CryptographicOperations.FixedTimeEquals(
+                    signature,
+                    expectedSignature))
+            {
+                return false;
+            }
+
+            var payload = JsonSerializer.Deserialize<PasswordResetTokenPayload>(
+                Base64UrlDecode(parts[0]));
+            return payload is not null
+                && payload.UserId == user.Id
+                && string.Equals(payload.Email, user.Email, StringComparison.Ordinal)
+                && string.Equals(
+                    payload.PasswordHashFingerprint,
+                    GetPasswordHashFingerprint(user.PasswordHash),
+                    StringComparison.Ordinal)
+                && payload.ExpiresAtUtc > DateTime.UtcNow;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private byte[] GetPasswordResetSigningKey()
+    {
+        var secret = _configuration["Jwt:Secret"];
+        if (string.IsNullOrWhiteSpace(secret)
+            || Encoding.UTF8.GetByteCount(secret) < 32)
+        {
+            throw new InvalidOperationException(
+                "Jwt:Secret must be configured with at least 32 UTF-8 bytes.");
+        }
+
+        return Encoding.UTF8.GetBytes(secret);
+    }
+
+    private static string Base64UrlEncode(byte[] value) =>
+        Convert.ToBase64String(value)
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
+
+    private static byte[] Base64UrlDecode(string value)
+    {
+        var base64 = value.Replace('-', '+').Replace('_', '/');
+        base64 = base64.PadRight(base64.Length + ((4 - base64.Length % 4) % 4), '=');
+        return Convert.FromBase64String(base64);
+    }
+
+    private static string GetPasswordHashFingerprint(string passwordHash) =>
+        Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(passwordHash)));
+
+    private sealed record PasswordResetTokenPayload(
+        Guid UserId,
+        string Email,
+        string PasswordHashFingerprint,
+        DateTime ExpiresAtUtc,
+        string Nonce);
 
     private sealed record PasswordResetPayload(
         Guid UserId,
@@ -423,7 +523,8 @@ public sealed class IdentityService : IIdentityService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim("email", user.Email),
-            new Claim("role", user.Role)
+            new Claim("role", user.Role),
+            new Claim("token_version", user.TokenVersion.ToString())
         };
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),

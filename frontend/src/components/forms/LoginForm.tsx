@@ -2,18 +2,19 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { authApi } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/error";
-import { useAuthStore } from "@/store/useAuthStore";
+import { saveAuthSession } from "@/lib/api/auth";
+import { safeReturnPath } from "@/lib/auth/session";
 
 export function LoginForm() {
   const router = useRouter();
-  const setSession = useAuthStore((state) => state.setSession);
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,8 +26,8 @@ export function LoginForm() {
     setIsLoading(true);
     try {
       const session = await authApi.login(email, password);
-      setSession(session.accessToken, session.user);
-      router.push("/dashboard");
+      saveAuthSession(session);
+      router.replace(safeReturnPath(searchParams.get("next")));
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));
     } finally {

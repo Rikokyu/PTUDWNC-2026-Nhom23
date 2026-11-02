@@ -8,7 +8,6 @@ import { Search, Plus, Menu, X, ChefHat, User, Bookmark, LogOut } from "lucide-r
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { authApi } from "@/lib/api/auth";
-import { getApiErrorMessage } from "@/lib/api/error";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export interface NavbarProps {
@@ -26,24 +25,21 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const clearSession = useAuthStore((state) => state.clearSession);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [logoutError, setLogoutError] = useState<string | null>(null);
   const currentUser = user ?? (authUser
     ? { name: authUser.displayName, email: authUser.email }
     : null);
+  const isAdmin = authUser?.role === "Admin";
 
   async function handleLogout() {
-    setLogoutError(null);
     try {
       await authApi.logout();
-    } catch (error) {
-      setLogoutError(getApiErrorMessage(error));
+    } catch {
+      // Always clear the local session, even if the API is unavailable.
+    } finally {
       clearSession();
       setUserDropdownOpen(false);
-      return;
+      router.push("/");
     }
-    clearSession();
-    setUserDropdownOpen(false);
-    router.push("/");
   }
 
   const navLinks = [
@@ -158,6 +154,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                     </div>
 
                     <div className="py-1">
+                      {isAdmin && (
+                        <Link href="/dashboard/categories" onClick={() => setUserDropdownOpen(false)} className="block px-4 py-2 text-xs text-content-secondary hover:bg-slate-50">
+                          Quản lý danh mục
+                        </Link>
+                      )}
                       <Link
                         href="/dashboard/profile"
                         onClick={() => setUserDropdownOpen(false)}
@@ -185,11 +186,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                     </div>
 
                     <div className="border-t border-slate-100 pt-1">
-                      {logoutError && (
-                        <p role="alert" className="px-4 py-2 text-xs text-rose-700">
-                          {logoutError}
-                        </p>
-                      )}
                       <button
                         onClick={() => void handleLogout()}
                         className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors text-left"

@@ -48,7 +48,7 @@ public sealed class GetRecipeBySlugQueryHandler
                 && recipe.AuthorId.Value ==
                    _currentUser.UserId.Value;
 
-            if (!_currentUser.IsAdmin && !isOwner)
+            if (!isOwner)
             {
                 throw new ForbiddenException(
                     "You do not have permission to view this recipe.");

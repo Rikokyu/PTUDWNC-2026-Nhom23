@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/next-dev.cjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -26,6 +26,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@next/swc-wasm-nodejs": "15.5.26",
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",

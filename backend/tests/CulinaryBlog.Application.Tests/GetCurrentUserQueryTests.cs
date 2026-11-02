@@ -20,6 +20,7 @@ public sealed class GetCurrentUserQueryTests
             null,
             null,
             "Author",
+            true,
             DateTime.UtcNow);
         var identityService = new FakeIdentityService(expectedUser);
         var handler = new GetCurrentUserQueryHandler(
@@ -60,7 +61,7 @@ public sealed class GetCurrentUserQueryTests
     {
         public Guid? RequestedUserId { get; private set; }
 
-        public Task<AuthUserDto> RegisterAsync(
+        public Task<AuthSessionDto> RegisterAsync(
             string displayName,
             string email,
             string password,
@@ -85,8 +86,8 @@ public sealed class GetCurrentUserQueryTests
         public Task<UserDto> UpdateProfileAsync(
             Guid userId,
             string displayName,
-            string? avatarUrl,
             string? bio,
+            string? avatarUrl,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 

@@ -12,7 +12,7 @@ namespace CulinaryBlog.Application.Features.Recipes.Commands.UploadRecipeImage;
 public sealed class UploadRecipeImageCommandHandler
     : IRequestHandler<UploadRecipeImageCommand, RecipeImageDto>
 {
-    private const int MaxFileSize = 5 * 1024 * 1024;
+    private const int MaxFileSize = 20 * 1024 * 1024;
 
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -51,11 +51,13 @@ public sealed class UploadRecipeImageCommandHandler
                 $"Recipe with id '{request.RecipeId}' was not found.");
         }
 
-        if (!_currentUser.IsAdmin
-            && recipe.AuthorId != _currentUser.UserId)
+        var isOwner = recipe.AuthorId == _currentUser.UserId;
+        var adminCanEditPublished = _currentUser.IsAdmin
+            && recipe.Status == Domain.Enums.RecipeStatus.Published;
+        if (!isOwner && !adminCanEditPublished)
         {
             throw new ForbiddenException(
-                "Only the recipe owner or an administrator can upload images.");
+                "You can upload images only to your own recipe or, as an administrator, another author's published recipe.");
         }
 
         var shouldBePrimary =
@@ -152,7 +154,7 @@ public sealed class UploadRecipeImageCommandHandler
         if (content.Length > MaxFileSize)
         {
             throw new ArgumentException(
-                "Image size cannot exceed 5 MB.");
+                "Image size cannot exceed 20 MB.");
         }
 
         if (altText?.Length > 200)

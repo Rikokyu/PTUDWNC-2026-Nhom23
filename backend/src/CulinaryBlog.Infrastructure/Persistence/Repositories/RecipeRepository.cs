@@ -247,6 +247,15 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 cancellationToken);
     }
 
+    public Task<RecipeImage?> GetImageByIdAsync(
+        Guid imageId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.RecipeImages.SingleOrDefaultAsync(
+            image => image.Id == imageId,
+            cancellationToken);
+    }
+
     public async Task<Recipe?> GetByIdWithDetailsAsync(
         Guid id,
         CancellationToken cancellationToken = default)

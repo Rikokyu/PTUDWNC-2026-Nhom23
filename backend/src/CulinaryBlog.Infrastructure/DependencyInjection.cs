@@ -69,6 +69,22 @@ public static class DependencyInjection
             services.AddScoped<
                 IWelcomeEmailJobScheduler,
                 HangfireWelcomeEmailJobScheduler>();
+            var sitemapBaseUrl = configuration["Sitemap:BaseUrl"]
+                ?? configuration["WelcomeEmail:ApplicationUrl"]
+                ?? "http://localhost:3000";
+            var sitemapStaticPaths = configuration
+                .GetSection("Sitemap:StaticPaths")
+                .Get<string[]>()
+                ?? ["/", "/recipes", "/categories"];
+            var webRootPath = Path.Combine(
+                contentRootPath ?? Directory.GetCurrentDirectory(),
+                "wwwroot");
+            services.AddScoped(provider => new SitemapGenerationJob(
+                provider.GetRequiredService<CulinaryBlogDbContext>(),
+                webRootPath,
+                sitemapBaseUrl,
+                sitemapStaticPaths,
+                provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SitemapGenerationJob>>()));
         }
         else
         {

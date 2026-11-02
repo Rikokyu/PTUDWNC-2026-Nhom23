@@ -62,6 +62,7 @@ services:
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-no-reply@culinary.local}
       Smtp__FromName: ${SMTP_FROM_NAME:-Culinary Blog}
       WelcomeEmail__ApplicationUrl: ${WELCOME_EMAIL_APPLICATION_URL:-http://localhost:3000}
+      Sitemap__BaseUrl: ${SITEMAP_BASE_URL:-http://localhost:3000}
     ports:
       - "5080:8080"
     volumes:

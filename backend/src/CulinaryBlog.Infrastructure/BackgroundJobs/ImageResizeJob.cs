@@ -1,13 +1,12 @@
 using CulinaryBlog.Application.Common.Interfaces;
-using CulinaryBlog.Infrastructure.Persistence;
+using CulinaryBlog.Domain.Interfaces;
 using Hangfire;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CulinaryBlog.Infrastructure.BackgroundJobs;
 
 public sealed class ImageResizeJob(
-    CulinaryBlogDbContext dbContext,
+    IUnitOfWork unitOfWork,
     IFileStorageService fileStorage,
     ILogger<ImageResizeJob> logger)
 {
@@ -19,10 +18,9 @@ public sealed class ImageResizeJob(
         Guid imageId,
         CancellationToken cancellationToken)
     {
-        var image = await dbContext.RecipeImages
-            .SingleOrDefaultAsync(
-                item => item.Id == imageId,
-                cancellationToken);
+        var image = await unitOfWork.Recipes.GetImageByIdAsync(
+            imageId,
+            cancellationToken);
 
         if (image is null)
         {
@@ -65,7 +63,7 @@ public sealed class ImageResizeJob(
             image.MediumUrl = mediumUrl;
             image.ThumbnailUrl = thumbnailUrl;
             image.UpdatedAt = DateTime.UtcNow;
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch
         {

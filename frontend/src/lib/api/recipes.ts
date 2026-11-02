@@ -64,6 +64,26 @@ export const recipeApi = {
     );
     return response.data.data;
   },
+  update: async (
+    recipeId: string,
+    request: {
+      title: string;
+      description: string;
+      instructions: string | null;
+      categoryId: string;
+      prepTimeMinutes: number;
+      cookTimeMinutes: number;
+      servings: number;
+      difficulty: number;
+      rowVersion: number;
+    },
+  ): Promise<RecipeApiDetailDto> => {
+    const response = await apiClient.put<{ data: RecipeApiDetailDto }>(
+      `/api/v1/recipes/${recipeId}`,
+      request,
+    );
+    return response.data.data;
+  },
   getManagedById: async (
     recipeId: string,
     isAdmin: boolean,
@@ -188,5 +208,8 @@ export const recipeApi = {
       `/api/v1/recipes/${recipeId}/${action}`,
     );
     return response.data.data;
+  },
+  deleteRecipe: async (recipeId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/recipes/${recipeId}`);
   },
 };

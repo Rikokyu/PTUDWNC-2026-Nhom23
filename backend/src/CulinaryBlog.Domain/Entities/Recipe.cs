@@ -66,6 +66,12 @@ public class Recipe : BaseEntity
                 "A recipe must have at least one step before publishing.");
         }
 
+        if (Ingredients.Count == 0)
+        {
+            throw new ValidationException(
+                "A recipe must have at least one ingredient before publishing.");
+        }
+
         Status = RecipeStatus.Published;
         UpdatedAt = DateTime.UtcNow;
     }

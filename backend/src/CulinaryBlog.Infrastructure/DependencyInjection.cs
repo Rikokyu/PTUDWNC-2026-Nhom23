@@ -13,7 +13,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Identity;
-using Minio;
 
 namespace CulinaryBlog.Infrastructure;
 
@@ -97,34 +96,8 @@ public static class DependencyInjection
             "uploads");
         var publicBasePath = configuration["FileStorage:PublicBasePath"]
             ?? "/uploads";
-        var minioEndpoint = configuration["Minio:Endpoint"];
-        if (!string.IsNullOrWhiteSpace(minioEndpoint))
-        {
-            var accessKey = configuration["Minio:AccessKey"] ?? "minioadmin";
-            var secretKey = configuration["Minio:SecretKey"] ?? "minioadmin";
-            var bucket = configuration["Minio:Bucket"] ?? "culinary-blog";
-            var publicEndpoint = configuration["Minio:PublicEndpoint"]
-                ?? minioEndpoint;
-
-            var minioUri = new Uri(minioEndpoint, UriKind.Absolute);
-            services.AddSingleton<IMinioClient>(_ => new MinioClient()
-                .WithEndpoint(minioUri.Host, minioUri.Port)
-                .WithCredentials(accessKey, secretKey)
-                .WithSSL(minioUri.Scheme.Equals(
-                    Uri.UriSchemeHttps,
-                    StringComparison.OrdinalIgnoreCase))
-                .Build());
-            services.AddScoped<IFileStorageService>(provider =>
-                new MinioObjectStorageService(
-                    provider.GetRequiredService<IMinioClient>(),
-                    bucket,
-                    publicEndpoint));
-        }
-        else
-        {
-            services.AddScoped<IFileStorageService>(
-                _ => new LocalFileStorageService(uploadRoot, publicBasePath));
-        }
+        services.AddScoped<IFileStorageService>(
+            _ => new LocalFileStorageService(uploadRoot, publicBasePath));
 
         return services;
     }

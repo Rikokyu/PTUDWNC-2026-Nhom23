@@ -50,12 +50,9 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 && currentUserId.HasValue
                 && x.AuthorId == currentUserId.Value);
         }
-        else if (isAdmin && includeAllStatuses)
+        else if (isAdmin)
         {
-            query = query.Where(x =>
-                x.Status == RecipeStatus.Published
-                || (currentUserId.HasValue
-                    && x.AuthorId == currentUserId.Value));
+            // Administrators can see every non-deleted recipe/status.
         }
         else if (isAuthenticated && currentUserId.HasValue)
         {

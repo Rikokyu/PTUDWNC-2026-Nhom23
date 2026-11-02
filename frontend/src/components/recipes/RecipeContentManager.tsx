@@ -8,8 +8,10 @@ import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
 import { recipeApi } from "@/lib/api/recipes";
+import { useCategories } from "@/hooks/useCategories";
 import { resolveApiAssetUrl } from "@/lib/api/axios";
 import { getApiErrorMessage } from "@/lib/api/error";
 import { IngredientUnitField } from "@/components/recipes/IngredientUnitField";
@@ -161,8 +163,8 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       setError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
       return;
     }
-    if (imageFile.size > 20 * 1024 * 1024) {
-      setError("Kích thước ảnh không được vượt quá 20 MB.");
+    if (imageFile.size > 5 * 1024 * 1024) {
+      setError("Kích thước ảnh không được vượt quá 5 MB.");
       return;
     }
 
@@ -178,7 +180,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
 
   async function changeStatus(action: "publish" | "unpublish" | "archive") {
     const confirmations = {
-      publish: null,
+      publish: "Xuất bản công thức này? Công thức sẽ hiển thị công khai.",
       unpublish: "Hủy xuất bản công thức này? Công thức sẽ không còn hiển thị công khai.",
       archive: "Lưu trữ công thức này? Công thức sẽ không còn hiển thị công khai.",
     };
@@ -193,6 +195,20 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
           ? "Đã chuyển công thức về bản nháp."
           : "Đã lưu trữ công thức.",
     );
+  }
+
+  async function softDeleteRecipe() {
+    if (!window.confirm("Xóa mềm công thức này? Công thức sẽ bị ẩn khỏi hệ thống và dữ liệu vẫn được giữ lại để khôi phục.")) {
+      return;
+    }
+
+    const succeeded = await runMutation(
+      () => recipeApi.deleteRecipe(recipeId),
+      "Đã xóa mềm công thức.",
+    );
+    if (succeeded) {
+      router.push("/dashboard/recipes");
+    }
   }
 
   if (!accessToken) {
@@ -269,6 +285,15 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
               Lưu trữ
             </Button>
           )}
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={busy}
+            leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+            onClick={() => void softDeleteRecipe()}
+          >
+            Xóa
+          </Button>
           <Link href={`/recipes/${encodeURIComponent(recipe.slug)}`}>
             <Button variant="outline">Xem công thức</Button>
           </Link>
@@ -282,6 +307,12 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
         </p>
       )}
 
+      <BasicRecipeEditor
+        recipe={recipe}
+        busy={busy}
+        runMutation={runMutation}
+      />
+
       <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5">
         <header>
           <h2 className="text-xl font-bold">Ảnh công thức</h2>
@@ -291,7 +322,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
         </header>
         <form onSubmit={uploadImage} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <label className="block space-y-1.5 text-xs font-semibold text-content-secondary">
-            Chọn ảnh (JPEG, PNG, WebP, AVIF; tối đa 20 MB)
+            Chọn ảnh (JPEG, PNG, WebP, AVIF; tối đa 5 MB)
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/avif"
@@ -348,12 +379,13 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
                       size="sm"
                       disabled={busy}
                       leftIcon={<Trash2 className="h-3.5 w-3.5" />}
-                      onClick={() =>
+                      onClick={() => {
+                        if (!window.confirm("Xóa ảnh này khỏi công thức? Tệp gốc sẽ được đưa vào hàng đợi dọn dẹp.")) return;
                         void runMutation(
                           () => recipeApi.deleteImage(recipe.id, image.id),
                           "Đã xóa ảnh; tệp được đưa vào hàng đợi dọn dẹp.",
                         )
-                      }
+                      }}
                     >
                       Xóa
                     </Button>
@@ -443,6 +475,99 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
         </div>
       </section>
     </main>
+  );
+}
+
+function BasicRecipeEditor({
+  recipe,
+  busy,
+  runMutation,
+}: {
+  recipe: RecipeApiDetailDto;
+  busy: boolean;
+  runMutation: (operation: () => Promise<unknown>, message: string) => Promise<boolean>;
+}) {
+  const categoriesQuery = useCategories();
+  const [title, setTitle] = useState(recipe.title);
+  const [description, setDescription] = useState(recipe.description);
+  const [instructions, setInstructions] = useState(recipe.instructions);
+  const [categoryId, setCategoryId] = useState(recipe.category.id);
+  const [prepTimeMinutes, setPrepTimeMinutes] = useState(recipe.prepTimeMinutes);
+  const [cookTimeMinutes, setCookTimeMinutes] = useState(recipe.cookTimeMinutes);
+  const [servings, setServings] = useState(recipe.servings);
+  const [difficulty, setDifficulty] = useState(recipe.difficulty);
+
+  return (
+    <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5">
+      <header>
+        <h2 className="text-xl font-bold">Thông tin công thức</h2>
+      </header>
+      <form
+        className="grid gap-4 sm:grid-cols-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void runMutation(
+            () =>
+              recipeApi.update(recipe.id, {
+                title,
+                description,
+                instructions,
+                categoryId,
+                prepTimeMinutes,
+                cookTimeMinutes,
+                servings,
+                difficulty,
+                rowVersion: recipe.rowVersion,
+              }),
+            "Đã cập nhật thông tin công thức.",
+          );
+        }}
+      >
+        <div className="sm:col-span-2">
+          <Input label="Tên công thức" required maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} />
+        </div>
+        <div className="sm:col-span-2 space-y-1.5">
+          <label className="block text-xs font-semibold text-content-secondary">Mô tả</label>
+          <textarea
+            required
+            maxLength={500}
+            rows={3}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm"
+          />
+        </div>
+        <Select
+          label="Danh mục"
+          value={categoryId}
+          onChange={(event) => setCategoryId(event.target.value)}
+          options={(categoriesQuery.data ?? []).map((category) => ({
+            label: category.name,
+            value: category.id,
+          }))}
+        />
+        <Select
+          label="Độ khó"
+          value={String(difficulty)}
+          onChange={(event) => setDifficulty(Number(event.target.value) as typeof difficulty)}
+          options={[
+            { label: "Dễ", value: "1" },
+            { label: "Trung bình", value: "2" },
+            { label: "Khó", value: "3" },
+            { label: "Chuyên gia", value: "4" },
+          ]}
+        />
+        <Input label="Thời gian chuẩn bị (phút)" type="number" min={1} value={prepTimeMinutes} onChange={(event) => setPrepTimeMinutes(Number(event.target.value))} />
+        <Input label="Thời gian nấu (phút)" type="number" min={0} value={cookTimeMinutes} onChange={(event) => setCookTimeMinutes(Number(event.target.value))} />
+        <Input label="Khẩu phần" type="number" min={1} max={50} value={servings} onChange={(event) => setServings(Number(event.target.value))} />
+        <div className="sm:col-span-2">
+          <Input label="Hướng dẫn chung" value={instructions} maxLength={10000} onChange={(event) => setInstructions(event.target.value)} />
+        </div>
+        <Button type="submit" isLoading={busy} className="sm:col-span-2">
+          Lưu thông tin
+        </Button>
+      </form>
+    </section>
   );
 }
 

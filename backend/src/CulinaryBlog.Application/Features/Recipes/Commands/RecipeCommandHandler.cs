@@ -111,6 +111,11 @@ public sealed class RecipeCommandHandler :
 
         await _recipeStore.AddAsync(recipe, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Recipe {RecipeId} created by user {UserId} with status {Status}.",
+            recipe.Id,
+            _currentUser.UserId,
+            RecipeStatus.Draft);
 
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
@@ -156,6 +161,10 @@ public sealed class RecipeCommandHandler :
         recipe.UpdatedAt = DateTime.UtcNow;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Recipe {RecipeId} updated by user {UserId}.",
+            recipe.Id,
+            _currentUser.UserId);
 
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
@@ -191,6 +200,11 @@ public sealed class RecipeCommandHandler :
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Recipe {RecipeId} status changed to {Status} by user {UserId}.",
+            recipe.Id,
+            request.Status,
+            _currentUser.UserId);
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 
@@ -203,6 +217,10 @@ public sealed class RecipeCommandHandler :
             cancellationToken);
         recipe.SoftDelete();
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Recipe {RecipeId} soft-deleted by user {UserId}.",
+            recipe.Id,
+            _currentUser.UserId);
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 
@@ -409,6 +427,12 @@ public sealed class RecipeCommandHandler :
             .FirstOrDefault(item => item.Id == request.ImageId)
             ?? throw new NotFoundException("Recipe image was not found.");
 
+        if (request.AltText?.Trim().Length > 200)
+        {
+            throw new ValidationException(
+                "Image alt text must be at most 200 characters.");
+        }
+
         if (request.IsPrimary == false && image.IsPrimary)
         {
             throw new ValidationException(
@@ -426,6 +450,11 @@ public sealed class RecipeCommandHandler :
 
         recipe.UpdatedAt = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Recipe image {ImageId} metadata updated for recipe {RecipeId} by user {UserId}.",
+            image.Id,
+            recipe.Id,
+            _currentUser.UserId);
     }
 
     public async Task Handle(
@@ -463,6 +492,11 @@ public sealed class RecipeCommandHandler :
 
         recipe.UpdatedAt = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Recipe image {ImageId} deleted from recipe {RecipeId} by user {UserId}.",
+            image.Id,
+            recipe.Id,
+            _currentUser.UserId);
 
         foreach (var fileUrl in filesToDelete)
         {
@@ -491,7 +525,7 @@ public sealed class RecipeCommandHandler :
 
         if (!_currentUser.IsAuthenticated
             || !_currentUser.UserId.HasValue
-            || recipe.AuthorId != _currentUser.UserId)
+            || (recipe.AuthorId != _currentUser.UserId && !_currentUser.IsAdmin))
         {
             throw new ForbiddenException(
                 "You do not have permission to modify this recipe.");
@@ -510,14 +544,13 @@ public sealed class RecipeCommandHandler :
             ?? throw new NotFoundException("Recipe was not found.");
         var isOwner = _currentUser.UserId.HasValue
             && recipe.AuthorId == _currentUser.UserId;
-        var adminCanEditPublished = _currentUser.IsAdmin
-            && recipe.Status == RecipeStatus.Published;
+        var isAdmin = _currentUser.IsAdmin;
 
         if (!_currentUser.IsAuthenticated
-            || (!isOwner && !adminCanEditPublished))
+            || (!isOwner && !isAdmin))
         {
             throw new ForbiddenException(
-                "You can edit only your own recipes or, as an administrator, another author's published recipe.");
+                "You can edit only your own recipes or as an administrator.");
         }
 
         return recipe;

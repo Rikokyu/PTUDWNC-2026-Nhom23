@@ -206,23 +206,25 @@ public sealed class RegistrationAndImageUploadTests
     }
 
     [Fact]
-    public async Task UpdateRecipe_RejectsAdminForAnotherAuthorsDraft()
+    public async Task UpdateRecipe_AllowsAdminForAnotherAuthorsDraft()
     {
         var recipe = CreateRecipe(Guid.NewGuid());
         var repository = new FakeRecipeRepository(recipe);
+        var unitOfWork = new FakeUnitOfWork(repository);
         var handler = new RecipeCommandHandler(
             repository,
             new FakeCategoryStore(),
             repository,
-            new FakeUnitOfWork(repository),
+            unitOfWork,
             new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true),
             new FakeImageCleanupJobScheduler(),
             NullLogger<RecipeCommandHandler>.Instance);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            handler.Handle(
-                UpdateCommand(recipe, recipe.RowVersion),
-                CancellationToken.None));
+        await handler.Handle(
+            UpdateCommand(recipe, recipe.RowVersion),
+            CancellationToken.None);
+
+        Assert.Equal(1, unitOfWork.SaveCount);
     }
 
     [Fact]

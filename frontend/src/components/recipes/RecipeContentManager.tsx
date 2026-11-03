@@ -15,6 +15,7 @@ import { getApiErrorMessage } from "@/lib/api/error";
 import { IngredientUnitField } from "@/components/recipes/IngredientUnitField";
 import { isNonNegativeIngredientQuantity } from "@/lib/recipeIngredient";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useCategories } from "@/hooks/useCategories";
 import type {
   RecipeApiDetailDto,
   RecipeApiIngredientDto,
@@ -89,6 +90,13 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
   );
   const [newStep, setNewStep] = useState<StepFields>(stepFields());
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!imageFile) { setImagePreview(null); return; }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
   const [altText, setAltText] = useState("");
 
   const queryKey = ["recipe-management", recipeId, isAdmin] as const;
@@ -283,10 +291,15 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       )}
 
       <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5">
+        <RecipeFieldsEditor key={`${recipe.id}:${recipe.rowVersion}`} recipe={recipe} busy={busy}
+          save={(payload) => runMutation(() => recipeApi.update(recipe.id, payload), "Đã cập nhật công thức.")} />
+      </section>
+
+      <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5">
         <header>
           <h2 className="text-xl font-bold">Ảnh công thức</h2>
           <p className="mt-1 text-sm text-content-secondary">
-            Ảnh được lưu trên local file storage hiện cấu hình cho backend.
+            Chọn ảnh JPEG, PNG, WebP hoặc AVIF tối đa 5 MB.
           </p>
         </header>
         <form onSubmit={uploadImage} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
@@ -309,6 +322,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
             Tải ảnh lên
           </Button>
         </form>
+        {imagePreview && <img src={imagePreview} alt={altText || "Ảnh xem trước"} className="max-h-64 rounded-lg object-contain" />}
         {recipe.images.length === 0 ? (
           <p className="text-sm text-content-secondary">Chưa có ảnh cho công thức này.</p>
         ) : (
@@ -444,6 +458,48 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       </section>
     </main>
   );
+}
+
+function RecipeFieldsEditor({ recipe, busy, save }: {
+  recipe: RecipeApiDetailDto;
+  busy: boolean;
+  save: (payload: Parameters<typeof recipeApi.update>[1]) => Promise<boolean>;
+}) {
+  const categories = useCategories();
+  const [fields, setFields] = useState({ title: recipe.title, description: recipe.description,
+    instructions: recipe.instructions, categoryId: recipe.category.id, difficulty: recipe.difficulty,
+    prepTimeMinutes: recipe.prepTimeMinutes, cookTimeMinutes: recipe.cookTimeMinutes, servings: recipe.servings });
+  return <form className="space-y-4" onSubmit={event => {
+    event.preventDefault();
+    void save({ ...fields, title: fields.title.trim(), description: fields.description.trim(), rowVersion: recipe.rowVersion });
+  }}>
+    <h2 className="text-xl font-bold">Thông tin công thức</h2>
+    <Input label="Tên công thức" required minLength={3} maxLength={200} value={fields.title}
+      onChange={event => setFields({ ...fields, title: event.target.value })} />
+    <label className="block space-y-2 text-sm">Mô tả công thức
+      <textarea required maxLength={2000} className="block w-full rounded border p-3" value={fields.description}
+        onChange={event => setFields({ ...fields, description: event.target.value })} />
+    </label>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <label className="space-y-2 text-sm">Danh mục
+        <select className="block w-full rounded border p-2" value={fields.categoryId} required
+          onChange={event => setFields({ ...fields, categoryId: event.target.value })}>
+          <option value={recipe.category.id}>{recipe.category.name}</option>
+          {categories.data?.filter(item => item.id !== recipe.category.id).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+      </label>
+      <label className="space-y-2 text-sm">Độ khó
+        <select className="block w-full rounded border p-2" value={fields.difficulty}
+          onChange={event => setFields({ ...fields, difficulty: Number(event.target.value) as typeof fields.difficulty })}>
+          <option value={1}>Easy</option><option value={2}>Medium</option><option value={3}>Hard</option><option value={4}>Expert</option>
+        </select>
+      </label>
+      {([['prepTimeMinutes', 'Thời gian chuẩn bị'], ['cookTimeMinutes', 'Thời gian nấu'], ['servings', 'Khẩu phần']] as const).map(([key, label]) =>
+        <Input key={key} label={label} required type="number" min={key === 'servings' ? 1 : 0} max={key === 'servings' ? 100 : 1440}
+          value={fields[key]} onChange={event => setFields({ ...fields, [key]: Number(event.target.value) })} />)}
+    </div>
+    <Button type="submit" isLoading={busy}>Lưu thông tin công thức</Button>
+  </form>;
 }
 
 function IngredientEditor({

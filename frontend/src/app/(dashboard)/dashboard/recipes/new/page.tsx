@@ -28,6 +28,14 @@ export default function NewRecipePage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState("");
+  useEffect(() => {
+    if (!imageFile) { setImagePreview(null); return; }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
   const [imageAltText, setImageAltText] = useState("");
 
   // Form State
@@ -289,7 +297,18 @@ export default function NewRecipePage() {
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/avif"
-                onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                disabled={isSubmitting}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  setImageError("");
+                  if (file && (!['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type) || file.size > 5 * 1024 * 1024)) {
+                    setImageError("Chọn ảnh JPEG, PNG, WebP hoặc AVIF tối đa 5 MB.");
+                    setImageFile(null);
+                    event.target.value = "";
+                    return;
+                  }
+                  setImageFile(file ?? null);
+                }}
                 className="mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal normal-case"
               />
             </label>
@@ -301,6 +320,8 @@ export default function NewRecipePage() {
               helperText={imageFile?.name}
             />
           </div>
+          {imageError && <p role="alert" className="text-sm text-rose-700">{imageError}</p>}
+          {imagePreview && <img src={imagePreview} alt={imageAltText || "Ảnh xem trước"} className="mt-4 max-h-64 rounded-lg object-contain" />}
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6">

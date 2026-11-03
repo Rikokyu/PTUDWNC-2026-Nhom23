@@ -191,6 +191,8 @@ public sealed class RecipeCommandHandler :
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        CulinaryBlog.Application.Common.Behaviors.CulinaryTelemetry.Changes.Add(1,
+            new KeyValuePair<string, object?>("operation", request.Status.ToString()));
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 

@@ -31,7 +31,7 @@ public sealed class SearchRecipesQueryHandler
         if (request.Page < 1 || request.PageSize is < 1 or > 50
             || (long)(request.Page - 1) * request.PageSize > int.MaxValue)
         {
-            throw new ValidationException("page must be positive and pageSize must be between 1 and 50.");
+            throw new PaginationException("page must be positive and pageSize must be between 1 and 50.");
         }
 
         if (request.CategoryId == Guid.Empty || request.MaxCookTime < 0

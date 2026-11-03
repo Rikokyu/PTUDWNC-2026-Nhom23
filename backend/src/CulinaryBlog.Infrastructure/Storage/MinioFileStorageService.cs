@@ -65,6 +65,7 @@ public sealed class MinioFileStorageService : IFileStorageService
         string contentType,
         CancellationToken cancellationToken = default)
     {
+        using var activity = CulinaryBlog.Application.Common.Behaviors.CulinaryTelemetry.Source.StartActivity("minio.upload", System.Diagnostics.ActivityKind.Client);
         try
         {
             var bucketExists = await _client.BucketExistsAsync(
@@ -133,6 +134,7 @@ public sealed class MinioFileStorageService : IFileStorageService
         string objectKey,
         CancellationToken cancellationToken = default)
     {
+        using var activity = CulinaryBlog.Application.Common.Behaviors.CulinaryTelemetry.Source.StartActivity("minio.delete", System.Diagnostics.ActivityKind.Client);
         objectKey = ResolveObjectKey(objectKey);
 
         for (var attempt = 0; ; attempt++)
@@ -208,6 +210,7 @@ public sealed class MinioFileStorageService : IFileStorageService
 
     public async Task<byte[]> ReadAsync(string fileUrl, CancellationToken cancellationToken = default)
     {
+        using var activity = CulinaryBlog.Application.Common.Behaviors.CulinaryTelemetry.Source.StartActivity("minio.read", System.Diagnostics.ActivityKind.Client);
         var key = ResolveObjectKey(fileUrl);
         using var buffer = new MemoryStream();
         try

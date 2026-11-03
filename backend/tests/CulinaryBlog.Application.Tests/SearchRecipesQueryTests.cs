@@ -25,7 +25,7 @@ public sealed class SearchRecipesQueryTests
     {
         var handler = new SearchRecipesQueryHandler(null!);
 
-        await Assert.ThrowsAsync<ValidationException>(() =>
+        await Assert.ThrowsAsync<PaginationException>(() =>
             handler.Handle(
                 new SearchRecipesQuery("soup", 1, 51),
                 CancellationToken.None));

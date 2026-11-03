@@ -18,6 +18,7 @@ export const Sidebar: React.FC = () => {
   const [logoutError, setLogoutError] = React.useState("");
 
   const menuItems = [
+    { label: user?.role === "Admin" ? "Người dùng" : "Tác giả", href: "/dashboard/users", icon: User },
     { label: "Tổng quan", href: "/dashboard", icon: Grid },
     { label: "Công thức của tôi", href: "/dashboard/recipes", icon: ChefHat },
     { label: "Tạo công thức mới", href: "/dashboard/recipes/new", icon: PlusCircle },

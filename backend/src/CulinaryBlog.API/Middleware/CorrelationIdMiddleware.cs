@@ -24,6 +24,8 @@ public sealed class CorrelationIdMiddleware
 		context.Response.Headers[HeaderName] = correlationId;
 
 		using (LogContext.PushProperty("CorrelationId", correlationId))
+		using (LogContext.PushProperty("TraceId", System.Diagnostics.Activity.Current?.TraceId.ToString()))
+		using (LogContext.PushProperty("SpanId", System.Diagnostics.Activity.Current?.SpanId.ToString()))
 		{
 			await _next(context);
 		}

@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
                         .Assembly));
 
         services.AddHttpContextAccessor();
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(TelemetryBehavior<,>));
 
         services.AddMemoryCache();
 

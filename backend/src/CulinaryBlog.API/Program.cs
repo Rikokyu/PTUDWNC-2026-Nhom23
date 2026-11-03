@@ -22,6 +22,8 @@ using Asp.Versioning;
 
 var builder =
     WebApplication.CreateBuilder(args);
+builder.Services.AddCulinaryTelemetry(builder.Configuration);
+builder.Services.AddScoped<CulinaryBlog.Application.Common.Interfaces.IUserDirectory, CulinaryBlog.Infrastructure.Identity.UserDirectory>();
 
 var webRootPath = Path.Combine(
     builder.Environment.ContentRootPath,
@@ -183,6 +185,8 @@ builder.Services.AddHttpClient("MinioHealthCheck", client =>
 
 var app =
     builder.Build();
+app.Lifetime.ApplicationStarted.Register(() => app.Logger.LogInformation("Application started"));
+app.Lifetime.ApplicationStopping.Register(() => app.Logger.LogInformation("Application stopping"));
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 

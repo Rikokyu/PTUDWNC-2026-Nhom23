@@ -11,6 +11,10 @@ import type {
 } from "@/types/api";
 
 export const recipeApi = {
+  update: async (id: string, request: Omit<CreateRecipeRequest, "ingredients" | "steps"> & { rowVersion: number }): Promise<RecipeApiDetailDto> => {
+    const response = await apiClient.put<{ data: RecipeApiDetailDto }>(`/api/v1/recipes/${id}`, request);
+    return response.data.data;
+  },
   getList: async (
     filters: RecipeFilters = {},
   ): Promise<PaginatedResult<RecipeApiSummaryDto>> => {

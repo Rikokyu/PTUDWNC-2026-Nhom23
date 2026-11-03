@@ -210,8 +210,10 @@ public sealed class MissingFeaturesHttpTests : IAsyncLifetime
         foreach (var path in new[] { "/api/v1/recipes", "/api/v1/recipes/search?q=pho" })
         {
             var separator = path.Contains('?') ? "&" : "?";
-            foreach (var invalid in new[] { "difficulty=999", "categoryId=bad", "maxCookTime=-1", "sort=bad", "page=2147483647&pageSize=50" })
+            foreach (var invalid in new[] { "difficulty=999", "categoryId=bad", "maxCookTime=-1", "sort=bad" })
                 Assert.Equal(HttpStatusCode.UnprocessableEntity, (await client.GetAsync(path + separator + invalid)).StatusCode);
+            foreach (var invalid in new[] { "page=0", "pageSize=0", "pageSize=51", "page=abc", "page=", "page=2147483647&pageSize=50" })
+                Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(path + separator + invalid)).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(path + separator + "sort=-title&difficulty=Easy&maxCookTime=30")).StatusCode);
         }
     }

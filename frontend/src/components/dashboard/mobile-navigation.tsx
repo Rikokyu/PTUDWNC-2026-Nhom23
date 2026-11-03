@@ -9,6 +9,7 @@ export function DashboardMobileNavigation() {
   const pathname = usePathname();
   const { user } = useAuth();
   const items = [
+    { href: "/dashboard/users", label: user?.role === "Admin" ? "Người dùng" : "Tác giả" },
     { href: "/dashboard", label: "Tổng quan" },
     { href: "/dashboard/recipes", label: "Công thức" },
     { href: "/dashboard/recipes/new", label: "Viết bài" },

@@ -35,6 +35,10 @@ public class GlobalExceptionMiddleware
         {
             await _next(context);
         }
+        catch (PaginationException ex)
+        {
+            await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Invalid pagination", ex.Message);
+        }
         catch (ApplicationNotFoundException ex)
         {
             await WriteProblemAsync(

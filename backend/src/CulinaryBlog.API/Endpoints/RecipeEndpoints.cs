@@ -282,7 +282,7 @@ public static class RecipeEndpoints
                 1,
                 out var page))
         {
-            throw new ValidationException(
+            throw new PaginationException(
                 "page must be a positive integer.");
         }
 
@@ -291,13 +291,13 @@ public static class RecipeEndpoints
                 12,
                 out var pageSize))
         {
-            throw new ValidationException(
+            throw new PaginationException(
                 "pageSize must be a positive integer.");
         }
 
         if (pageSize > 50 || (long)(page - 1) * pageSize > int.MaxValue)
         {
-            throw new ValidationException(
+            throw new PaginationException(
                 "pageSize cannot be greater than 50.");
         }
 
@@ -433,13 +433,13 @@ public static class RecipeEndpoints
 
         if (!TryParsePositiveInt(query["page"], 1, out var page))
         {
-            throw new ValidationException("page must be a positive integer.");
+            throw new PaginationException("page must be a positive integer.");
         }
 
-        if (!TryParsePositiveInt(query["pageSize"], 10, out var pageSize)
-            || pageSize > 50)
+        if (!TryParsePositiveInt(query["pageSize"], 12, out var pageSize)
+            || pageSize > 50 || (long)(page - 1) * pageSize > int.MaxValue)
         {
-            throw new ValidationException("pageSize must be between 1 and 50.");
+            throw new PaginationException("pageSize must be between 1 and 50.");
         }
 
         var sort = query["sort"].FirstOrDefault();
@@ -513,7 +513,7 @@ public static class RecipeEndpoints
         int defaultValue,
         out int result)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (value is null)
         {
             result = defaultValue;
             return true;

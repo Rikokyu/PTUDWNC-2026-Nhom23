@@ -57,7 +57,7 @@ public sealed class RecipeSearchValidationTests
     [InlineData(int.MaxValue, 50)]
     public async Task InvalidPagination_IsRejectedBeforeDatabaseAccess(int page, int size)
     {
-        await Assert.ThrowsAsync<ValidationException>(() => CreateHandler().Handle(
+        await Assert.ThrowsAsync<PaginationException>(() => CreateHandler().Handle(
             new SearchRecipesQuery("phở", page, size), CancellationToken.None));
     }
 

@@ -26,6 +26,9 @@ public sealed class GetRecipesQueryHandler
         GetRecipesQuery request,
         CancellationToken cancellationToken)
     {
+        if (request.Page < 1 || request.PageSize is < 1 or > 50
+            || (long)(request.Page - 1) * request.PageSize > int.MaxValue)
+            throw new CulinaryBlog.Application.Common.Exceptions.PaginationException("Invalid recipe pagination.");
         var result =
             await _recipeRepository.GetPagedAsync(
                 request.Page,

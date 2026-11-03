@@ -2,6 +2,8 @@ using CulinaryBlog.API.CurrentUser;
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Common.Behaviors;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
+using CulinaryBlog.Application.Features.Auth.Commands.GoogleLogin;
+using CulinaryBlog.Application.Features.Auth.Commands.RefreshToken;
 using CulinaryBlog.Application.Features.Auth.Commands.ChangePassword;
 using CulinaryBlog.Application.Features.Auth.Commands.ForgotPassword;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
@@ -42,6 +44,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<
             IValidator<LoginCommand>,
             LoginCommandValidator>();
+        services.AddTransient<
+            IValidator<GoogleLoginCommand>,
+            GoogleLoginCommandValidator>();
+        services.AddTransient<
+            IValidator<RefreshTokenCommand>,
+            RefreshTokenCommandValidator>();
         services.AddTransient<
             IValidator<ChangePasswordCommand>,
             ChangePasswordCommandValidator>();

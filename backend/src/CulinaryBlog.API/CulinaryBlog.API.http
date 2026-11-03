@@ -1,0 +1,58 @@
+@apiBase = http://localhost:5080
+@accessToken = replace-with-access-token
+@refreshToken = replace-with-refresh-token
+
+### Register and receive an access/refresh token pair
+POST {{apiBase}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "displayName": "Nguyen Van A",
+  "email": "a@example.com",
+  "password": "SecurePass1!"
+}
+
+### Log in with email and password
+POST {{apiBase}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "a@example.com",
+  "password": "SecurePass1!"
+}
+
+### Exchange a Google authorization code (obtain code and verifier through the frontend PKCE flow)
+POST {{apiBase}}/api/v1/auth/google
+Content-Type: application/json
+
+{
+  "code": "authorization-code-from-google",
+  "codeVerifier": "replace-with-the-43-to-128-character-pkce-verifier"
+}
+
+### Rotate a refresh token
+POST {{apiBase}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Get the authenticated user's profile
+GET {{apiBase}}/api/v1/auth/me
+Authorization: Bearer {{accessToken}}
+
+### Update the authenticated user's profile
+PUT {{apiBase}}/api/v1/auth/me
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "displayName": "Nguyen Van A",
+  "bio": "Sharing family recipes.",
+  "avatarUrl": null
+}
+
+### Log out and revoke this user's active refresh tokens
+POST {{apiBase}}/api/v1/auth/logout
+Authorization: Bearer {{accessToken}}

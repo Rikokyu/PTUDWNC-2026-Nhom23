@@ -2,11 +2,14 @@ using System.Security.Claims;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
 using CulinaryBlog.Application.Features.Auth.Commands.Logout;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
+using CulinaryBlog.Application.Features.Auth.Commands.GoogleLogin;
+using CulinaryBlog.Application.Features.Auth.Commands.RefreshToken;
 using CulinaryBlog.Application.Features.Auth.Commands.ChangePassword;
 using CulinaryBlog.Application.Features.Auth.Commands.ForgotPassword;
 using CulinaryBlog.Application.Features.Auth.Commands.ResetPassword;
 using CulinaryBlog.Application.Features.Auth.Commands.UpdateUserProfile;
 using CulinaryBlog.Application.DTOs.Users;
+using CulinaryBlog.Application.DTOs.Auth;
 using CulinaryBlog.Application.Features.Auth.Queries.GetCurrentUser;
 using MediatR;
 
@@ -43,7 +46,7 @@ public static class AuthEndpoints
             .WithDescription(
                 "Creates an Author account, returns an access/refresh token pair, and queues a welcome email.")
             .AllowAnonymous()
-            .Produces(StatusCodes.Status201Created)
+            .Produces<AuthSessionDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
@@ -53,9 +56,29 @@ public static class AuthEndpoints
             .WithDescription(
                 "Returns a JWT access token and a refresh token.")
             .AllowAnonymous()
-            .Produces(StatusCodes.Status200OK)
+            .Produces<AuthSessionDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/google", GoogleLoginAsync)
+            .WithName($"{routeVersion}GoogleLogin")
+            .WithSummary("Sign in or register with Google OAuth 2.0.")
+            .WithDescription(
+                "Exchanges a Google authorization code using PKCE, validates the Google identity, and returns a CulinaryBlog token pair.")
+            .AllowAnonymous()
+            .Produces<AuthSessionDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapPost("/refresh", RefreshTokenAsync)
+            .WithName($"{routeVersion}RefreshToken")
+            .WithSummary("Rotate a refresh token and issue a new access token.")
+            .WithDescription(
+                "Consumes the supplied refresh token and returns a replacement token pair. Reuse revokes the token family.")
+            .AllowAnonymous()
+            .Produces<AuthSessionDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapPost("/logout", LogoutAsync)
             .WithName($"{routeVersion}Logout")
@@ -131,7 +154,33 @@ public static class AuthEndpoints
                 request.Password),
             cancellationToken);
 
-        return Results.Created("/api/v1/auth/register", session);
+        return Results.Created("/api/v1/auth/me", session);
+    }
+
+    private static async Task<IResult> GoogleLoginAsync(
+        GoogleLoginRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var session = await sender.Send(
+            new GoogleLoginCommand(
+                request.Code,
+                request.CodeVerifier),
+            cancellationToken);
+
+        return Results.Ok(session);
+    }
+
+    private static async Task<IResult> RefreshTokenAsync(
+        RefreshTokenRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var session = await sender.Send(
+            new RefreshTokenCommand(request.RefreshToken),
+            cancellationToken);
+
+        return Results.Ok(session);
     }
 
     /// <summary>Validates credentials and issues an access/refresh token pair.</summary>
@@ -255,6 +304,14 @@ public sealed record RegisterRequest(
 public sealed record LoginRequest(
     string Email,
     string Password);
+
+/// <summary>Authorization code and PKCE verifier returned from the Google OAuth flow.</summary>
+public sealed record GoogleLoginRequest(
+    string Code,
+    string CodeVerifier);
+
+/// <summary>Refresh token to exchange for a new token pair.</summary>
+public sealed record RefreshTokenRequest(string RefreshToken);
 
 /// <summary>Current and replacement password values.</summary>
 public sealed record ChangePasswordRequest(

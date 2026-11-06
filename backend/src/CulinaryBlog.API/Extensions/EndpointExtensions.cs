@@ -23,6 +23,7 @@ public static class EndpointExtensions
         endpoints.MapRecipeIngredientEndpoints(versionSet);
         endpoints.MapRecipeStepEndpoints(versionSet);
         endpoints.MapRecipeImageEndpoints(versionSet);
+        endpoints.MapSavedRecipeEndpoints(versionSet);
 
         return endpoints;
     }

@@ -22,14 +22,12 @@ public static class AuthEndpoints
     {
         var group = endpoints
             .MapGroup("/api/auth")
-            .WithTags("Authentication")
-            .RequireRateLimiting("Auth");
+            .WithTags("Authentication");
 
         MapEndpoints(group, "Auth");
         MapEndpoints(
             endpoints.MapGroup("/api/v1/auth")
                 .WithTags("Authentication")
-                .RequireRateLimiting("Auth")
                 .WithDescription("Version 1 authentication routes."),
             "V1Auth");
 
@@ -41,6 +39,7 @@ public static class AuthEndpoints
         string routeVersion)
     {
         group.MapPost("/register", RegisterAsync)
+            .RequireRateLimiting("Auth")
             .WithName($"{routeVersion}Register")
             .WithSummary("Register a new user account.")
             .WithDescription(
@@ -51,6 +50,7 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPost("/login", LoginAsync)
+            .RequireRateLimiting("Auth")
             .WithName($"{routeVersion}Login")
             .WithSummary("Sign in using an email address and password.")
             .WithDescription(
@@ -61,6 +61,7 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/logout", LogoutAsync)
+            .RequireRateLimiting("Api")
             .WithName($"{routeVersion}Logout")
             .WithSummary("Revoke the current user's refresh tokens.")
             .RequireAuthorization()
@@ -68,6 +69,7 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/me", GetCurrentUserAsync)
+            .RequireRateLimiting("Api")
             .WithName($"{routeVersion}GetCurrentUser")
             .WithSummary("Get the authenticated user's profile.")
             .WithDescription(
@@ -78,6 +80,7 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPut("/me", UpdateProfileAsync)
+            .RequireRateLimiting("Api")
             .WithName($"{routeVersion}UpdateProfile")
             .WithSummary("Update the authenticated user's profile.")
             .RequireAuthorization()
@@ -86,6 +89,7 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapPost("/change-password", ChangePasswordAsync)
+            .RequireRateLimiting("Auth")
             .WithName($"{routeVersion}ChangePassword")
             .WithSummary("Change the authenticated user's password.")
             .RequireAuthorization()
@@ -94,6 +98,7 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapPost("/forgot-password", ForgotPasswordAsync)
+            .RequireRateLimiting("Auth")
             .WithName($"{routeVersion}ForgotPassword")
             .WithSummary("Send a password reset link if the account exists.")
             .AllowAnonymous()
@@ -101,6 +106,7 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapPost("/reset-password", ResetPasswordAsync)
+            .RequireRateLimiting("Auth")
             .WithName($"{routeVersion}ResetPassword")
             .WithSummary("Reset a password using a valid reset link.")
             .AllowAnonymous()

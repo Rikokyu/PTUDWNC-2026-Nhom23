@@ -624,6 +624,7 @@ public sealed class RegistrationAndImageUploadTests
     {
         public IRecipeRepository Recipes { get; } = recipes;
         public ICategoryRepository Categories { get; } = null!;
+        public ISavedRecipeRepository SavedRecipes { get; } = null!;
         public int SaveCount { get; private set; }
         public void AddRecipeImage(RecipeImage image) { }
 

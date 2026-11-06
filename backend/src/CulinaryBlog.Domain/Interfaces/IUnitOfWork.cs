@@ -9,6 +9,8 @@ public interface IUnitOfWork
 
     ICategoryRepository Categories { get; }
 
+    ISavedRecipeRepository SavedRecipes { get; }
+
     void AddRecipeImage(RecipeImage image);
 
     Task<int> SaveChangesAsync(

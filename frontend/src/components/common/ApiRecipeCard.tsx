@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Clock, Flame } from "lucide-react";
 import { resolveApiAssetUrl } from "@/lib/api/axios";
+import { SavedRecipeBookmarkButton } from "@/components/recipes/SavedRecipeBookmarkButton";
 import type { RecipeApiSummaryDto } from "@/types/api";
 
 const difficultyLabels: Record<number, string> = {
@@ -12,7 +15,7 @@ const difficultyLabels: Record<number, string> = {
 
 export function ApiRecipeCard({ recipe }: { recipe: RecipeApiSummaryDto }) {
   return (
-    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300">
+    <article className="relative overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300">
       <Link href={`/recipes/${encodeURIComponent(recipe.slug)}`} className="block">
         <img
           src={resolveApiAssetUrl(recipe.thumbnailUrl) || "/images/image 1.png"}
@@ -38,6 +41,14 @@ export function ApiRecipeCard({ recipe }: { recipe: RecipeApiSummaryDto }) {
           </div>
         </div>
       </Link>
+      {recipe.status === 1 && (
+        <div className="absolute right-3 top-3 z-10">
+          <SavedRecipeBookmarkButton
+            recipeId={recipe.id}
+            returnTo={`/recipes/${encodeURIComponent(recipe.slug)}`}
+          />
+        </div>
+      )}
     </article>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import apiClient from "@/lib/api/axios";
@@ -26,7 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((store) => store.accessToken);
   const setSession = useAuthStore((store) => store.setSession);
   const setUser = useAuthStore((store) => store.setUser);
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const retry = useCallback(() => setRevision((value) => value + 1), []);
   const updateUser = useCallback((user: AuthUserDto) => {
@@ -45,11 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener(AUTH_CHANGED, changed);
     window.addEventListener("storage", storageChanged);
-    window.addEventListener("focus", retry);
     return () => {
       window.removeEventListener(AUTH_CHANGED, changed);
       window.removeEventListener("storage", storageChanged);
-      window.removeEventListener("focus", retry);
     };
   }, [retry, queryClient]);
 
@@ -96,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       controller.abort();
       clearTimeout(expiryTimer);
     };
-  }, [revision, pathname, accessToken, setSession]);
+  }, [revision, accessToken, setSession]);
 
   const logout = async () => {
     const token = localStorage.getItem("accessToken");

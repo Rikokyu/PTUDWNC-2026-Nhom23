@@ -267,6 +267,7 @@ public sealed class CategoryModuleTests
 
         public IRecipeRepository Recipes { get; } = null!;
         public ICategoryRepository Categories { get; }
+        public ISavedRecipeRepository SavedRecipes { get; } = null!;
         public int SaveCount { get; private set; }
         public void AddRecipeImage(RecipeImage image) { }
 

@@ -10,6 +10,9 @@ using CulinaryBlog.Application.DTOs.Users;
 using CulinaryBlog.Application.Features.Auth.Queries.GetCurrentUser;
 using MediatR;
 
+using Hangfire;
+using CulinaryBlog.Infrastructure.BackgroundJobs;
+
 namespace CulinaryBlog.API.Endpoints;
 
 public static class AuthEndpoints
@@ -118,21 +121,25 @@ public static class AuthEndpoints
         return Results.Ok(user);
     }
 
-    /// <summary>Creates a user account and immediately returns an authenticated session.</summary>
-    private static async Task<IResult> RegisterAsync(
-        RegisterRequest request,
-        ISender sender,
-        CancellationToken cancellationToken)
-    {
-        var session = await sender.Send(
-            new RegisterCommand(
-                request.DisplayName,
-                request.Email,
-                request.Password),
-            cancellationToken);
+    
 
-        return Results.Created("/api/v1/auth/register", session);
-    }
+private static async Task<IResult> RegisterAsync(
+    RegisterRequest request,
+    ISender sender,
+    CancellationToken cancellationToken)
+{
+    var session = await sender.Send(
+        new RegisterCommand(
+            request.DisplayName,
+            request.Email,
+            request.Password),
+        cancellationToken);
+
+    return Results.Created(
+        "/api/v1/auth/register",
+        session);
+}
+
 
     /// <summary>Validates credentials and issues an access/refresh token pair.</summary>
     private static async Task<IResult> LoginAsync(

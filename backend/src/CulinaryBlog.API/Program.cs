@@ -15,6 +15,8 @@ using Microsoft.OpenApi;
 using Hangfire;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
 using Asp.Versioning;
+using CulinaryBlog.Application.Common.Interfaces;
+
 
 var builder =
     WebApplication.CreateBuilder(args);
@@ -127,6 +129,8 @@ builder.Services
         "postgresql",
         tags: ["ready"]);
 
+builder.Services.AddTransient<WelcomeEmailJob>();
+
 var app =
     builder.Build();
 
@@ -225,7 +229,54 @@ using (var scope =
     }
 }
 
+// API kiểm tra Backend
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/dev/ping", () =>
+        Results.Ok("Backend đang chạy!"));
+
+    
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost("/dev/test-email",
+        async (
+            TestEmailRequest request,
+            IEmailService emailService) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.DisplayName))
+            {
+                return Results.BadRequest(new
+                {
+                    message = "Email và tên người dùng không được để trống."
+                });
+            }
+
+            await emailService.SendWelcomeEmailAsync(
+                request.Email,
+                request.DisplayName);
+
+            return Results.Ok(new
+            {
+                message = "Gửi email thành công!",
+                email = request.Email,
+                displayName = request.DisplayName
+            });
+        })
+        .WithName("TestWelcomeEmail")
+        .WithTags("Development");
+    }
+}
 app.Run();
+
+// Khai báo kiểu dữ liệu nhận từ Swagger/Scalar
+public record TestEmailRequest(
+    string Email,
+    string DisplayName);
+
+
+
+
 
 internal sealed class RecipeListOutputCachePolicy : IOutputCachePolicy
 {

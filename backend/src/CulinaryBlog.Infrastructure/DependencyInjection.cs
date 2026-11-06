@@ -70,8 +70,8 @@ public static class DependencyInjection
                 IWelcomeEmailJobScheduler,
                 HangfireWelcomeEmailJobScheduler>();
             var sitemapBaseUrl = configuration["Sitemap:BaseUrl"]
-                ?? configuration["WelcomeEmail:ApplicationUrl"]
-                ?? "http://localhost:3000";
+                ?? throw new InvalidOperationException(
+                    "Sitemap:BaseUrl must be configured for the current environment.");
             var sitemapStaticPaths = configuration
                 .GetSection("Sitemap:StaticPaths")
                 .Get<string[]>()

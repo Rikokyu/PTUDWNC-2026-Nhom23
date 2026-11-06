@@ -5,21 +5,27 @@ const nextConfig: NextConfig = {
   experimental: {
     useWasmBinary: true,
   },
+
   async rewrites() {
+    const backendUrl =
+      process.env.API_BASE_URL ?? "http://127.0.0.1:5080";
+
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.API_BASE_URL ?? "http://127.0.0.1:5080"}/api/:path*`,
+        destination: `${backendUrl}/api/:path*`,
+      },
+      {
+        source: "/sitemap.xml",
+        destination: `${backendUrl}/sitemap.xml`,
+      },
+      {
+        source: "/robots.txt",
+        destination: `${backendUrl}/robots.txt`,
       },
     ];
   },
-  images: {
-    remotePatterns: [
-      { protocol: "http", hostname: "localhost", port: "5000" },
-      { protocol: "http", hostname: "localhost", port: "5080" },
-      { protocol: "https", hostname: "lh3.googleusercontent.com" },
-    ],
-  },
+
 };
 
 export default function config(phase: string): NextConfig {

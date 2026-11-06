@@ -67,6 +67,9 @@ services:
     ports:
       - "5080:8080"
     volumes:
+      # Persistent API wwwroot stores generated sitemap.xml and robots.txt.
+      - culinary_blog_wwwroot:/app/wwwroot
+      # Keep user uploads in their existing independent volume.
       - culinary_blog_uploads:/app/wwwroot/uploads
     depends_on:
       postgres:
@@ -80,3 +83,4 @@ volumes:
   culinary_blog_pgdata:
   culinary_blog_uploads:
   culinary_blog_minio_data:
+  culinary_blog_wwwroot:

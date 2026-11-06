@@ -16,6 +16,8 @@ using Hangfire;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
 using Asp.Versioning;
 using CulinaryBlog.Application.Common.Interfaces;
+using Serilog;
+using Serilog.Events;
 
 
 var builder =
@@ -27,9 +29,11 @@ var webRootPath = Path.Combine(
 Directory.CreateDirectory(Path.Combine(webRootPath, "uploads"));
 builder.Environment.WebRootPath = webRootPath;
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
+builder.Host.UseSerilog((_, _, loggerConfiguration) => loggerConfiguration
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console());
 
 // Application
 builder.Services
@@ -180,10 +184,13 @@ if (builder.Configuration.GetValue("Hangfire:Enabled", true))
     try
     {
         RecurringJob.AddOrUpdate<SitemapGenerationJob>(
-            "sitemap-generation",
+            SitemapGenerationJob.RecurringJobId,
             job => job.GenerateAsync(CancellationToken.None),
-            "0 2 * * *",
-            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+            SitemapGenerationJob.CronExpression,
+            new RecurringJobOptions
+            {
+                TimeZone = SitemapGenerationJob.ScheduleTimeZone
+            });
     }
     catch (Exception ex)
     {

@@ -36,6 +36,9 @@ public static class ServiceCollectionExtensions
         services.AddTransient(
             typeof(IPipelineBehavior<,>),
             typeof(FluentValidationBehavior<,>));
+        services.AddTransient(
+            typeof(IPipelineBehavior<,>),
+            typeof(LoggingBehavior<,>));
         services.AddTransient<
             IValidator<RegisterCommand>,
             RegisterCommandValidator>();

@@ -114,8 +114,8 @@ export default function NewRecipePage() {
         setSubmitError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
         return;
       }
-      if (imageFile.size > 20 * 1024 * 1024) {
-        setSubmitError("Kích thước ảnh không được vượt quá 20 MB.");
+      if (imageFile.size > 5 * 1024 * 1024) {
+        setSubmitError("Kích thước ảnh không được vượt quá 5 MB.");
         return;
       }
     }
@@ -235,7 +235,7 @@ export default function NewRecipePage() {
             <div className="space-y-4">
               <label className="block space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-content-secondary">
-                  Chọn ảnh (JPEG, PNG, WebP hoặc AVIF; tối đa 20 MB)
+                  Chọn ảnh (JPEG, PNG, WebP hoặc AVIF; tối đa 5 MB)
                 </span>
                 <input
                   type="file"

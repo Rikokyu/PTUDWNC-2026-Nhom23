@@ -48,11 +48,15 @@ public static class DatabaseSeeder
 
         foreach (var seedUser in seedUsers)
         {
-            var emailExists = await context.ApplicationUsers.AnyAsync(
-                user => user.Email.ToLower() == seedUser.Email,
+            var emailOrUserNameExists = await context.ApplicationUsers.AnyAsync(
+                user => user.Email.ToLower() == seedUser.Email
+                    || user.UserName.ToLower() == seedUser.UserName,
                 cancellationToken);
 
-            if (emailExists)
+            // A database can already contain a user name used by a seed account
+            // (for example, an admin created manually with a different email).
+            // Skip that seed entry instead of attempting a duplicate insert.
+            if (emailOrUserNameExists)
             {
                 continue;
             }

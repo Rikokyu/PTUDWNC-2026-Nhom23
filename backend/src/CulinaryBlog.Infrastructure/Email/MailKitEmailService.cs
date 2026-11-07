@@ -1,117 +1,165 @@
+
 using System.Net;
-using System.Net.Mail;
 using CulinaryBlog.Application.Common.Interfaces;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MimeKit;
 
 namespace CulinaryBlog.Infrastructure.Email;
 
 public sealed class MailKitEmailService(
     IConfiguration configuration,
-    ILogger<MailKitEmailService> logger) : IEmailService
+    ILogger<MailKitEmailService> logger
+) : IEmailService
 {
     public async Task SendWelcomeEmailAsync(
         string email,
         string displayName,
         CancellationToken cancellationToken = default)
     {
-        var host = configuration["Smtp:Host"];
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            throw new InvalidOperationException(
-                "Smtp:Host is required to send welcome emails.");
-        }
-
-        var fromAddress = configuration["Smtp:FromAddress"]
-            ?? "no-reply@culinary.local";
-        var fromName = configuration["Smtp:FromName"]
-            ?? "Culinary Blog";
-        var applicationUrl = configuration["WelcomeEmail:ApplicationUrl"]
+        var applicationUrl =
+            configuration["WelcomeEmail:ApplicationUrl"]
             ?? "http://localhost:3000";
-        var activationUrl = configuration.GetValue<bool>(
+
+        var activationUrl =
+            configuration.GetValue<bool>(
                 "WelcomeEmail:RequireActivation")
             ? configuration["WelcomeEmail:ActivationUrl"]
                 ?? throw new InvalidOperationException(
-                    "WelcomeEmail:ActivationUrl is required when email activation is enabled.")
+                    "WelcomeEmail:ActivationUrl is required.")
             : null;
+        var logoUrl = configuration["WelcomeEmail:LogoUrl"];
+        if (string.IsNullOrWhiteSpace(logoUrl))
+        {
+            logoUrl = $"{applicationUrl.TrimEnd('/')}/icons/logo.png";
+        }
+
         var content = WelcomeEmailTemplate.Create(
             displayName,
             applicationUrl,
-            activationUrl);
+            activationUrl,
+            logoUrl);
 
-        using var message = new MailMessage
-        {
-            From = new MailAddress(fromAddress, fromName),
-            Subject = content.Subject,
-            Body = content.HtmlBody,
-            IsBodyHtml = true
-        };
-        message.To.Add(new MailAddress(email, displayName));
+        await SendHtmlEmailAsync(
+            email,
+            displayName,
+            content.Subject,
+            content.HtmlBody,
+            cancellationToken);
 
-#pragma warning disable SYSLIB0014
-        using var client = new SmtpClient(
-            host,
-            configuration.GetValue("Smtp:Port", 587))
-        {
-            EnableSsl = configuration.GetValue("Smtp:UseSsl", true)
-        };
-#pragma warning restore SYSLIB0014
-
-        var userName = configuration["Smtp:UserName"];
-        var password = configuration["Smtp:Password"];
-        if (!string.IsNullOrWhiteSpace(userName))
-        {
-            client.Credentials = new NetworkCredential(userName, password);
-        }
-
-        await client.SendMailAsync(message, cancellationToken);
-        logger.LogInformation("Sent welcome email to {Email}.", email);
+        logger.LogInformation(
+            "Sent welcome email to {Email}.", email);
     }
+
     public async Task SendPasswordResetEmailAsync(
         string email,
         string displayName,
         string resetUrl,
         CancellationToken cancellationToken = default)
     {
-        var host = configuration["Smtp:Host"];
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            throw new InvalidOperationException(
-                "Smtp:Host is required to send password reset emails.");
-        }
-
-        var fromAddress = configuration["Smtp:FromAddress"]
-            ?? "no-reply@culinary.local";
-        var fromName = configuration["Smtp:FromName"]
-            ?? "Culinary Blog";
         var safeName = WebUtility.HtmlEncode(displayName);
         var safeUrl = WebUtility.HtmlEncode(resetUrl);
-        using var message = new MailMessage
-        {
-            From = new MailAddress(fromAddress, fromName),
-            Subject = "Đặt lại mật khẩu Culinary Blog",
-            Body = $"<p>Xin chào {safeName},</p><p>Nhấn vào liên kết sau để đặt lại mật khẩu. Liên kết có hiệu lực trong 30 phút.</p><p><a href=\"{safeUrl}\">Đặt lại mật khẩu</a></p><p>Nếu bạn không yêu cầu thay đổi này, hãy bỏ qua email.</p>",
-            IsBodyHtml = true
-        };
-        message.To.Add(new MailAddress(email, displayName));
 
-#pragma warning disable SYSLIB0014
-        using var client = new SmtpClient(
-            host,
-            configuration.GetValue("Smtp:Port", 587))
-        {
-            EnableSsl = configuration.GetValue("Smtp:UseSsl", true)
-        };
-#pragma warning restore SYSLIB0014
+        var html = $"""
+            <p>Xin chào {safeName},</p>
+            <p>Nhấn vào liên kết sau để đặt lại mật khẩu.</p>
+            <p>Liên kết có hiệu lực trong 30 phút.</p>
+            <p>
+                <a href="{safeUrl}">
+                    Đặt lại mật khẩu
+                </a>
+            </p>
+            <p>
+                Nếu bạn không yêu cầu thay đổi này,
+                hãy bỏ qua email.
+            </p>
+            """;
 
-        var userName = configuration["Smtp:UserName"];
+        await SendHtmlEmailAsync(
+            email,
+            displayName,
+            "Đặt lại mật khẩu Culinary Blog",
+            html,
+            cancellationToken);
+
+        logger.LogInformation(
+            "Sent password reset email to {Email}.", email);
+    }
+
+    private async Task SendHtmlEmailAsync(
+        string email,
+        string displayName,
+        string subject,
+        string html,
+        CancellationToken cancellationToken)
+    {
+        var host = configuration["Smtp:Host"]
+            ?? throw new InvalidOperationException(
+                "Smtp:Host is required.");
+
+        var port = configuration.GetValue(
+            "Smtp:Port", 587);
+
+        var username = configuration["Smtp:Username"];
         var password = configuration["Smtp:Password"];
-        if (!string.IsNullOrWhiteSpace(userName))
+
+        if (string.IsNullOrWhiteSpace(username)
+            || string.IsNullOrWhiteSpace(password))
         {
-            client.Credentials = new NetworkCredential(userName, password);
+            throw new InvalidOperationException(
+                "SMTP username or password is missing.");
         }
 
-        await client.SendMailAsync(message, cancellationToken);
-        logger.LogInformation("Sent password reset email to {Email}.", email);
+        var fromAddress =
+            configuration["Smtp:FromAddress"]
+            ?? throw new InvalidOperationException(
+                "Smtp:FromAddress is required.");
+
+        var fromName =
+            configuration["Smtp:FromName"]
+            ?? "Culinary Blog";
+
+        var message = new MimeMessage();
+
+        message.From.Add(
+            new MailboxAddress(fromName, fromAddress));
+
+        message.To.Add(
+            new MailboxAddress(displayName, email));
+
+        message.Subject = subject;
+
+        var bodyBuilder = new BodyBuilder
+        {
+            HtmlBody = html
+        };
+
+        message.Body = bodyBuilder.ToMessageBody();
+
+        using var client = new SmtpClient();
+
+        // Gmail port 587 sử dụng STARTTLS.
+        await client.ConnectAsync(
+            host,
+            port,
+            SecureSocketOptions.StartTls,
+            cancellationToken);
+
+        // Đăng nhập SMTP bằng App Password.
+        await client.AuthenticateAsync(
+            username,
+            password,
+            cancellationToken);
+
+        // Gửi email.
+        await client.SendAsync(
+            message,
+            cancellationToken);
+
+        await client.DisconnectAsync(
+            true,
+            cancellationToken);
     }
 }

@@ -12,7 +12,7 @@ public sealed class HangfireWelcomeEmailJobScheduler(
     public void Enqueue(string email, string displayName)
     {
         var jobId = backgroundJobs.Enqueue<WelcomeEmailJob>(
-            job => job.SendAsync(email, displayName, null!));
+            job => job.ExecuteAsync(email, displayName!));
 
         logger.LogInformation(
             "Enqueued welcome email job {JobId} for {Email}.",

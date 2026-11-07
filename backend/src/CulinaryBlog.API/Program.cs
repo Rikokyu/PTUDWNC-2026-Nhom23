@@ -15,7 +15,10 @@ using Microsoft.OpenApi;
 using Hangfire;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
 using Asp.Versioning;
+using CulinaryBlog.Application.Common.Interfaces;
 using Serilog;
+using Serilog.Events;
+
 
 var builder =
     WebApplication.CreateBuilder(args);
@@ -35,9 +38,11 @@ var webRootPath = Path.Combine(
 Directory.CreateDirectory(Path.Combine(webRootPath, "uploads"));
 builder.Environment.WebRootPath = webRootPath;
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
+builder.Host.UseSerilog((_, _, loggerConfiguration) => loggerConfiguration
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console());
 
 // Application
 builder.Services
@@ -137,6 +142,8 @@ builder.Services
         "postgresql",
         tags: ["ready"]);
 
+builder.Services.AddTransient<WelcomeEmailJob>();
+
 var app =
     builder.Build();
 
@@ -187,10 +194,13 @@ if (builder.Configuration.GetValue("Hangfire:Enabled", true))
     try
     {
         RecurringJob.AddOrUpdate<SitemapGenerationJob>(
-            "sitemap-generation",
+            SitemapGenerationJob.RecurringJobId,
             job => job.GenerateAsync(CancellationToken.None),
-            "0 2 * * *",
-            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+            SitemapGenerationJob.CronExpression,
+            new RecurringJobOptions
+            {
+                TimeZone = SitemapGenerationJob.ScheduleTimeZone
+            });
     }
     catch (Exception ex)
     {
@@ -236,7 +246,54 @@ using (var scope =
     }
 }
 
+// API kiểm tra Backend
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/dev/ping", () =>
+        Results.Ok("Backend đang chạy!"));
+
+    
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost("/dev/test-email",
+        async (
+            TestEmailRequest request,
+            IEmailService emailService) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.DisplayName))
+            {
+                return Results.BadRequest(new
+                {
+                    message = "Email và tên người dùng không được để trống."
+                });
+            }
+
+            await emailService.SendWelcomeEmailAsync(
+                request.Email,
+                request.DisplayName);
+
+            return Results.Ok(new
+            {
+                message = "Gửi email thành công!",
+                email = request.Email,
+                displayName = request.DisplayName
+            });
+        })
+        .WithName("TestWelcomeEmail")
+        .WithTags("Development");
+    }
+}
 app.Run();
+
+// Khai báo kiểu dữ liệu nhận từ Swagger/Scalar
+public record TestEmailRequest(
+    string Email,
+    string DisplayName);
+
+
+
+
 
 internal sealed class RecipeListOutputCachePolicy : IOutputCachePolicy
 {

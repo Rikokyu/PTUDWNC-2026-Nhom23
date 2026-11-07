@@ -1,53 +1,28 @@
-using CulinaryBlog.Application.Common.Interfaces;
+
 using Hangfire;
-using Hangfire.Server;
-using Microsoft.Extensions.Logging;
+using CulinaryBlog.Application.Common.Interfaces;
 
 namespace CulinaryBlog.Infrastructure.BackgroundJobs;
 
-public sealed class WelcomeEmailJob(
-    IEmailService emailService,
-    ILogger<WelcomeEmailJob> logger)
+public sealed class WelcomeEmailJob
 {
-    private const int MaximumRetryCount = 3;
+    private readonly IEmailService _emailService;
+
+    public WelcomeEmailJob(IEmailService emailService)
+    {
+        _emailService = emailService;
+    }
 
     [AutomaticRetry(
-        Attempts = MaximumRetryCount,
-        DelaysInSeconds = [60, 300, 1800],
-        OnAttemptsExceeded = AttemptsExceededAction.Fail,
-        LogEvents = true)]
-    public async Task SendAsync(
+        Attempts = 3,
+        DelaysInSeconds = new int[] { 60, 300, 1800 },
+        OnAttemptsExceeded = AttemptsExceededAction.Fail)]
+    public async Task ExecuteAsync(
         string email,
-        string displayName,
-        PerformContext? context)
+        string displayName)
     {
-        try
-        {
-            await emailService.SendWelcomeEmailAsync(email, displayName);
-        }
-        catch (Exception exception)
-        {
-            var retryCount = context?.GetJobParameter<int>("RetryCount") ?? 0;
-
-            if (retryCount >= MaximumRetryCount)
-            {
-                logger.LogError(
-                    exception,
-                    "Welcome email to {Email} failed permanently after {RetryCount} retries.",
-                    email,
-                    MaximumRetryCount);
-            }
-            else
-            {
-                logger.LogWarning(
-                    exception,
-                    "Welcome email to {Email} failed. Hangfire retry {NextRetry}/{MaximumRetryCount} will be scheduled.",
-                    email,
-                    retryCount + 1,
-                    MaximumRetryCount);
-            }
-
-            throw;
-        }
+        await _emailService.SendWelcomeEmailAsync(
+            email,
+            displayName);
     }
 }

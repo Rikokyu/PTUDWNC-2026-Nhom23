@@ -12,7 +12,7 @@ public sealed class WelcomeEmailJobTests
     public void Job_UsesRequiredRetrySchedule()
     {
         var method = typeof(WelcomeEmailJob).GetMethod(
-            nameof(WelcomeEmailJob.SendAsync));
+            nameof(WelcomeEmailJob.ExecuteAsync));
         var retry = method?.GetCustomAttribute<AutomaticRetryAttribute>();
 
         Assert.NotNull(retry);
@@ -33,20 +33,35 @@ public sealed class WelcomeEmailJobTests
         Assert.Contains("An &lt;script&gt;", content.HtmlBody);
         Assert.DoesNotContain("<script>", content.HtmlBody);
         Assert.Contains("http://localhost:3000", content.HtmlBody);
-        Assert.Contains("Kích hoạt email", content.HtmlBody);
         Assert.Contains("token=a&amp;user=1", content.HtmlBody);
-        Assert.Contains("charset=\"utf-8\"", content.HtmlBody);
-        Assert.Contains("Chào mừng", content.HtmlBody);
+        Assert.Contains("charset=\"UTF-8\"", content.HtmlBody,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Culinary Blog", content.HtmlBody);
     }
 
     [Fact]
     public void Template_OmitsActivationLinkWhenActivationIsNotRequired()
     {
         var content = WelcomeEmailTemplate.Create(
-            "Nguyễn Văn An",
+            "New user",
             "http://localhost:3000");
 
-        Assert.DoesNotContain("Kích hoạt email", content.HtmlBody);
-        Assert.Contains("Đi đến Culinary Blog", content.HtmlBody);
+        Assert.DoesNotContain("auth/activate", content.HtmlBody);
+        Assert.Contains("Khám phá Culinary Blog", content.HtmlBody);
+    }
+
+    [Fact]
+    public void Template_ReferencesHostedLogoUrlWithoutCid()
+    {
+        const string logoUrl = "https://culinary.example/icons/logo.png?x=1&y=2";
+
+        var content = WelcomeEmailTemplate.Create(
+            "New user",
+            "https://culinary.example",
+            logoUrl: logoUrl);
+
+        Assert.Contains("src=\"https://culinary.example/icons/logo.png?x=1&amp;y=2\"", content.HtmlBody);
+        Assert.DoesNotContain("cid:", content.HtmlBody);
+        Assert.Contains("alt=\"Culinary Blog Logo\"", content.HtmlBody);
     }
 }

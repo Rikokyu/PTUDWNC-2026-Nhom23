@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { RecipeDetailView } from "@/features/recipes/RecipeDetailView";
 import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
 import { resolveApiAssetUrl } from "@/lib/api/axios";
+import { SavedRecipeBookmarkButton } from "@/components/recipes/SavedRecipeBookmarkButton";
 
 const demoEnabled = process.env.NEXT_PUBLIC_USE_DEMO_DATA === "true";
 
@@ -81,6 +82,9 @@ export function RecipeDetailPageContent({ slug }: { slug: string }) {
           {recipe.author?.displayName ?? "Culinary Blog"} · {difficulty} ·{" "}
           {recipe.prepTimeMinutes + recipe.cookTimeMinutes} phút · {recipe.servings} khẩu phần
         </p>
+        {recipe.status === 1 && (
+          <SavedRecipeBookmarkButton recipeId={recipe.id} showLabel />
+        )}
       </header>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">

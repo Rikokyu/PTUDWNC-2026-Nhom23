@@ -104,6 +104,7 @@ public static class DependencyInjection
 
         services.AddScoped<IRecipeRepository, RecipeRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ISavedRecipeRepository, SavedRecipeRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         var uploadRoot = Path.Combine(

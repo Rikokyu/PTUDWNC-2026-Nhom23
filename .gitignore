@@ -342,3 +342,5 @@ frontend/temp/
 !.env.example
 !README.md
 !CHANGELOG.md
+/docs/local/FR-SAVED-RECIPES.docx
+/docs/local/FR-AUTH-429-Ket-noi-chap-chon.docx

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, ChefHat, Clock, FileText, Plus } from "lucide-react";
+import { ArrowRight, BookOpen, ChefHat, Clock, FileText, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -23,13 +23,14 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-subtle sm:flex-row sm:items-center">
+      <div className="flex flex-col justify-between gap-6 overflow-hidden rounded-3xl bg-[#211d1b] p-7 text-white shadow-card sm:flex-row sm:items-center sm:p-9">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-content-primary">
-            Xin chào, {user?.displayName ?? "bạn"} 👋
+          <p className="pb-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-300">{user?.role === "Admin" ? "Bảng điều khiển quản trị" : "Góc làm việc của tác giả"}</p>
+          <h1 className="font-display text-3xl font-bold text-white">
+            Xin chào, {user?.displayName ?? "bạn"}
           </h1>
-          <p className="text-xs text-content-secondary">
-            Dữ liệu bên dưới được tải từ tài khoản đang đăng nhập.
+          <p className="pt-1 text-sm text-stone-300">
+            {user?.role === "Admin" ? "Theo dõi bài viết của bạn và quản lý nội dung cộng đồng." : "Tiếp tục viết, chỉnh sửa và chia sẻ công thức của bạn."}
           </p>
         </div>
         <Link href="/dashboard/recipes/new" className="shrink-0">
@@ -39,7 +40,7 @@ export default function DashboardOverviewPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {recipesQuery.isLoading ? Array.from({ length: 3 }, (_, index) => (
           <Skeleton key={index} className="h-28 rounded-xl" />
         )) : (
@@ -51,11 +52,11 @@ export default function DashboardOverviewPage() {
         )}
       </div>
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-subtle">
+      <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-subtle">
         <div className="flex items-center justify-between border-b border-slate-100 p-5">
-          <h2 className="text-base font-bold text-content-primary">Công thức gần đây của bạn</h2>
+          <h2 className="font-display text-lg font-bold text-content-primary">Công thức gần đây của bạn</h2>
           <Link href="/dashboard/recipes" className="text-xs font-semibold text-brand hover:text-brand-hover">
-            Quản lý tất cả →
+            Quản lý tất cả <ArrowRight className="inline h-3.5 w-3.5" />
           </Link>
         </div>
 
@@ -105,11 +106,11 @@ export default function DashboardOverviewPage() {
 
 function MetricCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
-    <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-5 shadow-subtle">
+    <div className="space-y-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-subtle">
       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-content-tertiary">
         <span>{label}</span>{icon}
       </div>
-      <p className="text-2xl font-extrabold text-content-primary">{value}</p>
+      <p className="font-display text-3xl font-bold text-content-primary">{value}</p>
     </div>
   );
 }

@@ -6,7 +6,9 @@ Yêu cầu: Node.js, .NET 10 SDK và Docker Desktop đang chạy. Từ thư mụ
 npm run dev
 ```
 
-Lệnh này tự khởi động PostgreSQL/Mailpit, API và frontend; nếu frontend chưa có dependencies, chúng sẽ được cài từ `frontend/package-lock.json`. Trình duyệt mở tại `http://localhost:3000` (nếu cổng này bận, URL thay thế sẽ được in trong terminal). Nhấn `Ctrl+C` để dừng ứng dụng và các container mà lệnh đã khởi động.
+Lệnh này tự khởi động PostgreSQL/Mailpit/Redis, API và frontend; nếu frontend chưa có dependencies, chúng sẽ được cài từ `frontend/package-lock.json`. Email trong môi trường phát triển được gửi vào Mailpit cục bộ tại `http://localhost:8025`, và ảnh tải lên dùng lưu trữ cục bộ. Trình duyệt mở tại `http://localhost:3000` (nếu cổng này bận, URL thay thế sẽ được in trong terminal). Nhấn `Ctrl+C` để dừng ứng dụng và các container mà lệnh đã khởi động.
+
+Lưu ý: lệnh chạy toàn bộ có thể khởi động dịch vụ và API sẽ gọi `MigrateAsync` cho PostgreSQL được cấu hình. Hãy sao lưu dữ liệu đang dùng trước khi chạy trên máy có dữ liệu quan trọng. Bản mã launcher mới đã qua kiểm tra cú pháp và cấu hình Compose; chưa được chạy toàn bộ với cơ sở dữ liệu hiện tại.
 
 ## Thông tin sinh viên
 

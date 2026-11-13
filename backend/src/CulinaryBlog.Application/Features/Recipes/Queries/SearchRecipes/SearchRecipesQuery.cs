@@ -7,4 +7,8 @@ namespace CulinaryBlog.Application.Features.Recipes.Queries.SearchRecipes;
 public sealed record SearchRecipesQuery(
     string SearchTerm,
     int Page,
-    int PageSize) : IRequest<PagedResult<RecipeSummaryDto>>;
+    int PageSize,
+    Guid? CategoryId = null,
+    CulinaryBlog.Domain.Enums.DifficultyLevel? Difficulty = null,
+    int? MaxCookTime = null,
+    int? MinServings = null) : IRequest<PagedResult<RecipeSummaryDto>>;

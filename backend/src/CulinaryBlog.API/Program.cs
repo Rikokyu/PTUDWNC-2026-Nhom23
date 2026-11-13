@@ -14,20 +14,59 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.OpenApi;
 using Hangfire;
 using Asp.Versioning;
+<<<<<<< HEAD
+=======
+using CulinaryBlog.Application.Common.Interfaces;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
+using CulinaryBlog.API.Observability;
+using CulinaryBlog.API.Caching;
+using StackExchange.Redis;
+
+>>>>>>> 315339d (Update UI)
 
 var builder =
     WebApplication.CreateBuilder(args);
 
+<<<<<<< HEAD
+=======
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .WriteTo.Console(new CompactJsonFormatter())
+        .WriteTo.File(
+            new CompactJsonFormatter(),
+            Path.Combine(context.HostingEnvironment.ContentRootPath, "logs", "api-.json"),
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 14,
+            shared: true);
+    if (context.HostingEnvironment.IsDevelopment()
+        && Uri.TryCreate(context.Configuration["Seq:ServerUrl"],
+            UriKind.Absolute, out var seqUri)
+        && seqUri.Scheme is "http" or "https")
+        loggerConfiguration.WriteTo.Seq(seqUri.ToString());
+});
+
+>>>>>>> 315339d (Update UI)
 var webRootPath = Path.Combine(
     builder.Environment.ContentRootPath,
     "wwwroot");
 Directory.CreateDirectory(Path.Combine(webRootPath, "uploads"));
 builder.Environment.WebRootPath = webRootPath;
 
+<<<<<<< HEAD
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
+=======
+>>>>>>> 315339d (Update UI)
 // Application
 builder.Services
     .AddApplicationServices();
@@ -62,6 +101,21 @@ builder.Services
 builder.Services.AddAuthorization();
 
 // Output Cache
+var redisConnection = builder.Configuration.GetConnectionString("Redis")
+    ?? throw new InvalidOperationException("ConnectionStrings:Redis is required for shared output cache.");
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+{
+    var configuration = ConfigurationOptions.Parse(redisConnection);
+    configuration.AbortOnConnectFail = false;
+    configuration.ConnectTimeout = 1000;
+    configuration.ConnectRetry = 0;
+    return ConnectionMultiplexer.Connect(configuration);
+});
+builder.Services.AddStackExchangeRedisOutputCache(options =>
+{
+    options.Configuration = redisConnection;
+    options.InstanceName = "culinaryblog:output:";
+});
 builder.Services
     .AddOutputCache(options =>
     {
@@ -72,6 +126,15 @@ builder.Services
         options.AddPolicy(
             "RecipeDetail",
             new RecipeDetailOutputCachePolicy());
+        options.AddPolicy(
+            "RecipeSearch",
+            new RecipeSearchOutputCachePolicy());
+        options.AddPolicy(
+            "CategoryList",
+            new CategoryOutputCachePolicy(TimeSpan.FromMinutes(30)));
+        options.AddPolicy(
+            "CategoryDetail",
+            new CategoryOutputCachePolicy(TimeSpan.FromMinutes(5)));
     });
 
 // Swagger
@@ -120,14 +183,39 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services
     .AddProblemDetails();
 
-builder.Services
+builder.Services.AddHttpClient();
+builder.Services.AddCulinaryTelemetry(builder.Configuration);
+var healthChecks = builder.Services
     .AddHealthChecks()
     .AddCheck<PostgreSqlHealthCheck>(
         "postgresql",
+        tags: ["ready"])
+    .AddCheck<RedisHealthCheck>(
+        "redis",
         tags: ["ready"]);
+if (string.Equals(builder.Configuration["FileStorage:Provider"],
+        "Minio", StringComparison.OrdinalIgnoreCase))
+    healthChecks.AddCheck<MinioHealthCheck>(
+        "minio", tags: ["dependency"]);
 
 var app =
     builder.Build();
+
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnostics, http) =>
+    {
+        diagnostics.Set("Method", http.Request.Method);
+        diagnostics.Set("Path", http.Request.Path.Value ?? "/");
+        diagnostics.Set("StatusCode", http.Response.StatusCode);
+        diagnostics.Set("CorrelationId",
+            http.Response.Headers[CorrelationIdMiddleware.HeaderName].ToString());
+        diagnostics.Set("UserId", http.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? http.User.FindFirst("sub")?.Value);
+        diagnostics.Set("TraceId", System.Diagnostics.Activity.Current?.TraceId.ToString());
+    };
+});
 
 // Global exception middleware
 app.UseMiddleware<
@@ -155,7 +243,8 @@ app.UseStaticFiles(new StaticFileOptions
     ContentTypeProvider = staticContentTypes
 });
 
-// Output cache
+// Read the transactionally updated database epoch before a public cache lookup.
+app.UseMiddleware<CacheEpochMiddleware>();
 app.UseOutputCache();
 
 if (builder.Configuration.GetValue("Hangfire:Enabled", true)
@@ -218,12 +307,15 @@ internal sealed class RecipeListOutputCachePolicy : IOutputCachePolicy
             context.HttpContext.User.Identity?.IsAuthenticated != true;
 
         context.EnableOutputCaching = true;
-        context.AllowCacheLookup = isPublicRequest;
-        context.AllowCacheStorage = isPublicRequest;
+        context.AllowCacheLookup = isPublicRequest
+            && !CacheEpochMiddleware.IsBypassed(context.HttpContext);
+        context.AllowCacheStorage = context.AllowCacheLookup;
         context.ResponseExpirationTimeSpan =
-            TimeSpan.FromMinutes(15);
+            TimeSpan.FromMinutes(5);
         context.CacheVaryByRules.QueryKeys =
             new Microsoft.Extensions.Primitives.StringValues("*");
+        context.CacheVaryByRules.HeaderNames =
+            new Microsoft.Extensions.Primitives.StringValues(CacheEpochMiddleware.HeaderName);
 
         return ValueTask.CompletedTask;
     }
@@ -237,6 +329,10 @@ internal sealed class RecipeListOutputCachePolicy : IOutputCachePolicy
         OutputCacheContext context,
         CancellationToken cancellationToken)
     {
+        context.AllowCacheStorage =
+            context.AllowCacheStorage
+            && context.HttpContext.Response.StatusCode == StatusCodes.Status200OK
+            && !context.HttpContext.Response.Headers.ContainsKey("Set-Cookie");
         context.Tags.Add("recipes");
         return ValueTask.CompletedTask;
     }
@@ -252,10 +348,13 @@ internal sealed class RecipeDetailOutputCachePolicy : IOutputCachePolicy
             context.HttpContext.User.Identity?.IsAuthenticated != true;
 
         context.EnableOutputCaching = true;
-        context.AllowCacheLookup = isPublicRequest;
-        context.AllowCacheStorage = isPublicRequest;
+        context.AllowCacheLookup = isPublicRequest
+            && !CacheEpochMiddleware.IsBypassed(context.HttpContext);
+        context.AllowCacheStorage = context.AllowCacheLookup;
         context.ResponseExpirationTimeSpan =
-            TimeSpan.FromMinutes(60);
+            TimeSpan.FromMinutes(5);
+        context.CacheVaryByRules.HeaderNames =
+            new Microsoft.Extensions.Primitives.StringValues(CacheEpochMiddleware.HeaderName);
 
         return ValueTask.CompletedTask;
     }
@@ -269,6 +368,10 @@ internal sealed class RecipeDetailOutputCachePolicy : IOutputCachePolicy
         OutputCacheContext context,
         CancellationToken cancellationToken)
     {
+        context.AllowCacheStorage =
+            context.AllowCacheStorage
+            && context.HttpContext.Response.StatusCode == StatusCodes.Status200OK
+            && !context.HttpContext.Response.Headers.ContainsKey("Set-Cookie");
         context.Tags.Add("recipes");
 
         if (context.HttpContext.Request.RouteValues.TryGetValue(
@@ -280,6 +383,75 @@ internal sealed class RecipeDetailOutputCachePolicy : IOutputCachePolicy
             context.Tags.Add($"recipe:{slugValue}");
         }
 
+        return ValueTask.CompletedTask;
+    }
+}
+
+internal sealed class RecipeSearchOutputCachePolicy : IOutputCachePolicy
+{
+    public ValueTask CacheRequestAsync(
+        OutputCacheContext context, CancellationToken cancellationToken)
+    {
+        var anonymous = context.HttpContext.User.Identity?.IsAuthenticated != true;
+        context.EnableOutputCaching = true;
+        context.AllowCacheLookup = anonymous
+            && !CacheEpochMiddleware.IsBypassed(context.HttpContext);
+        context.AllowCacheStorage = context.AllowCacheLookup;
+        context.ResponseExpirationTimeSpan = TimeSpan.FromMinutes(1);
+        context.CacheVaryByRules.QueryKeys =
+            new Microsoft.Extensions.Primitives.StringValues("*");
+        context.CacheVaryByRules.HeaderNames =
+            new Microsoft.Extensions.Primitives.StringValues(CacheEpochMiddleware.HeaderName);
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask ServeFromCacheAsync(
+        OutputCacheContext context, CancellationToken cancellationToken) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask ServeResponseAsync(
+        OutputCacheContext context, CancellationToken cancellationToken)
+    {
+        context.AllowCacheStorage =
+            context.AllowCacheStorage
+            && context.HttpContext.Response.StatusCode == StatusCodes.Status200OK
+            && !context.HttpContext.Response.Headers.ContainsKey("Set-Cookie");
+        context.Tags.Add("recipes");
+        return ValueTask.CompletedTask;
+    }
+}
+
+internal sealed class CategoryOutputCachePolicy(TimeSpan expiration) : IOutputCachePolicy
+{
+    public ValueTask CacheRequestAsync(
+        OutputCacheContext context, CancellationToken cancellationToken)
+    {
+        var anonymous = context.HttpContext.User.Identity?.IsAuthenticated != true;
+        context.EnableOutputCaching = true;
+        context.AllowCacheLookup = anonymous
+            && !CacheEpochMiddleware.IsBypassed(context.HttpContext);
+        context.AllowCacheStorage = context.AllowCacheLookup;
+        context.ResponseExpirationTimeSpan = expiration;
+        context.CacheVaryByRules.QueryKeys =
+            new Microsoft.Extensions.Primitives.StringValues("*");
+        context.CacheVaryByRules.HeaderNames =
+            new Microsoft.Extensions.Primitives.StringValues(CacheEpochMiddleware.HeaderName);
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask ServeFromCacheAsync(
+        OutputCacheContext context, CancellationToken cancellationToken) =>
+        ValueTask.CompletedTask;
+
+    public ValueTask ServeResponseAsync(
+        OutputCacheContext context, CancellationToken cancellationToken)
+    {
+        context.AllowCacheStorage =
+            context.AllowCacheStorage
+            && context.HttpContext.Response.StatusCode == StatusCodes.Status200OK
+            && !context.HttpContext.Response.Headers.ContainsKey("Set-Cookie");
+        context.Tags.Add("categories");
+        context.Tags.Add("recipes");
         return ValueTask.CompletedTask;
     }
 }

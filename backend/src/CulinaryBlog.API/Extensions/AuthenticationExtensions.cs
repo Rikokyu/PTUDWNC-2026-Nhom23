@@ -75,6 +75,7 @@ public static class AuthenticationExtensions
                             .Select(user => new
                             {
                                 user.IsActive,
+                                user.LockoutEnd,
                                 user.Role,
                                 user.TokenVersion
                             })
@@ -83,6 +84,7 @@ public static class AuthenticationExtensions
 
                         if (account is null
                             || !account.IsActive
+                            || account.LockoutEnd > DateTime.UtcNow
                             || account.TokenVersion != tokenVersion
                             || account.Role != tokenRole)
                         {

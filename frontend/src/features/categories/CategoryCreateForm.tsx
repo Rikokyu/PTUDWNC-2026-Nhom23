@@ -1,30 +1,39 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import axios from "axios";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { getApiErrorMessage } from "@/lib/api/error";
 import { useCreateCategory } from "@/hooks/useCategories";
+import type { CategoryApiDto } from "@/types/api";
 
-export function CategoryCreateForm() {
+interface CategoryCreateFormProps {
+  existingNames: string[];
+  onCancel: () => void;
+  onCreated: (category: CategoryApiDto) => void;
+}
+
+export function CategoryCreateForm({ existingNames, onCancel, onCreated }: CategoryCreateFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const createCategory = useCreateCategory();
+  const normalizedName = name.trim().toLocaleLowerCase("vi-VN");
+  const isDuplicate = normalizedName.length > 0 && existingNames.some(
+    (existingName) => existingName.trim().toLocaleLowerCase("vi-VN") === normalizedName,
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSuccessMessage("");
+    if (isDuplicate || name.trim().length < 2 || name.trim().length > 50) return;
 
     try {
       const category = await createCategory.mutateAsync({
         name: name.trim(),
         description: description.trim() || null,
       });
-      setName("");
-      setDescription("");
-      setSuccessMessage(`Đã tạo danh mục “${category.name}”.`);
+      onCreated(category);
     } catch {
       // The mutation error is rendered below with the API's Problem Details.
     }
@@ -54,7 +63,6 @@ export function CategoryCreateForm() {
           value={name}
           onChange={(event) => {
             setName(event.target.value);
-            setSuccessMessage("");
             createCategory.reset();
           }}
           minLength={2}
@@ -62,7 +70,8 @@ export function CategoryCreateForm() {
           required
           autoComplete="off"
           placeholder="Ví dụ: Món chay"
-          helperText="Từ 2 đến 50 ký tự."
+          helperText="Từ 2 đến 50 ký tự. Tên danh mục không được trùng."
+          error={isDuplicate ? "Danh mục này đã tồn tại. Hãy nhập tên khác." : undefined}
           disabled={createCategory.isPending}
         />
 
@@ -79,7 +88,6 @@ export function CategoryCreateForm() {
             value={description}
             onChange={(event) => {
               setDescription(event.target.value);
-              setSuccessMessage("");
               createCategory.reset();
             }}
             maxLength={2000}
@@ -95,23 +103,25 @@ export function CategoryCreateForm() {
 
         {createCategory.isError && (
           <p role="alert" className="text-sm font-medium text-rose-600">
-            {getApiErrorMessage(createCategory.error)}
-          </p>
-        )}
-        {successMessage && (
-          <p role="status" className="text-sm font-medium text-emerald-700">
-            {successMessage}
+            {axios.isAxiosError(createCategory.error) && createCategory.error.response?.status === 409
+              ? "Danh mục này đã tồn tại. Hãy nhập tên khác."
+              : getApiErrorMessage(createCategory.error)}
           </p>
         )}
 
-        <Button
-          type="submit"
-          leftIcon={<Plus className="h-4 w-4" />}
-          isLoading={createCategory.isPending}
-          disabled={name.trim().length < 2 || name.trim().length > 50}
-        >
-          Tạo danh mục
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="submit"
+            leftIcon={<Plus className="h-4 w-4" />}
+            isLoading={createCategory.isPending}
+            disabled={isDuplicate || name.trim().length < 2 || name.trim().length > 50}
+          >
+            Tạo danh mục
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={createCategory.isPending}>
+            Hủy
+          </Button>
+        </div>
       </form>
     </section>
   );

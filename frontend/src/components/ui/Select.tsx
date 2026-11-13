@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 
@@ -16,7 +16,8 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, label, error, options, placeholder, id, disabled, ...props }, ref) => {
-    const selectId = id || React.useId();
+    const generatedId = React.useId();
+    const selectId = id || generatedId;
 
     return (
       <div className="w-full space-y-1.5">

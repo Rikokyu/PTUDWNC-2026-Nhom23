@@ -36,7 +36,7 @@ public static class RecipeStepEndpoints
 						request.TimerMinutes,
 						request.ImageUrl),
 					cancellationToken);
-				await outputCacheStore.EvictByTagAsync(
+				await outputCacheStore.SafeEvictByTagAsync(
 					"recipes",
 					cancellationToken);
 				return Results.Created(
@@ -65,7 +65,7 @@ public static class RecipeStepEndpoints
 						request.TimerMinutes,
 						request.ImageUrl),
 					cancellationToken);
-				await outputCacheStore.EvictByTagAsync(
+				await outputCacheStore.SafeEvictByTagAsync(
 					"recipes",
 					cancellationToken);
 				return Results.Ok();
@@ -86,7 +86,7 @@ public static class RecipeStepEndpoints
 				await sender.Send(
 					new DeleteRecipeStepCommand(recipeId, stepId),
 					cancellationToken);
-				await outputCacheStore.EvictByTagAsync(
+				await outputCacheStore.SafeEvictByTagAsync(
 					"recipes",
 					cancellationToken);
 				return Results.NoContent();
@@ -106,7 +106,7 @@ public static class RecipeStepEndpoints
 				await sender.Send(
 					new ReorderRecipeStepsCommand(recipeId, request.StepIds),
 					cancellationToken);
-				await outputCacheStore.EvictByTagAsync(
+				await outputCacheStore.SafeEvictByTagAsync(
 					"recipes",
 					cancellationToken);
 				return Results.Ok();

@@ -11,7 +11,7 @@ const rootDirectory = path.resolve(
 const apiPort = 5080;
 const frontendPortStart = 3000;
 const frontendPortEnd = 3010;
-const composeServices = ["postgres", "mailpit"];
+const composeServices = ["postgres", "mailpit", "redis"];
 const runningChildren = [];
 
 let servicesToStop = [];
@@ -38,14 +38,25 @@ async function ensureDockerReady() {
   }
 
   if (process.platform === "win32") {
-    const dockerDesktopPath = path.join(
-      process.env.ProgramFiles ?? "C:\\Program Files",
-      "Docker",
-      "Docker",
-      "Docker Desktop.exe",
+    const dockerDesktopPaths = [
+      path.join(
+        process.env.LOCALAPPDATA ?? "",
+        "Programs",
+        "DockerDesktop",
+        "Docker Desktop.exe",
+      ),
+      path.join(
+        process.env.ProgramFiles ?? "C:\\Program Files",
+        "Docker",
+        "Docker",
+        "Docker Desktop.exe",
+      ),
+    ];
+    const dockerDesktopPath = dockerDesktopPaths.find((candidate) =>
+      existsSync(candidate),
     );
 
-    if (existsSync(dockerDesktopPath)) {
+    if (dockerDesktopPath) {
       const dockerDesktop = spawn(dockerDesktopPath, [], {
         detached: true,
         stdio: "ignore",
@@ -362,6 +373,18 @@ async function main() {
         "--",
         "Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command=Warning",
       ],
+      {
+        env: {
+          ...process.env,
+          Smtp__Host: "127.0.0.1",
+          Smtp__Port: "1025",
+          Smtp__UseSsl: "false",
+          Smtp__UserName: "",
+          Smtp__Password: "",
+          Smtp__FromAddress: "no-reply@culinary.local",
+          FileStorage__Provider: "Local",
+        },
+      },
     );
     await waitForHttp(
       `http://127.0.0.1:${apiPort}/swagger/v1/swagger.json`,

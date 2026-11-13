@@ -14,5 +14,6 @@ public sealed record GetRecipesQuery(
     string? Search,
     string Sort,
     bool OwnRecipesOnly = false,
-    bool IncludeAllStatuses = false
+    bool IncludeAllStatuses = false,
+    int? MinServings = null
 ) : IRequest<PagedResult<RecipeSummaryDto>>;

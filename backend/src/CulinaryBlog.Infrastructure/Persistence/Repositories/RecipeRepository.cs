@@ -31,7 +31,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             bool isAdmin,
             bool ownRecipesOnly = false,
             bool includeAllStatuses = false,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            int? minServings = null)
     {
         IQueryable<Recipe> query =
             _context.Recipes
@@ -83,6 +84,9 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 x.Difficulty == difficulty.Value);
         }
 
+        if (minServings.HasValue)
+            query = query.Where(x => x.Servings >= minServings.Value);
+
         // Max cook time
         if (maxCookTime.HasValue)
         {
@@ -92,12 +96,14 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var normalizedSearch = search.Trim().ToLower();
-            query = query.Where(recipe =>
-                recipe.Title.ToLower().Contains(normalizedSearch)
-                || recipe.Description.ToLower().Contains(normalizedSearch)
-                || recipe.Ingredients.Any(ingredient =>
-                    ingredient.Name.ToLower().Contains(normalizedSearch)));
+            // Keep list and dedicated search endpoints consistent, and use the
+            // indexed Vietnamese-aware vector instead of scanning text columns.
+            var tsQuery = VietnameseSearchQuery.Build(search);
+            query = tsQuery.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(recipe =>
+                    EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+                        .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)));
         }
 
         // Sorting
@@ -111,6 +117,9 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
 
             "title" =>
                 query.OrderBy(x => x.Title),
+
+            "-title" =>
+                query.OrderByDescending(x => x.Title),
 
             "cookTime" =>
                 query.OrderBy(x => x.CookTimeMinutes),
@@ -128,7 +137,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             await query.CountAsync(cancellationToken);
 
         var items =
-            await query
+            await ((IOrderedQueryable<Recipe>)query)
+                .ThenBy(recipe => recipe.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
@@ -187,30 +197,37 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             string searchTerm,
             int page,
             int pageSize,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Guid? categoryId = null,
+            DifficultyLevel? difficulty = null,
+            int? maxCookTime = null,
+            int? minServings = null)
     {
-        var pattern = $"%{searchTerm.Trim()}%";
-        var query = _context.Recipes
-            .AsNoTracking()
-            .Where(recipe =>
-                !recipe.IsDeleted
-                && !recipe.Category.IsDeleted
+        var tsQuery = VietnameseSearchQuery.Build(searchTerm);
+        if (tsQuery.Length == 0) return (Array.Empty<Recipe>(), 0);
+        IQueryable<Recipe> query = _context.Recipes.AsNoTracking()
+            .Where(recipe => !recipe.IsDeleted && !recipe.Category.IsDeleted
                 && recipe.Status == RecipeStatus.Published
-                && (EF.Functions.ILike(recipe.Title, pattern)
-                    || EF.Functions.ILike(recipe.Description, pattern)
-                    || EF.Functions.ILike(recipe.Instructions, pattern)
-                    || recipe.Ingredients.Any(ingredient =>
-                        EF.Functions.ILike(ingredient.Name, pattern))))
+                && EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+                    .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)))
             .Include(recipe => recipe.Category)
             .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
-
+        if (categoryId.HasValue) query = query.Where(x => x.CategoryId == categoryId.Value);
+        if (difficulty.HasValue) query = query.Where(x => x.Difficulty == difficulty.Value);
+        if (maxCookTime.HasValue) query = query.Where(x => x.CookTimeMinutes <= maxCookTime.Value);
+        if (minServings.HasValue) query = query.Where(x => x.Servings >= minServings.Value);
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query
-            .OrderByDescending(recipe => recipe.CreatedAt)
-            .ThenBy(recipe => recipe.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        var ranked = await query
+            .OrderByDescending(recipe => EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+                .Rank(EF.Functions.ToTsQuery("vietnamese", tsQuery)))
+            .ThenByDescending(recipe => recipe.CreatedAt).ThenBy(recipe => recipe.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(recipe => new { Recipe = recipe,
+                Score = EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+                    .Rank(EF.Functions.ToTsQuery("vietnamese", tsQuery)) })
             .ToListAsync(cancellationToken);
+        foreach (var row in ranked) row.Recipe.SearchRelevanceScore = row.Score;
+        var items = ranked.Select(row => row.Recipe).ToList();
 
         return (items, totalCount);
     }

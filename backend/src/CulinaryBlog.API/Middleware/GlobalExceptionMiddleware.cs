@@ -67,6 +67,17 @@ public class GlobalExceptionMiddleware
                 "Unauthorized",
                 ex.Message);
         }
+        catch (AccountLockedException ex)
+        {
+            await WriteProblemAsync(context, StatusCodes.Status423Locked,
+                "Account locked", ex.Message);
+        }
+        catch (GoogleProviderUnavailableException ex)
+        {
+            _logger.LogWarning(ex, "Google identity provider could not be reached.");
+            await WriteProblemAsync(context, StatusCodes.Status502BadGateway,
+                "Identity provider unavailable", ex.Message);
+        }
         catch (CulinaryBlog.Application.Common.Exceptions.EmailServiceUnavailableException ex)
         {
             await WriteProblemAsync(
@@ -89,7 +100,8 @@ public class GlobalExceptionMiddleware
                 context,
                 StatusCodes.Status422UnprocessableEntity,
                 "Validation failed",
-                ex.Message);
+                ex.Message,
+                ex.Errors);
         }
         catch (DomainValidationException ex)
         {
@@ -173,7 +185,8 @@ public class GlobalExceptionMiddleware
         HttpContext context,
         int statusCode,
         string title,
-        string detail)
+        string detail,
+        IReadOnlyDictionary<string, string[]>? errors = null)
     {
         if (context.Response.HasStarted)
         {
@@ -188,6 +201,8 @@ public class GlobalExceptionMiddleware
             Detail = detail,
             Instance = context.Request.Path.ToString()
         };
+        if (errors is not null)
+            problem.Extensions["errors"] = errors;
 
         await _problemDetailsService.WriteAsync(
             new ProblemDetailsContext

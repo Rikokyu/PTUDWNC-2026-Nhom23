@@ -4,4 +4,5 @@ namespace CulinaryBlog.Domain.Models;
 
 public sealed record CategoryWithRecipeCount(
     Category Category,
-    int RecipeCount);
+    int RecipeCount,
+    string? RepresentativeImageUrl = null);

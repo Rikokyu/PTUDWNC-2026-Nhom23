@@ -6,6 +6,7 @@ using CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
 using CulinaryBlog.Application.Features.Categories.Queries.GetCategories;
 using CulinaryBlog.Application.Features.Categories.Queries.GetCategoryBySlug;
 using MediatR;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace CulinaryBlog.API.Endpoints;
 
@@ -20,11 +21,13 @@ public static class CategoryEndpoints
 			.RequireRateLimiting("Api");
 
 		group.MapGet("", GetCategoriesAsync)
+			.CacheOutput("CategoryList")
 			.WithName("GetCategories")
 			.WithSummary("List active recipe categories.")
 			.Produces<IReadOnlyList<CategoryDto>>(StatusCodes.Status200OK);
 
 		group.MapGet("/{slug}", GetCategoryBySlugAsync)
+			.CacheOutput("CategoryDetail")
 			.WithName("GetCategoryBySlug")
 			.WithSummary("Get a category and its paginated recipes.")
 			.Produces<CategoryDetailDto>(StatusCodes.Status200OK)
@@ -78,8 +81,7 @@ public static class CategoryEndpoints
 
 	private static async Task<IResult> GetCategoryBySlugAsync(
 		string slug,
-		int page,
-		int pageSize,
+		HttpRequest request,
 		ISender sender,
 		CancellationToken cancellationToken)
 	{
@@ -88,8 +90,8 @@ public static class CategoryEndpoints
 			throw new ValidationException("slug is required.");
 		}
 
-		page = page == 0 ? 1 : page;
-		pageSize = pageSize == 0 ? 12 : pageSize;
+		var page = ReadPaginationParameter(request, "page", 1);
+		var pageSize = ReadPaginationParameter(request, "pageSize", 12);
 
 		if (page < 1)
 		{
@@ -113,9 +115,32 @@ public static class CategoryEndpoints
 		return Results.Ok(result);
 	}
 
+	private static int ReadPaginationParameter(
+		HttpRequest request,
+		string name,
+		int defaultValue)
+	{
+		if (!request.Query.TryGetValue(name, out var values))
+		{
+			return defaultValue;
+		}
+
+		if (values.Count != 1 || !int.TryParse(
+			values[0],
+			System.Globalization.NumberStyles.Integer,
+			System.Globalization.CultureInfo.InvariantCulture,
+			out var value))
+		{
+			throw new ValidationException($"{name} must be an integer.");
+		}
+
+		return value;
+	}
+
 	private static async Task<IResult> CreateCategoryAsync(
 		CreateCategoryRequest request,
 		ISender sender,
+		IOutputCacheStore cache,
 		CancellationToken cancellationToken)
 	{
 		var result = await sender.Send(
@@ -125,6 +150,7 @@ public static class CategoryEndpoints
 				request.ImageUrl,
 				request.OrderIndex),
 			cancellationToken);
+		await cache.SafeEvictByTagAsync("categories", cancellationToken);
 
 		return Results.Created(
 			$"/api/v1/categories/{result.Slug}",
@@ -135,6 +161,7 @@ public static class CategoryEndpoints
 		Guid id,
 		UpdateCategoryRequest request,
 		ISender sender,
+		IOutputCacheStore cache,
 		CancellationToken cancellationToken)
 	{
 		var result = await sender.Send(
@@ -145,6 +172,7 @@ public static class CategoryEndpoints
 				request.ImageUrl,
 				request.OrderIndex),
 			cancellationToken);
+		await cache.SafeEvictByTagAsync("categories", cancellationToken);
 
 		return Results.Ok(result);
 	}
@@ -152,11 +180,13 @@ public static class CategoryEndpoints
 	private static async Task<IResult> DeleteCategoryAsync(
 		Guid id,
 		ISender sender,
+		IOutputCacheStore cache,
 		CancellationToken cancellationToken)
 	{
 		await sender.Send(
 			new DeleteCategoryCommand(id),
 			cancellationToken);
+		await cache.SafeEvictByTagAsync("categories", cancellationToken);
 
 		return Results.NoContent();
 	}

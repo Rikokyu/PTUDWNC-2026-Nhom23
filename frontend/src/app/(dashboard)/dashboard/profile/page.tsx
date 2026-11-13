@@ -102,9 +102,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8">
-      <header>
-        <h1 className="text-2xl font-bold text-content-primary">Hồ sơ cá nhân</h1>
+    <div className="mx-auto max-w-3xl space-y-8">
+      <header className="border-b border-stone-200 pb-6">
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">Tài khoản</p>
+        <h1 className="font-display text-3xl font-bold text-content-primary">Hồ sơ cá nhân</h1>
         <p className="mt-1 text-sm text-content-secondary">
           Cập nhật thông tin hiển thị và bảo vệ tài khoản của bạn.
         </p>
@@ -181,6 +182,6 @@ export default function ProfilePage() {
           {passwordMessage && <p role="status" className="text-sm text-emerald-700">{passwordMessage}</p>}
         </form>
       </section>
-    </main>
+    </div>
   );
 }

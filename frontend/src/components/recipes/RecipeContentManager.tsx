@@ -219,14 +219,14 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+    <div className="mx-auto max-w-5xl space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-200 pb-6">
         <div className="space-y-1">
           <Link href="/dashboard/recipes" className="text-sm font-semibold text-brand hover:underline">
             ← Công thức của tôi
           </Link>
-          <h1 className="text-2xl font-extrabold text-content-primary">
-            Quản lý nội dung: {recipe.title}
+          <h1 className="font-display text-3xl font-bold text-content-primary">
+            {recipe.title}
           </h1>
           <p className="text-sm text-content-secondary">
             Quản lý ảnh, nguyên liệu và các bước thực hiện.
@@ -442,7 +442,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

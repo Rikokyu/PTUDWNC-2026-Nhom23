@@ -25,6 +25,8 @@ public sealed class IdentityService : IIdentityService
     private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
     private readonly IConfiguration _configuration;
     private readonly IEmailSender _emailSender;
+    private readonly IGoogleTokenVerifier _googleTokenVerifier;
+    private readonly ILogger<IdentityService> _logger;
     private readonly ITimeLimitedDataProtector _passwordResetProtector;
 
     public IdentityService(
@@ -32,12 +34,16 @@ public sealed class IdentityService : IIdentityService
         IPasswordHasher<ApplicationUser> passwordHasher,
         IConfiguration configuration,
         IEmailSender emailSender,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        IGoogleTokenVerifier googleTokenVerifier,
+        ILogger<IdentityService> logger)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _configuration = configuration;
         _emailSender = emailSender;
+        _googleTokenVerifier = googleTokenVerifier;
+        _logger = logger;
         _passwordResetProtector = dataProtectionProvider
             .CreateProtector("CulinaryBlog.PasswordReset.v1")
             .ToTimeLimitedDataProtector();
@@ -88,14 +94,43 @@ public sealed class IdentityService : IIdentityService
                 candidate => candidate.Email.ToLower() == normalizedEmail,
                 cancellationToken);
 
-        if (user is null
-            || _passwordHasher.VerifyHashedPassword(
-                user,
-                user.PasswordHash,
-                password) == PasswordVerificationResult.Failed)
+        if (user is null || !user.IsActive)
         {
             return null;
         }
+
+        var now = DateTime.UtcNow;
+        if (user.LockoutEnd > now)
+            throw new AccountLockedException(user.LockoutEnd.Value);
+        if (user.LockoutEnd is not null && user.LockoutEnd <= now)
+        {
+            user.AccessFailedCount = 0;
+            user.LockoutEnd = null;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password)
+            == PasswordVerificationResult.Failed)
+        {
+            await _context.ApplicationUsers.Where(candidate => candidate.Id == user.Id)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(candidate => candidate.AccessFailedCount, candidate => candidate.AccessFailedCount + 1)
+                    .SetProperty(candidate => candidate.LockoutEnd, candidate =>
+                        candidate.AccessFailedCount + 1 >= 5 ? now.AddMinutes(15) : null),
+                    cancellationToken);
+            var lockoutEnd = await _context.ApplicationUsers.AsNoTracking()
+                .Where(candidate => candidate.Id == user.Id)
+                .Select(candidate => candidate.LockoutEnd).SingleAsync(cancellationToken);
+            if (lockoutEnd > now)
+                throw new AccountLockedException(lockoutEnd.Value);
+            return null;
+        }
+
+        if (user.AccessFailedCount != 0 || user.LockoutEnd is not null)
+            await _context.ApplicationUsers.Where(candidate => candidate.Id == user.Id)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(candidate => candidate.AccessFailedCount, 0)
+                    .SetProperty(candidate => candidate.LockoutEnd, (DateTime?)null), cancellationToken);
 
         return await CreateSessionAsync(user, cancellationToken);
     }
@@ -466,6 +501,143 @@ public sealed class IdentityService : IIdentityService
         }
     }
 
+    public async Task<AuthSessionDto?> RefreshAsync(
+        string refreshToken, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken) || refreshToken.Length > 512)
+            return null;
+
+        var hash = HashToken(refreshToken);
+        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        // A row lock serializes rotation and reuse detection across API instances.
+        var token = await _context.RefreshTokens
+            .FromSqlInterpolated($"SELECT * FROM \"RefreshTokens\" WHERE \"TokenHash\" = {hash} FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
+        if (token is null)
+            return null;
+
+        var now = DateTime.UtcNow;
+        if (token.ReplacedByTokenHash is not null)
+        {
+            await _context.RefreshTokens.Where(item => item.FamilyId == token.FamilyId && item.RevokedAt == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.RevokedAt, now)
+                    .SetProperty(item => item.UpdatedAt, now), cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            _logger.LogWarning("Refresh token reuse detected for family {FamilyId}", token.FamilyId);
+            return null;
+        }
+
+        if (token.RevokedAt is not null || token.ExpiresAt <= now)
+            return null;
+        var user = await _context.ApplicationUsers.SingleOrDefaultAsync(
+            candidate => candidate.Id == token.UserId, cancellationToken);
+        if (user is null || !user.IsActive || user.LockoutEnd > now)
+            return null;
+
+        var rawNext = CreateRefreshToken();
+        var nextHash = HashToken(rawNext);
+        var accessExpires = now.AddMinutes(_configuration.GetValue("Jwt:AccessTokenMinutes", 15));
+        var refreshExpires = now.AddDays(_configuration.GetValue("Jwt:RefreshTokenDays", 7));
+        token.RevokedAt = now;
+        token.ReplacedByTokenHash = nextHash;
+        token.UpdatedAt = now;
+        _context.RefreshTokens.Add(new RefreshToken
+        {
+            Id = Guid.NewGuid(), UserId = user.Id, TokenHash = nextHash,
+            FamilyId = token.FamilyId, ExpiresAt = refreshExpires, CreatedAt = now
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return new AuthSessionDto(CreateAccessToken(user, now, accessExpires),
+            accessExpires, rawNext, refreshExpires, ToDto(user));
+    }
+
+    public async Task LogoutAsync(Guid userId, string? refreshToken,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken) || refreshToken.Length > 512)
+            return;
+        var now = DateTime.UtcNow;
+        await _context.RefreshTokens.Where(token => token.UserId == userId
+                && token.TokenHash == HashToken(refreshToken) && token.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.RevokedAt, now)
+                .SetProperty(token => token.UpdatedAt, now), cancellationToken);
+    }
+
+    public async Task<AuthSessionDto> GoogleLoginAsync(string idToken,
+        CancellationToken cancellationToken)
+    {
+        var profile = await _googleTokenVerifier.VerifyAsync(idToken, cancellationToken)
+            ?? throw new UnauthorizedException("Invalid Google ID token.");
+        var user = await _context.ApplicationUsers.SingleOrDefaultAsync(
+            candidate => candidate.GoogleSubject == profile.Subject, cancellationToken);
+        if (user is null)
+        {
+            user = await _context.ApplicationUsers.SingleOrDefaultAsync(
+                candidate => candidate.Email == profile.Email, cancellationToken);
+            if (user is not null && (!user.IsActive || user.LockoutEnd > DateTime.UtcNow))
+                throw new UnauthorizedException("Account is unavailable.");
+            if (user is null)
+            {
+                user = new ApplicationUser
+                {
+                    Id = Guid.NewGuid(), Email = profile.Email,
+                    UserName = $"user_{Guid.NewGuid():N}",
+                    DisplayName = profile.DisplayName.Trim()[..Math.Min(profile.DisplayName.Trim().Length, 100)],
+                    AvatarUrl = profile.AvatarUrl, GoogleSubject = profile.Subject,
+                    Role = "Author", CreatedAt = DateTime.UtcNow,
+                    PasswordHash = string.Empty
+                };
+                _context.ApplicationUsers.Add(user);
+            }
+            else if (user.GoogleSubject is null)
+                user.GoogleSubject = profile.Subject;
+            else
+                throw new UnauthorizedException("Google account does not match the existing account.");
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        if (!user.IsActive || user.LockoutEnd > DateTime.UtcNow)
+            throw new UnauthorizedException("Account is unavailable.");
+        return await CreateSessionAsync(user, cancellationToken);
+    }
+
+    public async Task<UserDto> PatchProfileAsync(Guid userId, bool hasDisplayName,
+        string? displayName, bool hasAvatarUrl, string? avatarUrl, bool hasBio,
+        string? bio, CancellationToken cancellationToken)
+    {
+        var user = await _context.ApplicationUsers.SingleOrDefaultAsync(
+            candidate => candidate.Id == userId, cancellationToken)
+            ?? throw new NotFoundException("User profile was not found.");
+        if (hasDisplayName)
+        {
+            var name = displayName?.Trim();
+            if (name is null || name.Length is < 2 or > 100)
+                throw new ValidationException("Display name must contain between 2 and 100 characters.", "displayName");
+            user.DisplayName = name;
+        }
+        if (hasAvatarUrl)
+        {
+            var url = string.IsNullOrWhiteSpace(avatarUrl) ? null : avatarUrl.Trim();
+            if (url is not null && (url.Length > 500 || !Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+                || !string.IsNullOrEmpty(uri.UserInfo)))
+                throw new ValidationException("Avatar URL must be an absolute HTTP or HTTPS URL without embedded credentials.", "avatarUrl");
+            user.AvatarUrl = url;
+        }
+        if (hasBio)
+        {
+            if (bio?.Trim().Length > 500)
+                throw new ValidationException("Bio must be at most 500 characters.", "bio");
+            user.Bio = string.IsNullOrWhiteSpace(bio) ? null : bio.Trim();
+        }
+        if (hasDisplayName || hasAvatarUrl || hasBio)
+        {
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        return ToProfileDto(user);
+    }
+
     private async Task<AuthSessionDto> CreateSessionAsync(
         ApplicationUser user,
         CancellationToken cancellationToken)
@@ -488,6 +660,7 @@ public sealed class IdentityService : IIdentityService
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 TokenHash = HashToken(refreshToken),
+                FamilyId = Guid.NewGuid(),
                 ExpiresAt = refreshTokenExpiresAt,
                 CreatedAt = now
             },

@@ -24,7 +24,7 @@ export default function AdminUsersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<"" | UserRole>("");
-  const usersQuery = useAdminUsers({ page, pageSize: 20, search, role });
+  const usersQuery = useAdminUsers({ page, pageSize: 20, search, role }, currentUser?.role === "Admin");
   const statusMutation = useSetUserActive();
   const roleMutation = useSetUserRole();
   const mutationError = statusMutation.error ?? roleMutation.error;
@@ -36,16 +36,19 @@ export default function AdminUsersPage() {
     setSearch(searchInput.trim());
   };
 
+  if (currentUser?.role !== "Admin") return null;
+
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-extrabold text-content-primary">Quản lý tài khoản</h1>
+      <header className="border-b border-stone-200 pb-6">
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">Quản trị cộng đồng</p>
+        <h1 className="font-display text-3xl font-bold text-content-primary">Quản lý tài khoản</h1>
         <p className="mt-1 text-sm text-content-secondary">
-          Admin có thể xem tài khoản, khóa/mở khóa Author và thay đổi role.
+          Tìm tài khoản, quản lý trạng thái và quyền truy cập của thành viên.
         </p>
       </header>
 
-      <form onSubmit={applySearch} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_180px_auto] md:items-end">
+      <form onSubmit={applySearch} className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-subtle md:grid-cols-[1fr_180px_auto] md:items-end">
         <Input
           label="Tìm tài khoản"
           value={searchInput}

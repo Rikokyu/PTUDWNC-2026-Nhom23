@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Common.Interfaces;
+using CulinaryBlog.Application.Common.Observability;
 using CulinaryBlog.Application.Common.Validation;
 using CulinaryBlog.Application.DTOs.Recipes;
 using CulinaryBlog.Domain.Entities;
@@ -111,6 +112,15 @@ public sealed class RecipeCommandHandler :
 
         await _recipeStore.AddAsync(recipe, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+<<<<<<< HEAD
+=======
+        RecipeMetrics.RecordCreated();
+        _logger.LogInformation(
+            "Recipe {RecipeId} created by user {UserId} with status {Status}.",
+            recipe.Id,
+            _currentUser.UserId,
+            RecipeStatus.Draft);
+>>>>>>> 315339d (Update UI)
 
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
@@ -191,6 +201,16 @@ public sealed class RecipeCommandHandler :
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+<<<<<<< HEAD
+=======
+        if (request.Status == RecipeStatus.Published)
+            RecipeMetrics.RecordPublished();
+        _logger.LogInformation(
+            "Recipe {RecipeId} status changed to {Status} by user {UserId}.",
+            recipe.Id,
+            request.Status,
+            _currentUser.UserId);
+>>>>>>> 315339d (Update UI)
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 

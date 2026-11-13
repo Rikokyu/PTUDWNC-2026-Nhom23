@@ -36,9 +36,10 @@ export function useMyRecipes(filters: RecipeFilters = {}) {
   });
 }
 
-export function useAdminRecipes(filters: RecipeFilters = {}) {
+export function useAdminRecipes(filters: RecipeFilters = {}, enabled = true) {
   return useQuery({
     queryKey: recipeKeys.admin(filters),
     queryFn: () => recipeApi.getAdmin(filters),
+    enabled,
   });
 }

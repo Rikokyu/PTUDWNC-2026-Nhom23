@@ -634,7 +634,8 @@ public sealed class RegistrationAndImageUploadTests
                 bool isAdmin,
                 bool ownRecipesOnly = false,
                 bool includeAllStatuses = false,
-                CancellationToken cancellationToken = default)
+                CancellationToken cancellationToken = default,
+                int? minServings = null)
         {
                 LastPagedCurrentUserId = currentUserId;
                 LastPagedIncludeAllStatuses = includeAllStatuses;
@@ -657,7 +658,11 @@ public sealed class RegistrationAndImageUploadTests
                     string searchTerm,
                     int page,
                     int pageSize,
-                    CancellationToken cancellationToken = default) =>
+                    CancellationToken cancellationToken = default,
+            Guid? categoryId = null,
+            DifficultyLevel? difficulty = null,
+            int? maxCookTime = null,
+            int? minServings = null) =>
                 Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
 
         public Task<Recipe?> GetByIdWithDetailsAsync(

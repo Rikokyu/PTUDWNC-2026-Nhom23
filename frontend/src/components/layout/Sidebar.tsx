@@ -1,78 +1,63 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bookmark, ChefHat, Grid, LogOut, PlusCircle, Settings, User, Users } from "lucide-react";
+import { Bookmark, ChefHat, FolderOpen, LayoutDashboard, LogOut, Plus, Settings2, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 
-export const Sidebar: React.FC = () => {
+export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-
-  const menuItems = [
-    { label: "Tổng quan", href: "/dashboard", icon: Grid },
-    { label: "Công thức của tôi", href: "/dashboard/recipes", icon: ChefHat },
-    { label: "Tạo công thức mới", href: "/dashboard/recipes/new", icon: PlusCircle },
-    ...(user?.role === "Admin"
-      ? [
-          { label: "Quản lý danh mục", href: "/dashboard/categories", icon: Grid },
-          { label: "Quản lý công thức", href: "/dashboard/admin-recipes", icon: ChefHat },
-          { label: "Quản lý tài khoản", href: "/dashboard/users", icon: Users },
-        ]
-      : []),
-    { label: "Hồ sơ cá nhân", href: "/dashboard/profile", icon: User },
-    { label: "Công thức đã lưu", href: "/saved", icon: Bookmark },
+  const isAdmin = user?.role === "Admin";
+  const groups = [
+    { title: "Không gian làm việc", items: [
+      { label: "Tổng quan", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Công thức của tôi", href: "/dashboard/recipes", icon: ChefHat },
+      { label: "Tạo công thức", href: "/dashboard/recipes/new", icon: Plus },
+      { label: "Đã lưu", href: "/saved", icon: Bookmark },
+    ] },
+    ...(isAdmin ? [{ title: "Quản trị", items: [
+      { label: "Tất cả công thức", href: "/dashboard/admin-recipes", icon: FolderOpen },
+      { label: "Danh mục", href: "/dashboard/categories", icon: Settings2 },
+      { label: "Tài khoản", href: "/dashboard/users", icon: Users },
+    ] }] : []),
+    { title: "Tài khoản", items: [
+      { label: "Hồ sơ cá nhân", href: "/dashboard/profile", icon: UserRound },
+    ] },
   ];
+  const isActive = (href: string) => pathname === href || (
+    href === "/dashboard/recipes" && pathname.startsWith("/dashboard/recipes/") && pathname !== "/dashboard/recipes/new"
+  );
 
-  return (
-    <aside className="hidden min-h-[calc(100vh-4rem)] w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white p-4 md:flex">
-      <div className="space-y-6">
-        <div>
-          <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-content-tertiary">
-            Quản trị cá nhân
-          </p>
-          <nav className="space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors",
-                    isActive
-                      ? "bg-brand-light font-semibold text-brand-hover"
-                      : "text-content-secondary hover:bg-slate-50 hover:text-content-primary",
-                  )}
-                >
-                  <Icon className={cn("h-4 w-4", isActive ? "text-brand" : "text-content-tertiary")} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+  return <>
+    <nav aria-label="Điều hướng quản lý trên điện thoại" className="flex gap-2 overflow-x-auto border-b border-stone-200 bg-white px-4 py-3 md:hidden">
+      {groups.flatMap((group) => group.items).map((item) => <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={cn(
+        "shrink-0 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
+        isActive(item.href) ? "border-brand bg-brand-light text-brand-hover" : "border-stone-200 text-content-secondary hover:border-brand-border"
+      )}>{item.label}</Link>)}
+    </nav>
+    <aside className="hidden min-h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r border-stone-200 bg-white px-4 py-7 md:flex">
+      <div className="mb-8 px-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand">Culinary Blog</p>
+        <p className="mt-2 font-display text-xl font-bold text-content-primary">Góc làm việc</p>
+        <p className="mt-1 text-xs text-content-tertiary">{isAdmin ? "Quản trị viên" : "Tác giả"}</p>
       </div>
-
-      <div className="space-y-1 border-t border-slate-100 pt-4">
-        <Link
-          href="/dashboard/settings"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium text-content-secondary transition-colors hover:bg-slate-50 hover:text-content-primary"
-        >
-          <Settings className="h-4 w-4 text-content-tertiary" />
-          <span>Cài đặt tài khoản</span>
-        </Link>
-        <button
-          onClick={() => void logout()}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50"
-        >
-          <LogOut className="h-4 w-4 text-rose-500" />
-          <span>Đăng xuất</span>
-        </button>
+      <div className="flex-1 space-y-7">
+        {groups.map((group) => <div key={group.title}>
+          <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-content-tertiary">{group.title}</p>
+          <nav aria-label={group.title} className="space-y-1">
+            {group.items.map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} aria-current={isActive(item.href) ? "page" : undefined} className={cn(
+              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+              isActive(item.href) ? "bg-brand-light font-semibold text-brand-hover" : "text-content-secondary hover:bg-stone-100 hover:text-content-primary"
+            )}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{item.label}</Link>; })}
+          </nav>
+        </div>)}
+      </div>
+      <div className="border-t border-stone-200 pt-4">
+        <p className="truncate px-3 pb-2 text-xs font-medium text-content-secondary">{user?.displayName}</p>
+        <button onClick={() => void logout()} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-rose-700 hover:bg-rose-50"><LogOut className="h-4 w-4" />Đăng xuất</button>
       </div>
     </aside>
-  );
-};
+  </>;
+}

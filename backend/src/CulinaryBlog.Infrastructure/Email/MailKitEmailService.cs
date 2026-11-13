@@ -73,8 +73,60 @@ public sealed class MailKitEmailService(
         string resetUrl,
         CancellationToken cancellationToken = default)
     {
+<<<<<<< HEAD
         var host = configuration["Smtp:Host"];
         if (string.IsNullOrWhiteSpace(host))
+=======
+        var safeName = WebUtility.HtmlEncode(displayName);
+        var safeUrl = WebUtility.HtmlEncode(resetUrl);
+
+        var html = $"""
+            <p>Xin chào {safeName},</p>
+            <p>Nhấn vào liên kết sau để đặt lại mật khẩu.</p>
+            <p>Liên kết có hiệu lực trong 30 phút.</p>
+            <p>
+                <a href="{safeUrl}">
+                    Đặt lại mật khẩu
+                </a>
+            </p>
+            <p>
+                Nếu bạn không yêu cầu thay đổi này,
+                hãy bỏ qua email.
+            </p>
+            """;
+
+        await SendHtmlEmailAsync(
+            email,
+            displayName,
+            "Đặt lại mật khẩu Culinary Blog",
+            html,
+            cancellationToken);
+
+        logger.LogInformation(
+            "Sent password reset email to {Email}.", email);
+    }
+
+    private async Task SendHtmlEmailAsync(
+        string email,
+        string displayName,
+        string subject,
+        string html,
+        CancellationToken cancellationToken)
+    {
+        var host = configuration["Smtp:Host"]
+            ?? throw new InvalidOperationException(
+                "Smtp:Host is required.");
+
+        var port = configuration.GetValue(
+            "Smtp:Port", 587);
+
+        var username = configuration["Smtp:Username"];
+        var password = configuration["Smtp:Password"];
+
+        var useSsl = configuration.GetValue("Smtp:UseSsl", true);
+        if (string.IsNullOrWhiteSpace(username) != string.IsNullOrWhiteSpace(password)
+            || (useSsl && string.IsNullOrWhiteSpace(username)))
+>>>>>>> 315339d (Update UI)
         {
             throw new InvalidOperationException(
                 "Smtp:Host is required to send password reset emails.");
@@ -98,6 +150,7 @@ public sealed class MailKitEmailService(
 #pragma warning disable SYSLIB0014
         using var client = new SmtpClient(
             host,
+<<<<<<< HEAD
             configuration.GetValue("Smtp:Port", 587))
         {
             EnableSsl = configuration.GetValue("Smtp:UseSsl", true)
@@ -109,6 +162,16 @@ public sealed class MailKitEmailService(
         if (!string.IsNullOrWhiteSpace(userName))
         {
             client.Credentials = new NetworkCredential(userName, password);
+=======
+            port,
+            useSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None,
+            cancellationToken);
+
+        // Đăng nhập SMTP bằng App Password.
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            await client.AuthenticateAsync(username, password!, cancellationToken);
+>>>>>>> 315339d (Update UI)
         }
 
         await client.SendMailAsync(message, cancellationToken);

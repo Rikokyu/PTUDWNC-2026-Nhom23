@@ -55,7 +55,7 @@ public static class RecipeImageEndpoints
                         request.IsPrimary),
                     cancellationToken);
 
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     "recipes",
                     cancellationToken);
                 return Results.Created(
@@ -86,7 +86,7 @@ public static class RecipeImageEndpoints
                         request.AltText,
                         request.IsPrimary),
                     cancellationToken);
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     "recipes",
                     cancellationToken);
                 return Results.NoContent();
@@ -110,7 +110,7 @@ public static class RecipeImageEndpoints
                         null,
                         true),
                     cancellationToken);
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     "recipes",
                     cancellationToken);
                 return Results.Ok(new { id = imageId, isPrimary = true });
@@ -130,7 +130,7 @@ public static class RecipeImageEndpoints
                 await sender.Send(
                     new DeleteRecipeImageCommand(recipeId, imageId),
                     cancellationToken);
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     "recipes",
                     cancellationToken);
                 return Results.NoContent();

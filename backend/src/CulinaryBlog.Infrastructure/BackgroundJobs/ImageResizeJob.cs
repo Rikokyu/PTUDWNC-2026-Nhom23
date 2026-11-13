@@ -71,16 +71,28 @@ public sealed class ImageResizeJob(
         {
             if (thumbnailUrl is not null)
             {
-                await fileStorage.DeleteAsync(
-                    thumbnailUrl,
-                    CancellationToken.None);
+                try
+                {
+                    await fileStorage.DeleteAsync(thumbnailUrl, CancellationToken.None);
+                }
+                catch (Exception cleanupException)
+                {
+                    logger.LogError(cleanupException,
+                        "Could not remove orphan thumbnail for image {ImageId}.", imageId);
+                }
             }
 
             if (mediumUrl is not null)
             {
-                await fileStorage.DeleteAsync(
-                    mediumUrl,
-                    CancellationToken.None);
+                try
+                {
+                    await fileStorage.DeleteAsync(mediumUrl, CancellationToken.None);
+                }
+                catch (Exception cleanupException)
+                {
+                    logger.LogError(cleanupException,
+                        "Could not remove orphan medium image for image {ImageId}.", imageId);
+                }
             }
 
             throw;

@@ -27,11 +27,16 @@ public sealed class SearchRecipesQueryHandler(
                 "Page must be positive and pageSize must be between 1 and 50.");
         }
 
+        if (request.MinServings < 1 || request.MaxCookTime < 0
+            || (request.Difficulty.HasValue && !Enum.IsDefined(request.Difficulty.Value)))
+            throw new ValidationException("Invalid recipe search filters.");
+
         var result = await recipes.SearchPublishedAsync(
             term,
             request.Page,
             request.PageSize,
-            cancellationToken);
+            cancellationToken, request.CategoryId, request.Difficulty,
+            request.MaxCookTime, request.MinServings);
         var items = result.Items
             .Select(recipe => new RecipeSummaryDto(
                 recipe.Id,
@@ -51,7 +56,8 @@ public sealed class SearchRecipesQueryHandler(
                 recipe.Servings,
                 recipe.Difficulty,
                 recipe.Status,
-                recipe.CreatedAt))
+                recipe.CreatedAt,
+                recipe.SearchRelevanceScore))
             .ToList();
 
         return new PagedResult<RecipeSummaryDto>(

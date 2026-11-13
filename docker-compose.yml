@@ -39,6 +39,19 @@ services:
     volumes:
       - culinary_blog_minio_data:/bitnami/minio/data
 
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - culinary_blog_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     build:
       context: ./backend
@@ -49,6 +62,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=culinary_blog;Username=admin;Password=admin;SSL Mode=Disable
+      ConnectionStrings__Redis: redis:6379,abortConnect=false,connectTimeout=1000,asyncTimeout=1000,syncTimeout=1000,connectRetry=0
+      FileStorage__Provider: Minio
       Minio__Endpoint: http://minio:9000
       Minio__PublicEndpoint: ${Minio__PublicEndpoint:-http://localhost:9000}
       Minio__AccessKey: ${Minio__AccessKey:-minioadmin}
@@ -73,8 +88,15 @@ services:
         condition: service_started
       minio:
         condition: service_started
+      redis:
+        condition: service_healthy
 
 volumes:
   culinary_blog_pgdata:
   culinary_blog_uploads:
   culinary_blog_minio_data:
+<<<<<<< HEAD
+=======
+  culinary_blog_redis_data:
+  culinary_blog_wwwroot:
+>>>>>>> 315339d (Update UI)

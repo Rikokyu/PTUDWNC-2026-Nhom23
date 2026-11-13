@@ -14,7 +14,8 @@ public sealed record RecipeSummaryDto(
     int Servings,
     DifficultyLevel Difficulty,
     RecipeStatus Status,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    float? RelevanceScore = null
 );
 
 public sealed record RecipeDetailDto(

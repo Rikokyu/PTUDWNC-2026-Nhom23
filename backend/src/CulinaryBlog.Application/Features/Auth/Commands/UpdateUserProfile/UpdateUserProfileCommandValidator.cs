@@ -9,10 +9,11 @@ public sealed class UpdateUserProfileCommandValidator
     {
         RuleFor(command => command.DisplayName)
             .NotEmpty()
+            .MinimumLength(2)
             .MaximumLength(100);
 
         RuleFor(command => command.Bio)
-            .MaximumLength(1000);
+            .MaximumLength(500);
 
         RuleFor(command => command.AvatarUrl)
             .MaximumLength(500);

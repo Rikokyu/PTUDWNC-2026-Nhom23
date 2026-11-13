@@ -42,17 +42,57 @@ public static class RecipeEndpoints
             .MapGet(
                 "/search",
                 async (
-                    string? q,
+                    HttpRequest request,
                     ISender sender,
-                    CancellationToken cancellationToken,
-                    int page = 1,
-                    int pageSize = 10) =>
+                    CancellationToken cancellationToken) =>
                 {
+                    static int ReadPagination(HttpRequest request, string name, int fallback)
+                    {
+                        if (!request.Query.TryGetValue(name, out var values))
+                            return fallback;
+                        if (values.Count != 1 || !int.TryParse(values[0],
+                            System.Globalization.NumberStyles.Integer,
+                            System.Globalization.CultureInfo.InvariantCulture, out var value)
+                            || value < 1)
+                            throw new ValidationException($"{name} must be a positive integer.");
+                        return value;
+                    }
+
+                    var q = request.Query["q"].FirstOrDefault();
+                    var page = ReadPagination(request, "page", 1);
+                    var pageSize = ReadPagination(request, "pageSize", 10);
+                    int? ReadFilter(string name, int minimum)
+                    {
+                        if (!request.Query.ContainsKey(name)) return null;
+                        var values = request.Query[name];
+                        if (values.Count != 1 || !int.TryParse(values[0], out var value) || value < minimum)
+                            throw new ValidationException($"{name} must be an integer >= {minimum} occurring once.");
+                        return value;
+                    }
+                    Guid? categoryId = null;
+                    if (request.Query.ContainsKey("categoryId"))
+                    {
+                        var values = request.Query["categoryId"];
+                        if (values.Count != 1 || !Guid.TryParse(values[0], out var id))
+                            throw new ValidationException("categoryId must be a single GUID.");
+                        categoryId = id;
+                    }
+                    DifficultyLevel? difficulty = null;
+                    if (request.Query.ContainsKey("difficulty"))
+                    {
+                        var values = request.Query["difficulty"];
+                        if (values.Count != 1 || !Enum.TryParse<DifficultyLevel>(values[0], true, out var level)
+                            || !Enum.IsDefined(level))
+                            throw new ValidationException("Invalid difficulty.");
+                        difficulty = level;
+                    }
                     var result = await sender.Send(
-                        new SearchRecipesQuery(q ?? string.Empty, page, pageSize),
+                        new SearchRecipesQuery(q ?? string.Empty, page, pageSize,
+                            categoryId, difficulty, ReadFilter("maxCookTime", 0), ReadFilter("minServings", 1)),
                         cancellationToken);
                     return Results.Ok(result);
                 })
+            .CacheOutput("RecipeSearch")
             .WithSummary("Search published recipes by title, description, instructions, or ingredients.")
             .Produces(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
@@ -86,7 +126,7 @@ public static class RecipeEndpoints
                         request.Steps ?? Array.Empty<RecipeStepInput>()),
                     cancellationToken);
 
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     "recipes",
                     cancellationToken);
 
@@ -124,10 +164,10 @@ public static class RecipeEndpoints
                         request.Nutrition),
                     cancellationToken);
 
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     "recipes",
                     cancellationToken);
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     $"recipe:{result.Slug}",
                     cancellationToken);
 
@@ -196,10 +236,10 @@ public static class RecipeEndpoints
                     new DeleteRecipeCommand(recipeId),
                     cancellationToken);
 
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     "recipes",
                     cancellationToken);
-                await outputCacheStore.EvictByTagAsync(
+                await outputCacheStore.SafeEvictByTagAsync(
                     $"recipe:{result.Slug}",
                     cancellationToken);
 
@@ -267,10 +307,10 @@ public static class RecipeEndpoints
             new SetRecipeStatusCommand(recipeId, status),
             cancellationToken);
 
-        await outputCacheStore.EvictByTagAsync(
+        await outputCacheStore.SafeEvictByTagAsync(
             "recipes",
             cancellationToken);
-        await outputCacheStore.EvictByTagAsync(
+        await outputCacheStore.SafeEvictByTagAsync(
             $"recipe:{result.Slug}",
             cancellationToken);
 
@@ -373,6 +413,16 @@ public static class RecipeEndpoints
             maxCookTime = parsedMaxCookTime;
         }
 
+        int? minServings = null;
+        if (query.ContainsKey("minServings"))
+        {
+            if (query["minServings"].Count != 1
+                || !int.TryParse(query["minServings"].FirstOrDefault(), out var parsedMinServings)
+                || parsedMinServings < 1)
+                throw new ValidationException("minServings must be a positive integer occurring once.");
+            minServings = parsedMinServings;
+        }
+
         var search = query["search"].FirstOrDefault()?.Trim();
 
         if (search?.Length > 100)
@@ -385,12 +435,25 @@ public static class RecipeEndpoints
             query["sort"].FirstOrDefault()
             ?? "-createdAt";
 
+        if (query.ContainsKey("sortBy") || query.ContainsKey("sortOrder"))
+        {
+            if (query["sortBy"].Count > 1 || query["sortOrder"].Count > 1)
+                throw new ValidationException("Sort parameters must occur only once.");
+            var sortBy = query["sortBy"].FirstOrDefault() ?? "createdAt";
+            var sortOrder = query["sortOrder"].FirstOrDefault() ?? "desc";
+            if (sortBy is not ("title" or "createdAt" or "cookTime")
+                || sortOrder is not ("asc" or "desc"))
+                throw new ValidationException("sortBy must be title, createdAt or cookTime; sortOrder must be asc or desc.");
+            sort = (sortOrder == "desc" ? "-" : "") + sortBy;
+        }
+
         var allowedSorts =
             new[]
             {
                 "-createdAt",
                 "createdAt",
                 "title",
+                "-title",
                 "cookTime",
                 "-cookTime"
             };
@@ -413,7 +476,8 @@ public static class RecipeEndpoints
                 search,
                 sort,
                 ownRecipesOnly,
-                includeAllStatuses);
+                includeAllStatuses,
+                minServings);
 
         var result =
             await sender.Send(

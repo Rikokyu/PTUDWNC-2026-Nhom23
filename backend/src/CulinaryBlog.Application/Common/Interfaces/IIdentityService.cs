@@ -45,4 +45,14 @@ public interface IIdentityService
     Task RevokeRefreshTokensAsync(
         Guid userId,
         CancellationToken cancellationToken);
+
+    Task<AuthSessionDto?> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
+
+    Task LogoutAsync(Guid userId, string? refreshToken, CancellationToken cancellationToken);
+
+    Task<AuthSessionDto> GoogleLoginAsync(string idToken, CancellationToken cancellationToken);
+
+    Task<UserDto> PatchProfileAsync(Guid userId, bool hasDisplayName, string? displayName,
+        bool hasAvatarUrl, string? avatarUrl, bool hasBio, string? bio,
+        CancellationToken cancellationToken);
 }

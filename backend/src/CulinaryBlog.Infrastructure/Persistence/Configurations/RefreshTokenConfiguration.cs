@@ -17,6 +17,9 @@ public sealed class RefreshTokenConfiguration
             .HasMaxLength(64)
             .IsRequired();
 
+        builder.Property(token => token.ReplacedByTokenHash).HasMaxLength(64);
+        builder.HasIndex(token => token.FamilyId);
+
         builder.HasIndex(token => token.TokenHash)
             .IsUnique();
 

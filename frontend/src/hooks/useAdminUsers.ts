@@ -8,10 +8,11 @@ export const adminUserKeys = {
   list: (filters: AdminUserFilters) => [...adminUserKeys.all(), filters] as const,
 };
 
-export function useAdminUsers(filters: AdminUserFilters) {
+export function useAdminUsers(filters: AdminUserFilters, enabled = true) {
   return useQuery({
     queryKey: adminUserKeys.list(filters),
     queryFn: () => adminUserApi.getAll(filters),
+    enabled,
   });
 }
 

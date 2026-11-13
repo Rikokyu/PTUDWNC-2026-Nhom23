@@ -29,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
     ? { name: authUser.displayName, email: authUser.email }
     : null);
   const isAdmin = authUser?.role === "Admin";
+  const isHome = pathname === "/";
 
   async function handleLogout() {
     try {
@@ -46,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
     { label: "Trang chủ", href: "/" },
     { label: "Công thức", href: "/recipes" },
     { label: "Danh mục", href: "/categories" },
-    { label: "Bộ sưu tập", href: "/collections" },
+    { label: "Đã lưu", href: "/saved" },
   ];
 
   const isActive = (path: string) => {
@@ -56,32 +57,47 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xs border-b border-slate-200/80">
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 shrink-0 group">
-          <div className="relative w-9 h-9 flex items-center justify-center shrink-0 overflow-hidden rounded-xl transition-transform duration-200 group-hover:scale-105">
+    <header
+      className={cn(
+        "z-40 border-b backdrop-blur-xl transition-colors",
+        isHome
+          ? "fixed inset-x-0 top-0 border-white/10 bg-gradient-to-b from-black/55 to-black/10 text-white"
+          : "sticky top-0 border-zinc-200/80 bg-white/90 text-content-primary shadow-glass"
+      )}
+    >
+      <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="group flex shrink-0 items-center gap-3">
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg transition-transform duration-200 group-hover:scale-105">
             <Image
               src="/icons/logo.png"
               alt="Culinary Blog Logo"
               width={36}
               height={36}
-              className="object-contain w-full h-full"
+              className="h-full w-full object-contain"
               priority
             />
           </div>
           <div className="flex flex-col">
-            <span className="font-extrabold text-lg tracking-tight text-content-primary leading-none">
+            <span
+              className={cn(
+                "font-display text-lg font-extrabold leading-none tracking-tight",
+                isHome ? "text-white" : "text-content-primary"
+              )}
+            >
               Culinary<span className="text-brand">Blog</span>
             </span>
-            <span className="text-[10px] font-medium text-content-tertiary tracking-wider uppercase leading-tight">
-              Bếp Việt & Công Thức
+            <span
+              className={cn(
+                "text-[10px] font-medium uppercase leading-tight tracking-[0.14em]",
+                isHome ? "text-white/60" : "text-content-tertiary"
+              )}
+            >
+              Bếp Việt hiện đại
             </span>
           </div>
         </Link>
 
-        {/* Desktop Nav Links */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden items-center gap-1 md:flex">
           {navLinks.map((link) => {
             const active = isActive(link.href);
             return (
@@ -89,29 +105,37 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "px-3.5 py-2 text-sm font-medium rounded-lg transition-colors",
-                  active
-                    ? "text-brand font-semibold bg-brand-light/60"
-                    : "text-content-secondary hover:text-content-primary hover:bg-slate-50"
+                  "relative px-3.5 py-2 text-sm font-medium transition-colors",
+                  isHome
+                    ? active
+                      ? "font-semibold text-white"
+                      : "text-white/70 hover:text-white"
+                    : active
+                      ? "font-semibold text-brand"
+                      : "text-content-secondary hover:text-content-primary"
                 )}
               >
                 {link.label}
+                {active ? (
+                  <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-brand motion-safe:animate-fade-up" />
+                ) : null}
               </Link>
             );
           })}
         </nav>
 
-        {/* Search & Actions */}
         <div className="flex items-center gap-3">
           <Link
             href="/recipes/search"
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-content-tertiary hover:border-slate-300 hover:text-content-secondary text-xs transition-colors"
+            className={cn(
+              "hidden items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors sm:flex",
+              isHome
+                ? "border-white/25 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
+                : "border-zinc-200 bg-white text-content-tertiary hover:border-brand-border hover:text-content-secondary"
+            )}
           >
-            <Search className="w-3.5 h-3.5" />
-            <span>Tìm món ăn, nguyên liệu...</span>
-            <kbd className="hidden lg:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-200 rounded text-slate-400">
-              ⌘K
-            </kbd>
+            <Search className="h-3.5 w-3.5" />
+            <span>Tìm món ăn...</span>
           </Link>
 
           {currentUser ? (
@@ -120,77 +144,78 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                 <Button
                   variant="primary"
                   size="sm"
-                  leftIcon={<Plus className="w-4 h-4" />}
-                  className="hidden sm:inline-flex"
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="hidden rounded-full sm:inline-flex"
                 >
                   Đăng công thức
                 </Button>
               </Link>
 
-              {/* User Dropdown Trigger */}
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 p-1 rounded-full border border-slate-200 hover:border-brand transition-colors focus:outline-none"
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border p-1 transition-colors focus:outline-none",
+                    isHome ? "border-white/30 hover:border-white" : "border-zinc-200 hover:border-brand"
+                  )}
                 >
-                  <div className="w-8 h-8 rounded-full bg-brand-light text-brand-hover flex items-center justify-center font-bold text-xs uppercase">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-bold uppercase text-white">
                     {currentUser.name.charAt(0)}
                   </div>
                 </button>
 
-                {/* User Dropdown Menu */}
                 {userDropdownOpen && (
                   <div
-                    className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-dropdown border border-slate-200 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                    className="absolute right-0 z-50 mt-2 w-56 animate-in fade-in slide-in-from-top-1 rounded-xl border border-zinc-200 bg-white py-1.5 text-content-primary shadow-dropdown duration-150"
                     onMouseLeave={() => setUserDropdownOpen(false)}
                   >
-                    <div className="px-4 py-2.5 border-b border-slate-100">
-                      <p className="text-xs font-semibold text-content-primary truncate">
+                    <div className="border-b border-zinc-100 px-4 py-2.5">
+                      <p className="truncate text-xs font-semibold text-content-primary">
                         {currentUser.name}
                       </p>
-                      <p className="text-[11px] text-content-tertiary truncate">
+                      <p className="truncate text-[11px] text-content-tertiary">
                         {currentUser.email}
                       </p>
                     </div>
 
                     <div className="py-1">
                       {isAdmin && (
-                        <Link href="/dashboard/categories" onClick={() => setUserDropdownOpen(false)} className="block px-4 py-2 text-xs text-content-secondary hover:bg-slate-50">
+                        <Link href="/dashboard/categories" onClick={() => setUserDropdownOpen(false)} className="block px-4 py-2 text-xs text-content-secondary hover:bg-zinc-50">
                           Quản lý danh mục
                         </Link>
                       )}
                       <Link
                         href="/dashboard/profile"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-content-secondary hover:text-content-primary hover:bg-slate-50 transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-content-secondary transition-colors hover:bg-zinc-50 hover:text-content-primary"
                       >
-                        <User className="w-4 h-4 text-content-tertiary" />
+                        <User className="h-4 w-4 text-content-tertiary" />
                         Trang cá nhân
                       </Link>
                       <Link
                         href="/dashboard/recipes"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-content-secondary hover:text-content-primary hover:bg-slate-50 transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-content-secondary transition-colors hover:bg-zinc-50 hover:text-content-primary"
                       >
-                        <ChefHat className="w-4 h-4 text-content-tertiary" />
+                        <ChefHat className="h-4 w-4 text-content-tertiary" />
                         Công thức của tôi
                       </Link>
                       <Link
                         href="/saved"
                         onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-content-secondary hover:text-content-primary hover:bg-slate-50 transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-content-secondary transition-colors hover:bg-zinc-50 hover:text-content-primary"
                       >
-                        <Bookmark className="w-4 h-4 text-content-tertiary" />
+                        <Bookmark className="h-4 w-4 text-content-tertiary" />
                         Công thức đã lưu
                       </Link>
                     </div>
 
-                    <div className="border-t border-slate-100 pt-1">
+                    <div className="border-t border-zinc-100 pt-1">
                       <button
                         onClick={() => void handleLogout()}
-                        className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors text-left"
+                        className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-xs text-rose-600 transition-colors hover:bg-rose-50"
                       >
-                        <LogOut className="w-4 h-4" />
+                        <LogOut className="h-4 w-4" />
                         Đăng xuất
                       </button>
                     </div>
@@ -201,12 +226,16 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
           ) : (
             <div className="flex items-center gap-2">
               <Link href="/auth/login">
-                <Button variant="ghost" size="sm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(isHome && "text-white hover:bg-white/10 hover:text-white")}
+                >
                   Đăng nhập
                 </Button>
               </Link>
               <Link href="/auth/register">
-                <Button variant="primary" size="sm">
+                <Button variant="primary" size="sm" className="rounded-full">
                   Đăng ký
                 </Button>
               </Link>
@@ -215,24 +244,38 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-content-secondary hover:text-content-primary hover:bg-slate-100 transition-colors"
+            className={cn(
+              "rounded-lg p-2 transition-colors md:hidden",
+              isHome
+                ? "text-white hover:bg-white/10"
+                : "text-content-secondary hover:bg-zinc-100 hover:text-content-primary"
+            )}
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3 animate-in slide-in-from-top-2 duration-150">
+        <div
+          className={cn(
+            "animate-in slide-in-from-top-2 space-y-3 border-t px-4 pb-6 pt-3 duration-150 md:hidden",
+            isHome ? "border-white/10 bg-black/90 text-white" : "border-zinc-200 bg-white"
+          )}
+        >
           <div className="mb-3">
             <Link
               href="/recipes/search"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-content-secondary text-xs"
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs",
+                isHome
+                  ? "border-white/20 bg-white/10 text-white/80"
+                  : "border-zinc-200 bg-white text-content-secondary"
+              )}
             >
-              <Search className="w-4 h-4 text-content-tertiary" />
+              <Search className="h-4 w-4 opacity-70" />
               <span>Tìm kiếm công thức nấu ăn...</span>
             </Link>
           </div>
@@ -244,10 +287,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
-                  "block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  "block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive(link.href)
-                    ? "bg-brand-light text-brand-hover font-semibold"
-                    : "text-content-secondary hover:bg-slate-50 hover:text-content-primary"
+                    ? isHome
+                      ? "bg-white/10 font-semibold text-white"
+                      : "bg-brand-light font-semibold text-brand-hover"
+                    : isHome
+                      ? "text-white/75 hover:bg-white/10 hover:text-white"
+                      : "text-content-secondary hover:bg-zinc-50 hover:text-content-primary"
                 )}
               >
                 {link.label}
@@ -256,23 +303,23 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
           </div>
 
           {currentUser ? (
-            <div className="pt-3 border-t border-slate-100 space-y-2">
+            <div className="space-y-2 border-t border-white/10 pt-3">
               <Link
                 href="/dashboard/recipes/new"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <Button variant="primary" size="md" className="w-full justify-center" leftIcon={<Plus className="w-4 h-4" />}>
+                <Button variant="primary" size="md" className="w-full justify-center rounded-full" leftIcon={<Plus className="h-4 w-4" />}>
                   Đăng công thức mới
                 </Button>
               </Link>
             </div>
           ) : (
-            <div className="flex gap-2 border-t border-slate-100 pt-3">
+            <div className="flex gap-2 border-t border-white/10 pt-3">
               <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
                 <Button variant="outline" size="sm">Đăng nhập</Button>
               </Link>
               <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="primary" size="sm">Đăng ký</Button>
+                <Button variant="primary" size="sm" className="rounded-full">Đăng ký</Button>
               </Link>
             </div>
           )}

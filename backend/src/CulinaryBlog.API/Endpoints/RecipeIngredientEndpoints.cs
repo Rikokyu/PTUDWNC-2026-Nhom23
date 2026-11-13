@@ -36,7 +36,7 @@ public static class RecipeIngredientEndpoints
 						request.Unit,
 						request.Notes),
 					cancellationToken);
-				await outputCacheStore.EvictByTagAsync(
+				await outputCacheStore.SafeEvictByTagAsync(
 					"recipes",
 					cancellationToken);
 				return Results.Created(
@@ -65,7 +65,7 @@ public static class RecipeIngredientEndpoints
 						request.Unit,
 						request.Notes),
 					cancellationToken);
-				await outputCacheStore.EvictByTagAsync(
+				await outputCacheStore.SafeEvictByTagAsync(
 					"recipes",
 					cancellationToken);
 				return Results.Ok();
@@ -86,7 +86,7 @@ public static class RecipeIngredientEndpoints
 				await sender.Send(
 					new DeleteRecipeIngredientCommand(recipeId, ingredientId),
 					cancellationToken);
-				await outputCacheStore.EvictByTagAsync(
+				await outputCacheStore.SafeEvictByTagAsync(
 					"recipes",
 					cancellationToken);
 				return Results.NoContent();

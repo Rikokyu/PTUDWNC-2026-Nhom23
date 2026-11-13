@@ -92,7 +92,7 @@ public static class ServiceCollectionExtensions
                         "If-None-Match",
                         "api-version")
                     .AllowAnyMethod()
-                    .WithExposedHeaders("ETag", "Retry-After"));
+                    .WithExposedHeaders("ETag", "Retry-After", "X-Correlation-ID"));
         });
 
         return services;

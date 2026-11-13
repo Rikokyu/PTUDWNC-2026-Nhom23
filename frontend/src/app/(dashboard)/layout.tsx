@@ -10,11 +10,11 @@ export default function DashboardLayout({
 }) {
   return (
     <RequireAuth>
-    <div className="min-h-screen flex flex-col bg-slate-50/50">
+    <div className="flex min-h-screen flex-col bg-[#f7f6f3]">
       <Navbar />
-      <div className="flex-1 max-w-[1280px] w-full mx-auto flex">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col md:flex-row">
         <Sidebar />
-        <main className="flex-1 p-6 lg:p-8 min-w-0">
+        <main id="main-content" className="min-w-0 flex-1 p-5 sm:p-7 lg:p-10">
           {children}
         </main>
       </div>

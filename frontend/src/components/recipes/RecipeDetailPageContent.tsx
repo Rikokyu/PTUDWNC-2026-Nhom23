@@ -7,6 +7,11 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { RecipeDetailView } from "@/features/recipes/RecipeDetailView";
 import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
 import { resolveApiAssetUrl } from "@/lib/api/axios";
+<<<<<<< HEAD
+=======
+import { SavedRecipeBookmarkButton } from "@/components/recipes/SavedRecipeBookmarkButton";
+import { Clock, Flame, Users } from "lucide-react";
+>>>>>>> 315339d (Update UI)
 
 const demoEnabled = process.env.NEXT_PUBLIC_USE_DEMO_DATA === "true";
 
@@ -60,56 +65,67 @@ export function RecipeDetailPageContent({ slug }: { slug: string }) {
   );
 
   return (
-    <article className="mx-auto max-w-4xl space-y-8">
-      <Link href="/recipes" className="text-sm font-semibold text-brand hover:underline">
+    <article className="mx-auto max-w-6xl space-y-9 pb-12">
+      <Link href="/recipes" className="text-xs font-bold uppercase tracking-[0.15em] text-brand hover:underline">
         ← Tất cả công thức
       </Link>
+      <header className="max-w-4xl space-y-5">
+        <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand">{recipe.category.name}</p>
+        <h1 className="font-display text-4xl font-bold leading-tight text-content-primary sm:text-5xl lg:text-6xl">
+          {recipe.title}
+        </h1>
+        <p className="max-w-3xl text-base leading-8 text-content-secondary sm:text-lg">{recipe.description}</p>
+        <p className="border-t border-zinc-300 pt-4 text-sm font-semibold text-content-secondary">
+          Công thức bởi {recipe.author?.displayName ?? "Culinary Blog"}
+        </p>
+      </header>
       {heroImage && (
         <img
           src={heroImage}
           alt={recipe.title}
-          className="max-h-[28rem] w-full rounded-2xl bg-slate-100 object-cover"
+          className="aspect-[16/9] max-h-[38rem] w-full bg-zinc-100 object-cover"
         />
       )}
-      <header className="space-y-3">
-        <p className="text-sm font-semibold text-brand">{recipe.category.name}</p>
-        <h1 className="text-3xl font-extrabold text-content-primary sm:text-4xl">
-          {recipe.title}
-        </h1>
-        <p className="leading-7 text-content-secondary">{recipe.description}</p>
-        <p className="text-sm text-content-tertiary">
-          {recipe.author?.displayName ?? "Culinary Blog"} · {difficulty} ·{" "}
-          {recipe.prepTimeMinutes + recipe.cookTimeMinutes} phút · {recipe.servings} khẩu phần
-        </p>
-      </header>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="text-xl font-bold">Nguyên liệu</h2>
-        <ul className="mt-4 space-y-2">
+      <div className="grid grid-cols-2 gap-5 border-y border-zinc-300 py-5 text-sm sm:grid-cols-4">
+        <div className="flex items-center gap-3"><Clock className="h-5 w-5 text-brand" /><span><small className="block text-content-tertiary">Chuẩn bị</small><strong>{recipe.prepTimeMinutes} phút</strong></span></div>
+        <div className="flex items-center gap-3"><Flame className="h-5 w-5 text-brand" /><span><small className="block text-content-tertiary">Nấu</small><strong>{recipe.cookTimeMinutes} phút</strong></span></div>
+        <div className="flex items-center gap-3"><Users className="h-5 w-5 text-brand" /><span><small className="block text-content-tertiary">Khẩu phần</small><strong>{recipe.servings} người</strong></span></div>
+        <div className="flex items-center gap-3"><span className="text-lg text-brand" aria-hidden="true">✦</span><span><small className="block text-content-tertiary">Độ khó</small><strong>{difficulty}</strong></span></div>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] lg:gap-14">
+      <section className="border-t-4 border-brand bg-white p-6 shadow-subtle lg:self-start lg:sticky lg:top-24">
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">Chuẩn bị</p>
+        <h2 className="font-display text-2xl font-bold">Nguyên liệu</h2>
+        <ul className="mt-6 divide-y divide-zinc-200">
           {recipe.ingredients.map((ingredient) => (
-            <li key={ingredient.id} className="border-b border-slate-100 py-2 text-sm">
-              <span className="font-medium">{ingredient.name}</span>
+            <li key={ingredient.id} className="py-3 text-sm leading-6">
+              <span className="font-semibold text-content-primary">{ingredient.name}</span>
               {ingredient.quantity && ` — ${ingredient.quantity}`}
               {ingredient.unit && ` ${ingredient.unit}`}
-              {ingredient.notes && ` (${ingredient.notes})`}
+              {ingredient.notes && <span className="block text-content-tertiary">{ingredient.notes}</span>}
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold">Cách thực hiện</h2>
+      <section className="space-y-6">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand">Vào bếp</p>
+        <h2 className="font-display text-3xl font-bold">Cách thực hiện</h2>
         {recipe.steps.map((step) => (
-          <article key={step.id} className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="font-semibold">
+          <article key={step.id} className="grid grid-cols-[3rem_1fr] gap-4 border-t border-zinc-300 pt-6 sm:gap-6">
+            <span className="font-display text-3xl font-bold text-brand/70" aria-hidden="true">{String(step.stepNumber).padStart(2, "0")}</span>
+            <div><h3 className="font-display text-lg font-bold">
               Bước {step.stepNumber}{step.title ? `: ${step.title}` : ""}
             </h3>
-            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-content-secondary">
+            <p className="mt-3 whitespace-pre-line text-base leading-7 text-content-secondary">
               {step.description}
-            </p>
+            </p></div>
           </article>
         ))}
       </section>
+      </div>
 
       {recipe.nutrition && (
         <section className="rounded-xl border border-slate-200 bg-white p-5">

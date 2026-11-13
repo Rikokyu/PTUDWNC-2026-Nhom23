@@ -6,6 +6,9 @@ namespace CulinaryBlog.Domain.Entities;
 
 public class Recipe : BaseEntity
 {
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public float? SearchRelevanceScore { get; set; }
+
     public string Title { get; set; } = string.Empty;
 
     public string Slug { get; set; } = string.Empty;

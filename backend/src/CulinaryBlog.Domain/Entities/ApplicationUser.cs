@@ -24,6 +24,12 @@ public class ApplicationUser : BaseEntity
     /// </summary>
     public int TokenVersion { get; set; }
 
+    public int AccessFailedCount { get; set; }
+
+    public DateTime? LockoutEnd { get; set; }
+
+    public string? GoogleSubject { get; set; }
+
     public ICollection<RefreshToken> RefreshTokens { get; set; }
         = new List<RefreshToken>();
 }

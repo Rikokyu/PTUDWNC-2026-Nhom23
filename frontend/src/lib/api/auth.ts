@@ -27,7 +27,8 @@ export const authApi = {
     return response.data;
   },
   logout: async (): Promise<void> => {
-    await apiClient.post("/api/v1/auth/logout");
+    const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+    await apiClient.post("/api/v1/auth/logout", { refreshToken });
   },
   changePassword: async (
     currentPassword: string,

@@ -24,5 +24,19 @@
 		</PackageReference>
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+<<<<<<< HEAD
+=======
+		<PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+		<PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+		<PackageReference Include="Serilog.Sinks.Seq" Version="9.1.0" />
+		<PackageReference Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="10.0.12" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.18.0-beta.1" />
+		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
+>>>>>>> 315339d (Update UI)
 	</ItemGroup>
 </Project>

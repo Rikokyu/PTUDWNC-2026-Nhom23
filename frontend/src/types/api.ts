@@ -251,6 +251,9 @@ export interface RecipeFilters {
   categoryId?: string;
   difficulty?: Difficulty | "Expert";
   maxCookTime?: number;
-  sort?: "-createdAt" | "createdAt" | "title" | "cookTime" | "-cookTime";
+  minServings?: number;
+  sortBy?: "title" | "createdAt" | "cookTime";
+  sortOrder?: "asc" | "desc";
+  sort?: "-createdAt" | "createdAt" | "title" | "-title" | "cookTime" | "-cookTime";
   search?: string;
 }

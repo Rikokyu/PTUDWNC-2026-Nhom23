@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Be_Vietnam_Pro, Manrope } from "next/font/google";
 import { Providers } from "@/providers/Providers";
 import "./globals.css";
 
-const inter = Inter({
+const sans = Manrope({
   subsets: ["latin", "vietnamese"],
-  variable: "--font-inter",
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const display = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -18,8 +25,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="vi" className={inter.variable} suppressHydrationWarning>
-      <body className="bg-white text-content-primary antialiased selection:bg-brand-light selection:text-brand-hover min-h-screen flex flex-col font-sans">
+    <html lang="vi" className={`${sans.variable} ${display.variable}`} suppressHydrationWarning>
+      <body className="flex min-h-screen flex-col bg-surface-muted font-sans text-content-primary antialiased selection:bg-brand-light selection:text-brand-hover">
         <Providers>{children}</Providers>
       </body>
     </html>

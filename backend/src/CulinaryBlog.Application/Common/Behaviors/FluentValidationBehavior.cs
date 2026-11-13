@@ -28,16 +28,17 @@ public sealed class FluentValidationBehavior<TRequest, TResponse>
                 validator.ValidateAsync(
                     new ValidationContext<TRequest>(request),
                     cancellationToken)));
-        var errors = results
-            .SelectMany(result => result.Errors)
-            .Select(error => error.ErrorMessage)
-            .Distinct()
-            .ToArray();
+        var failures = results.SelectMany(result => result.Errors).ToArray();
 
-        if (errors.Length > 0)
+        if (failures.Length > 0)
         {
+            var errors = failures.GroupBy(error =>
+                    error.PropertyName.Length == 0 ? "request" :
+                    char.ToLowerInvariant(error.PropertyName[0]) + error.PropertyName[1..])
+                .ToDictionary(group => group.Key,
+                    group => group.Select(error => error.ErrorMessage).Distinct().ToArray());
             throw new ApplicationValidationException(
-                string.Join(" ", errors));
+                string.Join(" ", failures.Select(error => error.ErrorMessage).Distinct()), errors);
         }
 
         return await next(cancellationToken);

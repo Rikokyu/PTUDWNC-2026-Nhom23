@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { authApi, saveAuthSession } from "@/lib/api/auth";
-import { getApiErrorMessage } from "@/lib/api/error";
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/error";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -17,11 +17,13 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [registered, setRegistered] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     setRegistered(false);
     setIsLoading(true);
     try {
@@ -30,6 +32,7 @@ export function RegisterForm() {
       router.push("/dashboard");
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));
+      setFieldErrors(getApiFieldErrors(requestError));
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +50,13 @@ export function RegisterForm() {
         label="Họ và tên"
         autoComplete="name"
         value={displayName}
-        onChange={(event) => setDisplayName(event.target.value)}
+        onChange={(event) => {
+          setDisplayName(event.target.value);
+          if (fieldErrors.displayName || fieldErrors.DisplayName) {
+            setFieldErrors((prev) => ({ ...prev, displayName: [], DisplayName: [] }));
+          }
+        }}
+        error={fieldErrors.displayName?.[0] || fieldErrors.DisplayName?.[0]}
         leftIcon={<User className="h-4 w-4" />}
         required
       />
@@ -56,7 +65,13 @@ export function RegisterForm() {
         type="email"
         autoComplete="email"
         value={email}
-        onChange={(event) => setEmail(event.target.value)}
+        onChange={(event) => {
+          setEmail(event.target.value);
+          if (fieldErrors.email || fieldErrors.Email) {
+            setFieldErrors((prev) => ({ ...prev, email: [], Email: [] }));
+          }
+        }}
+        error={fieldErrors.email?.[0] || fieldErrors.Email?.[0]}
         leftIcon={<Mail className="h-4 w-4" />}
         required
       />
@@ -66,7 +81,13 @@ export function RegisterForm() {
         autoComplete="new-password"
         minLength={8}
         value={password}
-        onChange={(event) => setPassword(event.target.value)}
+        onChange={(event) => {
+          setPassword(event.target.value);
+          if (fieldErrors.password || fieldErrors.Password) {
+            setFieldErrors((prev) => ({ ...prev, password: [], Password: [] }));
+          }
+        }}
+        error={fieldErrors.password?.[0] || fieldErrors.Password?.[0]}
         leftIcon={<Lock className="h-4 w-4" />}
         required
       />

@@ -39,5 +39,14 @@ public class CulinaryBlogDbContext : DbContext
 
         modelBuilder.ApplyConfigurationsFromAssembly(
             typeof(CulinaryBlogDbContext).Assembly);
+
+        if (Database.IsNpgsql())
+        {
+            var builder = modelBuilder.Entity<Recipe>();
+        builder.Property<NpgsqlTypes.NpgsqlTsVector>("SearchVector")
+            .HasColumnType("tsvector").ValueGeneratedOnAddOrUpdate();
+        builder.HasIndex("SearchVector").HasMethod("GIN");
+
+        }
     }
 }

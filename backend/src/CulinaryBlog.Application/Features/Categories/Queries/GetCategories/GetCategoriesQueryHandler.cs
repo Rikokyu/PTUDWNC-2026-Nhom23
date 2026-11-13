@@ -9,8 +9,6 @@ public sealed class GetCategoriesQueryHandler
 	: IRequestHandler<GetCategoriesQuery, IReadOnlyList<CategoryDto>>
 {
 	private readonly IUnitOfWork _unitOfWork;
-	private readonly IMemoryCache _cache;
-
 	public const string CacheKey = "categories:all";
 
 	public GetCategoriesQueryHandler(
@@ -18,21 +16,13 @@ public sealed class GetCategoriesQueryHandler
 		IMemoryCache cache)
 	{
 		_unitOfWork = unitOfWork;
-		_cache = cache;
+		_ = cache; // Keep the existing constructor contract; HTTP output cache is shared in Redis.
 	}
 
 	public async Task<IReadOnlyList<CategoryDto>> Handle(
 		GetCategoriesQuery request,
 		CancellationToken cancellationToken)
 	{
-		if (_cache.TryGetValue<IReadOnlyList<CategoryDto>>(
-				CacheKey,
-				out var cachedCategories)
-			&& cachedCategories is not null)
-		{
-			return cachedCategories;
-		}
-
 		var categories = await _unitOfWork.Categories
 			.GetAllWithPublishedRecipeCountAsync(cancellationToken);
 
@@ -42,18 +32,12 @@ public sealed class GetCategoriesQueryHandler
 				item.Category.Name,
 				item.Category.Slug,
 				item.Category.Description,
-				item.Category.ImageUrl,
+				string.IsNullOrWhiteSpace(item.Category.ImageUrl)
+					? item.RepresentativeImageUrl
+					: item.Category.ImageUrl,
 				item.Category.OrderIndex,
 				item.RecipeCount))
 			.ToList();
-
-		_cache.Set(
-			CacheKey,
-			result,
-			new MemoryCacheEntryOptions
-			{
-				SlidingExpiration = TimeSpan.FromMinutes(60)
-			});
 
 		return result;
 	}

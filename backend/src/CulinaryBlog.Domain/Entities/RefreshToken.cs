@@ -12,6 +12,10 @@ public class RefreshToken : BaseEntity
 
     public DateTime? RevokedAt { get; set; }
 
+    public Guid FamilyId { get; set; }
+
+    public string? ReplacedByTokenHash { get; set; }
+
     public bool IsActive =>
         RevokedAt is null && ExpiresAt > DateTime.UtcNow;
 }

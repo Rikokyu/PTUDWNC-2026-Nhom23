@@ -3,6 +3,7 @@ using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Infrastructure.BackgroundJobs;
 using CulinaryBlog.Infrastructure.Email;
 using CulinaryBlog.Infrastructure.Identity;
+using CulinaryBlog.Infrastructure.Authentication;
 using CulinaryBlog.Domain.Interfaces;
 using CulinaryBlog.Infrastructure.Persistence;
 using CulinaryBlog.Infrastructure.Persistence.Repositories;
@@ -13,6 +14,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Identity;
+<<<<<<< HEAD
+=======
+using Microsoft.Extensions.Logging;
+>>>>>>> 315339d (Update UI)
 using Minio;
 
 namespace CulinaryBlog.Infrastructure;
@@ -34,6 +39,7 @@ public static class DependencyInjection
             IPasswordHasher<ApplicationUser>,
             PasswordHasher<ApplicationUser>>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddSingleton<IGoogleTokenVerifier, GoogleAuthenticationService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddDataProtection();
@@ -55,10 +61,12 @@ public static class DependencyInjection
                 StartupConnectionMaxDelay = TimeSpan.FromSeconds(1)
             };
 
-            services.AddHangfire((_, hangfire) =>
+            services.AddHangfire((provider, hangfire) =>
                 hangfire.UsePostgreSqlStorage(options =>
                         options.UseNpgsqlConnection(connectionString),
-                    hangfireStorageOptions));
+                    hangfireStorageOptions)
+                    .UseFilter(new WelcomeEmailFailureFilter(
+                        provider.GetRequiredService<ILogger<WelcomeEmailFailureFilter>>())));
             services.AddHangfireServer();
             services.AddScoped<
                 IImageResizeJobScheduler,
@@ -90,6 +98,42 @@ public static class DependencyInjection
         services.AddScoped<IRecipeRepository, RecipeRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        var storageProvider = configuration["FileStorage:Provider"] ?? "Local";
+        if (storageProvider.Equals("Minio", StringComparison.OrdinalIgnoreCase))
+        {
+            var endpoint = configuration["Minio:Endpoint"]
+                ?? throw new InvalidOperationException("Minio:Endpoint is required.");
+            var publicEndpoint = configuration["Minio:PublicEndpoint"]
+                ?? throw new InvalidOperationException("Minio:PublicEndpoint is required.");
+            var accessKey = configuration["Minio:AccessKey"]
+                ?? throw new InvalidOperationException("Minio:AccessKey is required.");
+            var secretKey = configuration["Minio:SecretKey"]
+                ?? throw new InvalidOperationException("Minio:SecretKey is required.");
+            var bucket = configuration["Minio:Bucket"]
+                ?? throw new InvalidOperationException("Minio:Bucket is required.");
+            var endpointUri = new Uri(endpoint, UriKind.Absolute);
+            if (endpointUri.Scheme is not ("http" or "https")
+                || endpointUri.AbsolutePath != "/" || endpointUri.Query.Length > 0)
+            {
+                throw new InvalidOperationException("Minio:Endpoint must be an HTTP(S) origin.");
+            }
+
+            services.AddSingleton<IMinioClient>(_ => new MinioClient()
+                .WithEndpoint(endpointUri.Host, endpointUri.Port)
+                .WithCredentials(accessKey, secretKey)
+                .WithSSL(endpointUri.Scheme == "https")
+                .Build());
+            services.AddSingleton<IFileStorageService>(provider =>
+                new MinioObjectStorageService(
+                    provider.GetRequiredService<IMinioClient>(), bucket, publicEndpoint));
+            return services;
+        }
+
+        if (!storageProvider.Equals("Local", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("FileStorage:Provider must be Local or Minio.");
+        }
 
         var uploadRoot = Path.Combine(
             contentRootPath ?? Directory.GetCurrentDirectory(),

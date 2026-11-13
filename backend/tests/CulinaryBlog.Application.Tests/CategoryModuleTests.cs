@@ -16,7 +16,7 @@ namespace CulinaryBlog.Application.Tests;
 public sealed class CategoryModuleTests
 {
     [Fact]
-    public async Task GetCategoriesHandler_CacheMiss_MapsAndCachesCategories()
+    public async Task GetCategoriesHandler_MapsWithoutProcessLocalCache()
     {
         var repository = new FakeCategoryRepository();
         var soup = Category.Create("Súp", "sup", "Món súp", null, 2);
@@ -40,11 +40,11 @@ public sealed class CategoryModuleTests
         Assert.Equal(["Salad", "Súp"], firstResult.Select(item => item.Name));
         Assert.Equal([7, 4], firstResult.Select(item => item.RecipeCount));
         Assert.Equal(firstResult, secondResult);
-        Assert.Equal(1, repository.PublishedRecipeCountQueryCount);
-        Assert.True(cache.TryGetValue(
+        Assert.Equal(2, repository.PublishedRecipeCountQueryCount);
+        Assert.False(cache.TryGetValue(
             GetCategoriesQueryHandler.CacheKey,
             out IReadOnlyList<CulinaryBlog.Application.DTOs.Categories.CategoryDto>? cached));
-        Assert.Equal(firstResult, cached);
+        Assert.Null(cached);
     }
 
     [Fact]

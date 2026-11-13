@@ -48,6 +48,10 @@ public class ApplicationUserConfiguration
             .HasDefaultValue(0)
             .IsRequired();
 
+        builder.Property(x => x.AccessFailedCount).HasDefaultValue(0).IsRequired();
+        builder.Property(x => x.GoogleSubject).HasMaxLength(255);
+        builder.HasIndex(x => x.GoogleSubject).IsUnique();
+
         builder.HasIndex(x => x.Email)
             .IsUnique();
 

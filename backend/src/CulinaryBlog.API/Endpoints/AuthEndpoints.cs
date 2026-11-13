@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text.Json;
+using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
 using CulinaryBlog.Application.Features.Auth.Commands.Logout;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
@@ -57,11 +59,23 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+        group.MapPost("/refresh", RefreshAsync)
+            .RequireRateLimiting("Auth").AllowAnonymous()
+            .WithName($"{routeVersion}Refresh")
+            .Produces(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/google", GoogleLoginAsync)
+            .RequireRateLimiting("Auth").AllowAnonymous()
+            .WithName($"{routeVersion}GoogleLogin")
+            .Produces(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+
         group.MapPost("/logout", LogoutAsync)
             .WithName($"{routeVersion}Logout")
             .WithSummary("Revoke the current user's refresh tokens.")
             .RequireAuthorization()
-            .Produces<string>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/me", GetCurrentUserAsync)
@@ -80,6 +94,13 @@ public static class AuthEndpoints
             .RequireAuthorization()
             .Produces<UserDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapPatch("/me", PatchProfileAsync)
+            .RequireRateLimiting("Api")
+            .WithName($"{routeVersion}PatchProfile")
+            .RequireAuthorization()
+            .Produces<UserDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapPost("/change-password", ChangePasswordAsync)
@@ -147,10 +168,25 @@ public static class AuthEndpoints
         return Results.Ok(session);
     }
 
+    private static async Task<IResult> RefreshAsync(RefreshRequest request,
+        IIdentityService identityService, CancellationToken cancellationToken)
+    {
+        var session = await identityService.RefreshAsync(request.RefreshToken, cancellationToken);
+        return session is null ? Results.Unauthorized() : Results.Ok(session);
+    }
+
+    private static async Task<IResult> GoogleLoginAsync(GoogleLoginRequest request,
+        IIdentityService identityService, CancellationToken cancellationToken)
+    {
+        var session = await identityService.GoogleLoginAsync(request.IdToken, cancellationToken);
+        return Results.Ok(session);
+    }
+
     /// <summary>Revokes all active refresh tokens for the authenticated user.</summary>
     private static async Task<IResult> LogoutAsync(
         ClaimsPrincipal principal,
-        ISender sender,
+        HttpRequest request,
+        IIdentityService identityService,
         CancellationToken cancellationToken)
     {
         var userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -160,8 +196,59 @@ public static class AuthEndpoints
             return Results.Unauthorized();
         }
 
-        await sender.Send(new LogoutCommand(userId), cancellationToken);
-        return Results.Ok("Đăng xuất thành công");
+        string? refreshToken = null;
+        var hasBody = request.ContentLength > 0
+            || (request.ContentLength is null && request.HasJsonContentType());
+        if (hasBody)
+        {
+            var body = await request.ReadFromJsonAsync<LogoutRequest>(cancellationToken);
+            refreshToken = body?.RefreshToken;
+        }
+        if (!hasBody)
+            await identityService.RevokeRefreshTokensAsync(userId, cancellationToken);
+        else if (refreshToken is not null)
+            await identityService.LogoutAsync(userId, refreshToken, cancellationToken);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> PatchProfileAsync(JsonElement request,
+        ClaimsPrincipal principal, IIdentityService identityService,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(principal, out var userId)) return Results.Unauthorized();
+        if (request.ValueKind != JsonValueKind.Object)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["request"] = ["Profile must be an object."] }, statusCode: 422);
+        string? name = null, avatar = null, bio = null;
+        var hasName = false; var hasAvatar = false; var hasBio = false;
+        foreach (var property in request.EnumerateObject())
+        {
+            if (property.NameEquals("displayName") || property.NameEquals("fullName"))
+            {
+                hasName = true;
+                if (property.Value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { ["displayName"] = ["Must be a string."] }, statusCode: 422);
+                name = property.Value.GetString();
+            }
+            else if (property.NameEquals("avatarUrl"))
+            {
+                hasAvatar = true;
+                if (property.Value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { ["avatarUrl"] = ["Must be a string or null."] }, statusCode: 422);
+                avatar = property.Value.GetString();
+            }
+            else if (property.NameEquals("bio"))
+            {
+                hasBio = true;
+                if (property.Value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { ["bio"] = ["Must be a string or null."] }, statusCode: 422);
+                bio = property.Value.GetString();
+            }
+            else
+                return Results.ValidationProblem(new Dictionary<string, string[]> { [property.Name] = ["This field cannot be updated."] }, statusCode: 422);
+        }
+        var user = await identityService.PatchProfileAsync(userId, hasName, name,
+            hasAvatar, avatar, hasBio, bio, cancellationToken);
+        return Results.Ok(user);
     }
 
     private static async Task<IResult> ChangePasswordAsync(
@@ -254,6 +341,10 @@ public sealed record RegisterRequest(
 public sealed record LoginRequest(
     string Email,
     string Password);
+
+public sealed record RefreshRequest(string RefreshToken);
+public sealed record GoogleLoginRequest(string IdToken);
+public sealed record LogoutRequest(string? RefreshToken);
 
 public sealed record UpdateProfileRequest(
     string DisplayName,

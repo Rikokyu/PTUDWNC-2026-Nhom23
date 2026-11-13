@@ -10,6 +10,16 @@ import type {
   RecipeStepRequest,
 } from "@/types/api";
 
+// Existing filter controls remain compatible; HTTP uses the agreed explicit fields.
+export function recipeListParams(filters: RecipeFilters): Omit<RecipeFilters, "sort"> {
+  const { sort, ...params } = filters;
+  if (!params.sortBy) {
+    params.sortBy = (sort?.replace(/^-/, "") ?? "createdAt") as NonNullable<RecipeFilters["sortBy"]>;
+  }
+  params.sortOrder ??= sort ? (sort.startsWith("-") ? "desc" : "asc") : "desc";
+  return params;
+}
+
 export const recipeApi = {
   getList: async (
     filters: RecipeFilters = {},
@@ -17,7 +27,7 @@ export const recipeApi = {
     const response = await apiClient.get<PaginatedResult<RecipeApiSummaryDto>>(
       "/api/v1/recipes",
       {
-        params: filters,
+        params: recipeListParams(filters),
       },
     );
     return response.data;
@@ -27,7 +37,7 @@ export const recipeApi = {
   ): Promise<PaginatedResult<RecipeApiSummaryDto>> => {
     const response = await apiClient.get<PaginatedResult<RecipeApiSummaryDto>>(
       "/api/v1/me/recipes",
-      { params: filters },
+      { params: recipeListParams(filters) },
     );
     return response.data;
   },
@@ -36,7 +46,7 @@ export const recipeApi = {
   ): Promise<PaginatedResult<RecipeApiSummaryDto>> => {
     const response = await apiClient.get<PaginatedResult<RecipeApiSummaryDto>>(
       "/api/v1/admin/recipes",
-      { params: filters },
+      { params: recipeListParams(filters) },
     );
     return response.data;
   },
@@ -44,10 +54,11 @@ export const recipeApi = {
     searchTerm: string,
     page = 1,
     pageSize = 10,
+    filters: Pick<RecipeFilters, "categoryId" | "difficulty" | "maxCookTime" | "minServings"> = {},
   ): Promise<PaginatedResult<RecipeApiSummaryDto>> => {
     const response = await apiClient.get<PaginatedResult<RecipeApiSummaryDto>>(
       "/api/v1/recipes/search",
-      { params: { q: searchTerm, page, pageSize } },
+      { params: { ...filters, q: searchTerm, page, pageSize } },
     );
     return response.data;
   },

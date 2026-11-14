@@ -105,7 +105,7 @@ export function CategoryEditForm({
             rows={3}
             disabled={updateCategory.isPending}
             placeholder="Mô tả ngắn về danh mục"
-            className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-content-primary transition duration-150 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+            className="w-full resize-y rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-content-primary transition duration-150 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
           />
           <p className="text-xs text-content-tertiary">
             Để trống nếu muốn xóa mô tả. {description.length}/2000 ký tự

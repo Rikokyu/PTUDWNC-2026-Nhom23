@@ -95,8 +95,5 @@ volumes:
   culinary_blog_pgdata:
   culinary_blog_uploads:
   culinary_blog_minio_data:
-<<<<<<< HEAD
-=======
   culinary_blog_redis_data:
   culinary_blog_wwwroot:
->>>>>>> 315339d (Update UI)

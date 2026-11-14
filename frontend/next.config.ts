@@ -4,6 +4,12 @@ import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 const nextConfig: NextConfig = {
   experimental: {
     useWasmBinary: true,
+    // Match the avatar upload client's 5-minute timeout instead of Next.js'
+    // 30-second rewrite proxy default.
+    proxyTimeout: 5 * 60_000,
+    // Uploads are proxied through Next.js rewrites. Allow the avatar endpoint's
+    // 100 MiB file limit plus multipart framing instead of the 10 MiB default.
+    middlewareClientMaxBodySize: "110mb",
   },
   async rewrites() {
     return [

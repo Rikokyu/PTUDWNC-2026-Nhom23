@@ -17,6 +17,8 @@ export function resolveApiAssetUrl(
   fileUrl: string | null | undefined,
 ): string | undefined {
   if (!fileUrl) return undefined;
+  // Curated dish photos ship with the frontend, even when the API has its own host.
+  if (fileUrl.startsWith("/images/dishes/")) return fileUrl;
   try {
     return new URL(fileUrl, apiClient.defaults.baseURL).toString();
   } catch {

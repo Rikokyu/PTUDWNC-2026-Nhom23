@@ -8,6 +8,8 @@ import { Search, Plus, Menu, X, ChefHat, User, Bookmark, LogOut } from "lucide-r
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { authApi } from "@/lib/api/auth";
+import { AvatarImage } from "@/components/common/AvatarImage";
+import { resolveApiAssetUrl } from "@/lib/api/axios";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export interface NavbarProps {
@@ -26,8 +28,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const currentUser = user ?? (authUser
-    ? { name: authUser.displayName, email: authUser.email }
+    ? { name: authUser.displayName, email: authUser.email, avatarUrl: authUser.avatarUrl ?? undefined }
     : null);
+  const currentAvatarUrl = resolveApiAssetUrl(currentUser?.avatarUrl);
   const isAdmin = authUser?.role === "Admin";
   const isHome = pathname === "/";
 
@@ -59,13 +62,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
   return (
     <header
       className={cn(
-        "z-40 border-b backdrop-blur-xl transition-colors",
+        "z-40 border-b backdrop-blur-xl transition-colors duration-200",
         isHome
-          ? "fixed inset-x-0 top-0 border-white/10 bg-gradient-to-b from-black/55 to-black/10 text-white"
-          : "sticky top-0 border-zinc-200/80 bg-white/90 text-content-primary shadow-glass"
+          ? "fixed inset-x-0 top-0 border-white/15 bg-[#20271f]/75 text-white"
+          : "sticky top-0 border-stone-200/80 bg-surface/95 text-content-primary shadow-glass"
       )}
     >
-      <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <a href="#main-content" className="sr-only rounded-lg bg-surface px-4 py-2 font-semibold text-content-primary focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50">Đi đến nội dung</a>
+      <div className="mx-auto flex h-[4.5rem] max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link href="/" className="group flex shrink-0 items-center gap-3">
           <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg transition-transform duration-200 group-hover:scale-105">
             <Image
@@ -97,27 +101,28 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           {navLinks.map((link) => {
             const active = isActive(link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative px-3.5 py-2 text-sm font-medium transition-colors",
+                  "relative rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors hover:bg-white/10",
                   isHome
                     ? active
                       ? "font-semibold text-white"
                       : "text-white/70 hover:text-white"
                     : active
                       ? "font-semibold text-brand"
-                      : "text-content-secondary hover:text-content-primary"
+                      : "text-content-secondary hover:bg-surface-muted hover:text-brand"
                 )}
               >
                 {link.label}
                 {active ? (
-                  <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-brand motion-safe:animate-fade-up" />
+                  <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand" />
                 ) : null}
               </Link>
             );
@@ -131,7 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
               "hidden items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors sm:flex",
               isHome
                 ? "border-white/25 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
-                : "border-zinc-200 bg-white text-content-tertiary hover:border-brand-border hover:text-content-secondary"
+                : "border-stone-300 bg-surface-cream text-content-secondary hover:border-brand-border hover:text-brand"
             )}
           >
             <Search className="h-3.5 w-3.5" />
@@ -154,19 +159,21 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  aria-label="Mở menu tài khoản"
+                  aria-expanded={userDropdownOpen}
                   className={cn(
                     "flex items-center gap-2 rounded-full border p-1 transition-colors focus:outline-none",
                     isHome ? "border-white/30 hover:border-white" : "border-zinc-200 hover:border-brand"
                   )}
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-bold uppercase text-white">
-                    {currentUser.name.charAt(0)}
+                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-brand text-xs font-bold uppercase text-white">
+                    <AvatarImage src={currentAvatarUrl} alt="" className="h-full w-full object-cover" />
                   </div>
                 </button>
 
                 {userDropdownOpen && (
                   <div
-                    className="absolute right-0 z-50 mt-2 w-56 animate-in fade-in slide-in-from-top-1 rounded-xl border border-zinc-200 bg-white py-1.5 text-content-primary shadow-dropdown duration-150"
+                    className="absolute right-0 z-50 mt-2 w-56 animate-in fade-in slide-in-from-top-1 rounded-2xl border border-stone-200 bg-surface py-1.5 text-content-primary shadow-dropdown duration-150"
                     onMouseLeave={() => setUserDropdownOpen(false)}
                   >
                     <div className="border-b border-zinc-100 px-4 py-2.5">
@@ -224,7 +231,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 sm:flex">
               <Link href="/auth/login">
                 <Button
                   variant="ghost"
@@ -245,12 +252,13 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className={cn(
-              "rounded-lg p-2 transition-colors md:hidden",
+              "rounded-xl p-2 transition-colors lg:hidden",
               isHome
                 ? "text-white hover:bg-white/10"
                 : "text-content-secondary hover:bg-zinc-100 hover:text-content-primary"
             )}
-            aria-label="Toggle menu"
+            aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu"}
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -260,8 +268,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
       {mobileMenuOpen && (
         <div
           className={cn(
-            "animate-in slide-in-from-top-2 space-y-3 border-t px-4 pb-6 pt-3 duration-150 md:hidden",
-            isHome ? "border-white/10 bg-black/90 text-white" : "border-zinc-200 bg-white"
+            "animate-in slide-in-from-top-2 space-y-3 border-t px-4 pb-6 pt-3 duration-150 lg:hidden",
+            isHome ? "border-white/10 bg-[#20271f]/95 text-white" : "border-stone-200 bg-surface"
           )}
         >
           <div className="mb-3">
@@ -286,6 +294,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
+                aria-current={isActive(link.href) ? "page" : undefined}
                 className={cn(
                   "block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive(link.href)

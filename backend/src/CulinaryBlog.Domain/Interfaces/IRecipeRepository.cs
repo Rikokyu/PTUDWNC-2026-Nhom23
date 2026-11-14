@@ -47,6 +47,21 @@ public interface IRecipeRepository : IRepository<Recipe>
         string slug,
         CancellationToken cancellationToken = default);
 
+    Task<ApplicationUser?> GetAuthorByIdAsync(
+        Guid authorId,
+        CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<Recipe> Items, int TotalCount)> GetPublishedByAuthorAsync(
+        Guid authorId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<(IReadOnlyList<Recipe> Items, int TotalCount)> GetUnattributedPublishedAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<Recipe?> GetByIdWithImagesAsync(
         Guid id,
         CancellationToken cancellationToken = default);

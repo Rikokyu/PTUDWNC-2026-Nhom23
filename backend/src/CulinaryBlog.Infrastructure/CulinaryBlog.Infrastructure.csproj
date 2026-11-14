@@ -41,6 +41,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="Persistence\Seed\real-content.sql" />
+		<EmbeddedResource Include="Persistence\Seed\author-recipes.sql" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\CulinaryBlog.Application\CulinaryBlog.Application.csproj" />
 		<ProjectReference Include="..\CulinaryBlog.Domain\CulinaryBlog.Domain.csproj" />
 	</ItemGroup>

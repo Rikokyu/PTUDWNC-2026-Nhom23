@@ -41,14 +41,14 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <header className="border-b border-stone-200 pb-6">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">Quản trị cộng đồng</p>
+        <p className="editorial-kicker mb-2">Quản trị cộng đồng</p>
         <h1 className="font-display text-3xl font-bold text-content-primary">Quản lý tài khoản</h1>
         <p className="mt-1 text-sm text-content-secondary">
           Tìm tài khoản, quản lý trạng thái và quyền truy cập của thành viên.
         </p>
       </header>
 
-      <form onSubmit={applySearch} className="grid gap-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-subtle md:grid-cols-[1fr_180px_auto] md:items-end">
+      <form onSubmit={applySearch} className="grid gap-3 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle md:grid-cols-[1fr_180px_auto] md:items-end">
         <Input
           label="Tìm tài khoản"
           value={searchInput}
@@ -94,9 +94,9 @@ export default function AdminUsersPage() {
         <EmptyState title="Không có tài khoản" description="Không tìm thấy tài khoản phù hợp." />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-content-tertiary">
+          <div className="overflow-x-auto rounded-2xl border border-stone-200 bg-surface shadow-subtle">
+            <table className="min-w-full divide-y divide-stone-200 text-sm">
+              <thead className="bg-surface-cream text-left text-xs uppercase tracking-wide text-content-tertiary">
                 <tr>
                   <th className="px-4 py-3">Tài khoản</th>
                   <th className="px-4 py-3">Role</th>

@@ -26,26 +26,26 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none rounded-lg";
+      "inline-flex items-center justify-center rounded-xl font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-muted disabled:cursor-not-allowed disabled:opacity-50 select-none";
 
     const variants = {
       primary:
-        "bg-brand text-white hover:bg-brand-hover active:bg-brand-active focus:ring-brand/40 shadow-sm",
+        "bg-brand text-white shadow-subtle hover:bg-brand-hover active:bg-brand-active focus:ring-brand/35",
       secondary:
-        "bg-surface-muted text-content-primary hover:bg-surface-subtle border border-slate-200 focus:ring-slate-300",
+        "border border-stone-200 bg-surface-cream text-content-primary hover:border-stone-300 hover:bg-surface-subtle focus:ring-accent/30",
       accent:
-        "bg-accent text-white hover:bg-accent-hover focus:ring-accent/40 shadow-sm",
+        "bg-accent text-white shadow-subtle hover:bg-accent-hover focus:ring-accent/35",
       outline:
-        "bg-transparent text-content-primary border border-slate-300 hover:bg-slate-50 focus:ring-brand/30",
+        "border border-stone-300 bg-surface text-content-primary hover:border-brand-border hover:bg-brand-light focus:ring-brand/30",
       ghost:
-        "bg-transparent text-content-secondary hover:text-content-primary hover:bg-slate-100 focus:ring-slate-300",
+        "bg-transparent text-content-secondary hover:bg-surface-subtle hover:text-content-primary focus:ring-accent/30",
       danger:
         "bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400 shadow-sm",
     };
 
     const sizes = {
-      sm: "text-xs px-3 py-1.5 gap-1.5 h-8",
-      md: "text-sm px-4 py-2 gap-2 h-10",
+      sm: "h-9 gap-1.5 px-3 text-xs",
+      md: "h-11 gap-2 px-4 text-sm",
       lg: "text-base px-5 py-2.5 gap-2.5 h-12",
     };
 

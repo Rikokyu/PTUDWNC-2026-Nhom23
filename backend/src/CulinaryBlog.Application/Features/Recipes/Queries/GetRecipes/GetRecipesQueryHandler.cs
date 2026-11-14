@@ -45,32 +45,9 @@ public sealed class GetRecipesQueryHandler
                 cancellationToken,
                 request.MinServings);
 
-        var items =
-            result.Items
-                .Select(recipe =>
-                    new RecipeSummaryDto(
-                        recipe.Id,
-                        recipe.Title,
-                        recipe.Slug,
-                        recipe.Images
-                            .OrderByDescending(x =>
-                                x.IsPrimary)
-                            .ThenBy(x =>
-                                x.OrderIndex)
-                            .Select(x =>
-                                x.ThumbnailUrl
-                                ?? x.MediumUrl
-                                ?? x.OriginalUrl)
-                            .FirstOrDefault(),
-                        recipe.Category.Name,
-                        recipe.CategoryId,
-                        recipe.PrepTimeMinutes,
-                        recipe.CookTimeMinutes,
-                        recipe.Servings,
-                        recipe.Difficulty,
-                        recipe.Status,
-                        recipe.CreatedAt))
-                .ToList();
+        var items = result.Items
+            .Select(recipe => RecipeSummaryDto.FromRecipe(recipe))
+            .ToList();
 
         return new PagedResult<RecipeSummaryDto>(
             items,

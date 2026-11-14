@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import apiClient from "@/lib/api/axios";
@@ -26,7 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((store) => store.accessToken);
   const setSession = useAuthStore((store) => store.setSession);
   const setUser = useAuthStore((store) => store.setUser);
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const retry = useCallback(() => setRevision((value) => value + 1), []);
   const updateUser = useCallback((user: AuthUserDto) => {
@@ -45,11 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener(AUTH_CHANGED, changed);
     window.addEventListener("storage", storageChanged);
-    window.addEventListener("focus", retry);
     return () => {
       window.removeEventListener(AUTH_CHANGED, changed);
       window.removeEventListener("storage", storageChanged);
-      window.removeEventListener("focus", retry);
     };
   }, [retry, queryClient]);
 
@@ -72,7 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const controller = new AbortController();
-    let expiryTimer: ReturnType<typeof setTimeout> | undefined;
     setState({ user: null, status: "loading" });
     // Roles are loaded from the authenticated API, never trusted from localStorage.
     apiClient.get<AuthUserDto>("/api/v1/auth/me", { signal: controller.signal })
@@ -80,10 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (controller.signal.aborted || localStorage.getItem("accessToken") !== token) return;
         setState({ user: data, status: "authenticated" });
         setSession(token, data);
-        const expiry = Date.parse(localStorage.getItem("accessTokenExpiresAt") ?? "");
-        if (Number.isFinite(expiry)) {
-          expiryTimer = setTimeout(clearAuthSession, Math.max(0, expiry - Date.now()));
-        }
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
@@ -94,9 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     return () => {
       controller.abort();
-      clearTimeout(expiryTimer);
     };
-  }, [revision, pathname, accessToken, setSession]);
+  }, [revision, accessToken, setSession]);
 
   const logout = async () => {
     const token = localStorage.getItem("accessToken");

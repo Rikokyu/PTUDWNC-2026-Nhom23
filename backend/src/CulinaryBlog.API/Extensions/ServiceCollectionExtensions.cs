@@ -126,7 +126,7 @@ public static class ServiceCollectionExtensions
                     GetClientAddress(context),
                     _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 10,
+                        PermitLimit = 20,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0,
                         AutoReplenishment = true

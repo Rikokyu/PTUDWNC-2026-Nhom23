@@ -14,10 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Identity;
-<<<<<<< HEAD
-=======
 using Microsoft.Extensions.Logging;
->>>>>>> 315339d (Update UI)
 using Minio;
 
 namespace CulinaryBlog.Infrastructure;
@@ -97,6 +94,7 @@ public static class DependencyInjection
 
         services.AddScoped<IRecipeRepository, RecipeRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ISavedRecipeRepository, SavedRecipeRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         var storageProvider = configuration["FileStorage:Provider"] ?? "Local";

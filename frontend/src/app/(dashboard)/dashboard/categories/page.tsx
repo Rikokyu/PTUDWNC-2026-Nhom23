@@ -90,7 +90,7 @@ export default function DashboardCategoriesPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-stone-200 pb-6">
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">Quản trị nội dung</p>
+          <p className="editorial-kicker mb-2">Quản trị nội dung</p>
           <h1 className="font-display text-3xl font-bold text-content-primary">Quản lý danh mục</h1>
           <p className="mt-1 text-sm text-content-secondary">
             Tạo và sắp xếp các chủ đề để người đọc dễ tìm món ăn.

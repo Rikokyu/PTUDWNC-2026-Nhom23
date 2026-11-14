@@ -42,7 +42,7 @@ export function CategoryCreateForm({ existingNames, onCancel, onCreated }: Categ
   return (
     <section
       aria-labelledby="create-category-heading"
-      className="rounded-xl border border-slate-200 bg-white p-5 shadow-subtle sm:p-6"
+      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-subtle sm:p-6"
     >
       <div className="mb-5">
         <h2
@@ -94,7 +94,7 @@ export function CategoryCreateForm({ existingNames, onCancel, onCreated }: Categ
             rows={3}
             disabled={createCategory.isPending}
             placeholder="Mô tả ngắn về danh mục"
-            className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-content-primary transition duration-150 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+            className="w-full resize-y rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-content-primary transition duration-150 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
           />
           <p className="text-xs text-content-tertiary">
             {description.length}/2000 ký tự

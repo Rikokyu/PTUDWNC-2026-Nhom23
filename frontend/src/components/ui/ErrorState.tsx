@@ -18,16 +18,17 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 }) => {
   return (
     <div
+      role="alert"
       className={cn(
-        "p-6 rounded-xl border border-rose-200 bg-rose-50/40 text-center flex flex-col items-center justify-center max-w-md mx-auto my-8",
+        "mx-auto my-8 flex w-full max-w-2xl flex-col items-center justify-center rounded-2xl border border-rose-200 bg-rose-50/70 px-6 py-10 text-center sm:px-10",
         className
       )}
     >
-      <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
-        <AlertCircle className="w-5 h-5" />
+      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-200 bg-white text-rose-600 shadow-subtle">
+        <AlertCircle className="h-7 w-7" aria-hidden="true" />
       </div>
-      <h4 className="text-sm font-semibold text-rose-900 mb-1">{title}</h4>
-      <p className="text-xs text-rose-700 mb-4 max-w-xs">{message}</p>
+      <h4 className="mb-2 font-display text-xl font-bold text-content-primary">{title}</h4>
+      <p className="mb-6 max-w-md text-sm leading-6 text-content-secondary">{message}</p>
       {onRetry && (
         <Button
           variant="outline"

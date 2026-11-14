@@ -32,6 +32,9 @@ public class CulinaryBlogDbContext : DbContext
     public DbSet<RecipeImage> RecipeImages =>
         Set<RecipeImage>();
 
+    public DbSet<SavedRecipe> SavedRecipes =>
+        Set<SavedRecipe>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {

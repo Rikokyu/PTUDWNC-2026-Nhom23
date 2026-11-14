@@ -7,10 +7,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { SuccessNotice } from "@/components/ui/SuccessNotice";
 import { Input } from "@/components/ui/Input";
 import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
 import { recipeApi } from "@/lib/api/recipes";
 import { resolveApiAssetUrl } from "@/lib/api/axios";
+import { normalizeImageFile } from "@/lib/imageFile";
 import { getApiErrorMessage } from "@/lib/api/error";
 import { IngredientUnitField } from "@/components/recipes/IngredientUnitField";
 import { isNonNegativeIngredientQuantity } from "@/lib/recipeIngredient";
@@ -84,11 +86,13 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [newIngredient, setNewIngredient] = useState<IngredientFields>(
     ingredientFields(),
   );
   const [newStep, setNewStep] = useState<StepFields>(stepFields());
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [altText, setAltText] = useState("");
 
   const queryKey = ["recipe-management", recipeId, isAdmin] as const;
@@ -103,6 +107,17 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       router.replace("/auth/login");
     }
   }, [accessToken, router]);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [imageFile]);
 
   async function runMutation(
     operation: () => Promise<unknown>,
@@ -157,23 +172,24 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       setError("Hãy chọn một ảnh trước khi tải lên.");
       return;
     }
-    if (!["image/jpeg", "image/png", "image/webp", "image/avif"].includes(imageFile.type)) {
-      setError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
-      return;
-    }
     if (imageFile.size > 20 * 1024 * 1024) {
       setError("Kích thước ảnh không được vượt quá 20 MB.");
       return;
     }
 
-    const succeeded = await runMutation(
-      () => recipeApi.uploadImage(recipeId, imageFile, altText),
-      "Đã tải ảnh lên.",
-    );
-    if (!succeeded) return;
-    setImageFile(null);
-    setAltText("");
-    form.reset();
+    setIsUploadingImage(true);
+    try {
+      const succeeded = await runMutation(
+        () => recipeApi.uploadImage(recipeId, imageFile, altText),
+        "Đã tải ảnh lên.",
+      );
+      if (!succeeded) return;
+      setImageFile(null);
+      setAltText("");
+      form.reset();
+    } finally {
+      setIsUploadingImage(false);
+    }
   }
 
   async function changeStatus(action: "publish" | "unpublish" | "archive") {
@@ -276,45 +292,75 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       </div>
 
       {error && <ErrorState title="Không thể lưu thay đổi" message={error} />}
-      {success && (
-        <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          {success}
-        </p>
-      )}
+      {success && <SuccessNotice title="Đã cập nhật công thức" message={success} />}
 
-      <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="space-y-5 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle">
         <header>
           <h2 className="text-xl font-bold">Ảnh công thức</h2>
-          <p className="mt-1 text-sm text-content-secondary">
-            Ảnh được lưu trên local file storage hiện cấu hình cho backend.
-          </p>
         </header>
-        <form onSubmit={uploadImage} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <label className="block space-y-1.5 text-xs font-semibold text-content-secondary">
-            Chọn ảnh (JPEG, PNG, WebP, AVIF; tối đa 20 MB)
+        <form onSubmit={uploadImage} className="grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
+          <div>
+            <label htmlFor="recipe-content-image-upload" className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-brand bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 ${busy ? "pointer-events-none opacity-50" : ""}`}>
+              <ImagePlus className="h-4 w-4" aria-hidden="true" />
+              {imageFile ? "Đổi ảnh" : "Thêm ảnh"}
+            </label>
             <input
+              id="recipe-content-image-upload"
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/avif"
-              onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-              className="block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal"
+              accept=".jpg,.jpeg,.png,.webp,.avif,image/jpeg,image/png,image/webp,image/avif"
+              disabled={busy}
+              onChange={(event) => {
+                const input = event.currentTarget;
+                const selectedFile = input.files?.[0] ?? null;
+                input.value = "";
+                setError(null);
+                setSuccess(null);
+                if (!selectedFile) return;
+                const file = normalizeImageFile(selectedFile);
+                if (!file) {
+                  setImageFile(null);
+                  setError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
+                  return;
+                }
+                if (file && file.size > 20 * 1024 * 1024) {
+                  setImageFile(null);
+                  setError("Kích thước ảnh không được vượt quá 20 MB.");
+                  return;
+                }
+                setImageFile(file);
+              }}
+              className="sr-only"
             />
-          </label>
+          </div>
           <Input
             label="Mô tả ảnh"
             value={altText}
             onChange={(event) => setAltText(event.target.value)}
             maxLength={200}
           />
-          <Button type="submit" isLoading={busy} leftIcon={<ImagePlus className="h-4 w-4" />}>
-            Tải ảnh lên
+          <Button type="submit" disabled={busy && !isUploadingImage} isLoading={isUploadingImage} leftIcon={<ImagePlus className="h-4 w-4" />}>
+            {isUploadingImage ? "Đang tải ảnh lên…" : "Tải ảnh lên"}
           </Button>
         </form>
-        {recipe.images.length === 0 ? (
-          <p className="text-sm text-content-secondary">Chưa có ảnh cho công thức này.</p>
-        ) : (
+        {imageFile && (
+          <p role="status" className="truncate text-sm text-content-secondary">Đã chọn: {imageFile.name}</p>
+        )}
+        {imagePreviewUrl && imageFile && (
+          <div className="max-w-md overflow-hidden rounded-xl border border-stone-200 bg-surface-cream">
+            <img
+              src={imagePreviewUrl}
+              alt={altText || `Ảnh xem trước ${recipe.title}`}
+              className="aspect-[4/3] w-full object-cover"
+            />
+          </div>
+        )}
+        {recipe.images.length === 0 && !imageFile && (
+          <p className="text-sm text-content-secondary">Chưa có ảnh được tải lên cho công thức này.</p>
+        )}
+        {recipe.images.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {recipe.images.map((image) => (
-              <article key={image.id} className="overflow-hidden rounded-lg border border-slate-200">
+              <article key={image.id} className="overflow-hidden rounded-xl border border-stone-200 bg-surface-cream">
                 <img
                   src={resolveApiAssetUrl(image.mediumUrl ?? image.originalUrl) ?? ""}
                   alt={image.altText ?? recipe.title}
@@ -365,14 +411,14 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
         )}
       </section>
 
-      <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="space-y-5 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle">
         <header>
           <h2 className="text-xl font-bold">Nguyên liệu ({recipe.ingredients.length})</h2>
           <p className="mt-1 text-sm text-content-secondary">
             Số lượng là chuỗi tự do, ví dụ “1/2” hoặc “vừa đủ”.
           </p>
         </header>
-        <form onSubmit={addIngredient} className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2">
+        <form onSubmit={addIngredient} className="grid gap-3 rounded-xl bg-surface-cream p-4 sm:grid-cols-2">
           <Input label="Tên nguyên liệu" required maxLength={200} value={newIngredient.name} onChange={(event) => setNewIngredient({ ...newIngredient, name: event.target.value })} />
           <Input label="Số lượng" maxLength={50} value={newIngredient.quantity} onChange={(event) => setNewIngredient({ ...newIngredient, quantity: event.target.value })} />
           <IngredientUnitField
@@ -401,14 +447,14 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
         </div>
       </section>
 
-      <section className="space-y-5 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="space-y-5 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle">
         <header>
           <h2 className="text-xl font-bold">Các bước ({recipe.steps.length})</h2>
           <p className="mt-1 text-sm text-content-secondary">
             Thứ tự được backend đánh lại liên tục sau khi thêm, xóa hoặc sắp xếp.
           </p>
         </header>
-        <form onSubmit={addStep} className="space-y-3 rounded-lg bg-slate-50 p-4">
+        <form onSubmit={addStep} className="space-y-3 rounded-xl bg-surface-cream p-4">
           <Input label="Tiêu đề bước" maxLength={200} value={newStep.title} onChange={(event) => setNewStep({ ...newStep, title: event.target.value })} />
           <label className="block space-y-1.5 text-xs font-semibold text-content-secondary">
             Mô tả (bắt buộc, tối đa 2000 ký tự)
@@ -417,7 +463,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
               maxLength={2000}
               value={newStep.description}
               onChange={(event) => setNewStep({ ...newStep, description: event.target.value })}
-              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm font-normal text-content-primary"
+              className="w-full rounded-xl border border-stone-300 bg-surface p-3 text-sm font-normal text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
               rows={3}
             />
           </label>
@@ -474,7 +520,7 @@ function IngredientEditor({
           "Đã cập nhật nguyên liệu.",
         );
       }}
-      className="grid gap-3 rounded-lg border border-slate-200 p-4 sm:grid-cols-2"
+      className="grid gap-3 rounded-xl border border-stone-200 bg-surface-cream p-4 sm:grid-cols-2"
     >
       <Input label="Tên" required maxLength={200} value={fields.name} onChange={(event) => setFields({ ...fields, name: event.target.value })} />
       <Input label="Số lượng" maxLength={50} value={fields.quantity} onChange={(event) => setFields({ ...fields, quantity: event.target.value })} />
@@ -542,7 +588,7 @@ function StepEditor({
           "Đã cập nhật bước thực hiện.",
         );
       }}
-      className="space-y-3 rounded-lg border border-slate-200 p-4"
+      className="space-y-3 rounded-xl border border-stone-200 bg-surface-cream p-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-semibold">Bước {step.stepNumber}</h3>
@@ -563,7 +609,7 @@ function StepEditor({
           maxLength={2000}
           value={fields.description}
           onChange={(event) => setFields({ ...fields, description: event.target.value })}
-          className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm font-normal text-content-primary"
+          className="w-full rounded-xl border border-stone-300 bg-surface p-3 text-sm font-normal text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           rows={3}
         />
       </label>

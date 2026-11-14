@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown, SearchX, SlidersHorizontal } from "lucide-react";
 import { ApiRecipeCard } from "@/components/common/ApiRecipeCard";
-import { Button } from "@/components/ui/Button";
+import { AutocompleteSearch } from "@/components/common/AutocompleteSearch";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { RecipeCardSkeleton } from "@/components/ui/LoadingState";
 import { Pagination } from "@/components/ui/Pagination";
 import { useCategories } from "@/hooks/useCategories";
 import { useRecipes } from "@/hooks/useRecipes";
+import { useRecipeSuggestions } from "@/hooks/useRecipeSuggestions";
 import { getApiErrorMessage } from "@/lib/api/error";
 import type { RecipeFilters } from "@/types/api";
 
@@ -37,6 +39,7 @@ export function RecipeExplorer() {
   const [maxCookTime, setMaxCookTime] = useState<number>();
   const [minServings, setMinServings] = useState<number>();
   const [urlReady, setUrlReady] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   useEffect(() => {
     const read = () => {
       const params = new URLSearchParams(window.location.search);
@@ -54,6 +57,7 @@ export function RecipeExplorer() {
       setSearchDraft(params.get("search") ?? "");
       setMaxCookTime(positive("maxCookTime", 0));
       setMinServings(positive("minServings"));
+      setFiltersOpen(Boolean(params.get("categoryId") || params.get("difficulty") || params.get("maxCookTime") || params.get("minServings")));
       setUrlReady(true);
     };
     read();
@@ -86,43 +90,45 @@ export function RecipeExplorer() {
     search: search || undefined,
   });
   const categoriesQuery = useCategories();
+  const recipeSuggestions = useRecipeSuggestions(searchDraft);
   const result = recipesQuery.data;
+  const activeFilterCount = Number(Boolean(categoryId)) + Number(Boolean(difficulty))
+    + Number(maxCookTime !== undefined) + Number(minServings !== undefined)
+    + Number(sort !== "-createdAt");
 
   return (
-    <div className="space-y-10 pb-12">
-      <header className="border-b border-zinc-300 pb-8 sm:pb-10">
-        <p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-brand">Culinary Blog / Khám phá</p>
+    <div className="space-y-6 pb-10">
+      <header className="border-b border-stone-300 pb-5 sm:pb-6">
+        <p className="editorial-kicker mb-3">Culinary Blog / Khám phá</p>
         <h1 className="font-display text-4xl font-bold leading-tight tracking-tight text-content-primary sm:text-5xl">
           Khám phá công thức
         </h1>
-        <p className="mt-4 max-w-2xl text-base leading-7 text-content-secondary">
-          Tìm món hợp với bữa ăn hôm nay. Lọc theo thời gian, khẩu phần và cách bạn muốn nấu.
+        <p className="mt-3 max-w-2xl text-base leading-7 text-content-secondary">
+          Tìm món hợp với bữa ăn hôm nay.
         </p>
       </header>
 
       <section
         aria-label="Lọc công thức"
-        className="grid gap-x-5 gap-y-4 border border-zinc-200 bg-white p-5 shadow-subtle sm:grid-cols-2 sm:p-6 lg:grid-cols-4"
+        className="space-y-4 rounded-2xl border border-stone-200/80 bg-surface p-4 shadow-subtle sm:p-5"
       >
-        <form
-          className="flex items-end gap-2 lg:col-span-1"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setSearch(searchDraft.trim());
+        <AutocompleteSearch
+          label="Tìm công thức"
+          placeholder="Tìm theo tên món hoặc nguyên liệu..."
+          value={searchDraft}
+          onChange={setSearchDraft}
+          onSearch={(value) => {
+            setSearch(value);
             setPage(1);
           }}
-        >
-          <label className="flex-1 text-xs font-semibold text-content-secondary">
-            Tìm kiếm
-            <input
-              value={searchDraft}
-              onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder="Tên món hoặc nguyên liệu"
-              className="mt-2 w-full rounded-md border border-zinc-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary placeholder:text-content-tertiary"
-            />
-          </label>
-          <Button type="submit" size="sm">Tìm</Button>
-        </form>
+          suggestions={recipeSuggestions.suggestions}
+          isLoading={recipeSuggestions.isLoading}
+        />
+        <button type="button" className="flex min-h-11 w-full items-center justify-between rounded-xl border border-stone-200 bg-surface-cream px-3 text-sm font-semibold text-content-primary lg:hidden" aria-expanded={filtersOpen} aria-controls="recipe-filters" onClick={() => setFiltersOpen((open) => !open)}>
+          <span className="inline-flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-accent" aria-hidden="true" /> Bộ lọc{activeFilterCount ? ` (${activeFilterCount})` : ""}</span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+        </button>
+        <div id="recipe-filters" className={`${filtersOpen ? "grid" : "hidden"} gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid lg:grid-cols-5`}>
         <label className="text-xs font-semibold text-content-secondary">
           Danh mục
           <select
@@ -131,7 +137,7 @@ export function RecipeExplorer() {
               setCategoryId(event.target.value);
               setPage(1);
             }}
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary"
+            className="mt-2 min-h-11 w-full rounded-xl border border-stone-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           >
             <option value="">Tất cả danh mục</option>
             {(categoriesQuery.data ?? []).map((category) => (
@@ -147,7 +153,7 @@ export function RecipeExplorer() {
               setDifficulty(difficultyOptions.find((option) => option === event.target.value));
               setPage(1);
             }}
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary"
+            className="mt-2 min-h-11 w-full rounded-xl border border-stone-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           >
             <option value="">Mọi mức độ</option>
             <option value="Easy">Dễ</option>
@@ -164,7 +170,7 @@ export function RecipeExplorer() {
               setSort(sortOptions.find((option) => option === event.target.value) ?? "-createdAt");
               setPage(1);
             }}
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary"
+            className="mt-2 min-h-11 w-full rounded-xl border border-stone-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           >
             <option value="-createdAt">Mới nhất</option>
             <option value="createdAt">Cũ nhất</option>
@@ -182,7 +188,7 @@ export function RecipeExplorer() {
               setMaxCookTime(Number.isSafeInteger(value) && value >= 0 ? value : undefined);
               setPage(1);
             }}
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary"
+            className="mt-2 min-h-11 w-full rounded-xl border border-stone-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             placeholder="Không giới hạn" />
         </label>
         <label className="text-xs font-semibold text-content-secondary">
@@ -193,9 +199,10 @@ export function RecipeExplorer() {
               setMinServings(Number.isSafeInteger(value) && value >= 1 ? value : undefined);
               setPage(1);
             }}
-            className="mt-2 w-full rounded-md border border-zinc-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary"
+            className="mt-2 min-h-11 w-full rounded-xl border border-stone-300 bg-surface-cream px-3 py-2.5 text-sm font-normal text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             placeholder="Mọi khẩu phần" />
         </label>
+        </div>
       </section>
 
       {recipesQuery.isLoading ? (
@@ -210,9 +217,10 @@ export function RecipeExplorer() {
         />
       ) : !result || result.items.length === 0 ? (
         <EmptyState
-          title="Không tìm thấy công thức"
-          description="Hãy thử từ khóa hoặc bộ lọc khác."
-          actionLabel="Xóa bộ lọc"
+          icon={<SearchX className="h-7 w-7" aria-hidden="true" />}
+          title="Chưa có món nào phù hợp"
+          description="Thử đổi từ khóa hoặc bỏ bớt điều kiện lọc để xem thêm công thức nhé."
+          actionLabel="Xem tất cả công thức"
           onAction={() => {
             setMaxCookTime(undefined);
             setMinServings(undefined);
@@ -226,9 +234,9 @@ export function RecipeExplorer() {
         />
       ) : (
         <>
-          <div className="flex items-center gap-4 border-b border-zinc-300 pb-4">
+          <div className="flex items-center gap-4 border-b border-stone-300 pb-4">
             <p className="font-display text-lg font-semibold text-content-primary">{result.totalCount} công thức</p>
-            <span className="h-px flex-1 bg-zinc-200" aria-hidden="true" />
+            <span className="h-px flex-1 bg-stone-200" aria-hidden="true" />
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {result.items.map((recipe) => <ApiRecipeCard key={recipe.id} recipe={recipe} />)}

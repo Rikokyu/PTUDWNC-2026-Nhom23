@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { SuccessNotice } from "@/components/ui/SuccessNotice";
 import { Input } from "@/components/ui/Input";
 import { authApi } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/error";
@@ -56,7 +57,7 @@ function ResetPasswordForm() {
       {error && <ErrorState title="Không thể đặt lại mật khẩu" message={error} />}
       {completed ? (
         <div className="space-y-4 text-center">
-          <p role="status" className="text-sm text-emerald-700">Đã cập nhật mật khẩu. Hãy đăng nhập lại.</p>
+          <SuccessNotice title="Đổi mật khẩu thành công" message="Bạn có thể đăng nhập bằng mật khẩu mới." />
           <Link href="/auth/login" className="font-semibold text-brand">Đăng nhập</Link>
         </div>
       ) : (

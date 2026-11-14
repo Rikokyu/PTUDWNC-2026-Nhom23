@@ -10,7 +10,7 @@ export default function PublicLayout({
   return (
     <div className="min-h-screen flex flex-col bg-surface-muted">
       <Navbar />
-      <main className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <main id="main-content" className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         {children}
       </main>
       <Footer />

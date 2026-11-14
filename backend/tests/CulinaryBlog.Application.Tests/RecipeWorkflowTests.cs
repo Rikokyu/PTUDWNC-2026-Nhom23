@@ -130,8 +130,8 @@ public sealed class RecipeWorkflowTests
         var state = new SharedRowVersion();
         await using var firstContext = CreateContext(state);
         await using var secondContext = CreateContext(state);
-        var firstUnitOfWork = new UnitOfWork(firstContext, null!, null!);
-        var secondUnitOfWork = new UnitOfWork(secondContext, null!, null!);
+        var firstUnitOfWork = new UnitOfWork(firstContext, null!, null!, null!);
+        var secondUnitOfWork = new UnitOfWork(secondContext, null!, null!, null!);
 
         var outcomes = await Task.WhenAll(
             TrySaveAsync(firstUnitOfWork),

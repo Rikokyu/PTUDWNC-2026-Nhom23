@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { SuccessNotice } from "@/components/ui/SuccessNotice";
 import { Input } from "@/components/ui/Input";
 import { authApi } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/error";
@@ -38,9 +39,10 @@ export default function ForgotPasswordPage() {
       </header>
       {error && <ErrorState title="Không thể gửi yêu cầu" message={error} />}
       {submitted ? (
-        <p role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
-          Nếu email tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi. Kiểm tra cả thư mục spam.
-        </p>
+        <SuccessNotice
+          title="Đã nhận yêu cầu"
+          message="Nếu email có trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu. Hãy kiểm tra cả thư mục spam."
+        />
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
           <Input

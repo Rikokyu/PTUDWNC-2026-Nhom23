@@ -11,16 +11,20 @@ public class UnitOfWork : IUnitOfWork
     public UnitOfWork(
         CulinaryBlogDbContext context,
         IRecipeRepository recipes,
-        ICategoryRepository categories)
+        ICategoryRepository categories,
+        ISavedRecipeRepository savedRecipes)
     {
         _context = context;
         Recipes = recipes;
         Categories = categories;
+        SavedRecipes = savedRecipes;
     }
 
     public IRecipeRepository Recipes { get; }
 
     public ICategoryRepository Categories { get; }
+
+    public ISavedRecipeRepository SavedRecipes { get; }
 
     public void AddRecipeImage(RecipeImage image) =>
         _context.RecipeImages.Add(image);

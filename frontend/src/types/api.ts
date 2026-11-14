@@ -91,6 +91,7 @@ export interface RecipeApiSummaryDto {
   difficulty: ApiDifficultyLevel;
   status: ApiRecipeStatus;
   createdAt: string;
+  author?: RecipeApiCardAuthorDto | null;
 }
 
 export interface RecipeApiDetailDto {
@@ -124,6 +125,22 @@ export interface RecipeApiAuthorDto {
   id: string;
   displayName: string;
   email: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+}
+
+export interface RecipeApiCardAuthorDto {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+}
+
+export interface AuthorProfileDto {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  recipes: PaginatedResult<RecipeApiSummaryDto>;
 }
 
 export interface RecipeApiIngredientDto {

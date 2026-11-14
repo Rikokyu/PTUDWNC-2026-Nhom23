@@ -29,7 +29,7 @@ public sealed class WelcomeEmailHangfirePostgresTests
         });
         var client = new BackgroundJobClient();
         var jobId = client.Enqueue<WelcomeEmailJob>(job =>
-            job.ExecuteAsync("failure@culinary.test", "Failure Test"));
+            job.SendAsync("failure@culinary.test", "Failure Test", null));
         var until = DateTime.UtcNow.AddSeconds(25);
         string? state = null;
         while (DateTime.UtcNow < until)
@@ -49,7 +49,7 @@ public sealed class WelcomeEmailHangfirePostgresTests
     {
         public override object ActivateJob(Type jobType) =>
             jobType == typeof(WelcomeEmailJob)
-                ? new WelcomeEmailJob(email)
+                ? new WelcomeEmailJob(email, NullLogger<WelcomeEmailJob>.Instance)
                 : base.ActivateJob(jobType);
     }
 

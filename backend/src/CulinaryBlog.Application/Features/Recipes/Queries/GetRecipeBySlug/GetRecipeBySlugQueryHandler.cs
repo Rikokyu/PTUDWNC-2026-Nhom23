@@ -104,7 +104,9 @@ public sealed class GetRecipeBySlugQueryHandler
                 new RecipeAuthorDto(
                     recipe.Author.Id,
                     recipe.Author.DisplayName,
-                    recipe.Author.Email);
+                    recipe.Author.Email,
+                    recipe.Author.AvatarUrl,
+                    recipe.Author.Bio);
         }
 
         RecipeNutritionDto? nutrition = null;

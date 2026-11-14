@@ -17,14 +17,14 @@ export const Toast: React.FC<ToastProps> = ({
   onClose,
 }) => {
   const icons = {
-    success: <CheckCircle2 className="w-5 h-5 text-brand" />,
+    success: <CheckCircle2 className="w-5 h-5 text-accent" />,
     error: <XCircle className="w-5 h-5 text-rose-500" />,
     warning: <AlertTriangle className="w-5 h-5 text-accent" />,
     info: <Info className="w-5 h-5 text-sky-500" />,
   };
 
   const borders = {
-    success: "border-brand-border/60 bg-white",
+    success: "border-accent/25 bg-surface",
     error: "border-rose-200 bg-white",
     warning: "border-amber-200 bg-white",
     info: "border-sky-200 bg-white",
@@ -33,7 +33,7 @@ export const Toast: React.FC<ToastProps> = ({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 p-4 rounded-xl border shadow-lg max-w-sm w-full transition-all duration-200 animate-in slide-in-from-top-2",
+        "flex w-full max-w-sm items-start gap-3 rounded-2xl border p-4 shadow-dropdown transition-all duration-200 animate-in slide-in-from-top-2",
         borders[type]
       )}
     >

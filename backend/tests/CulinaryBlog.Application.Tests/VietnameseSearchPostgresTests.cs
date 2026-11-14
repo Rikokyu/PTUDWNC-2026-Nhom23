@@ -13,7 +13,8 @@ public class VietnameseSearchPostgresTests
     [Theory]
     [InlineData("M\u00cc", "mi:*")]
     [InlineData("mi\u0300", "mi:*")]
-    [InlineData("PH\u1ede B\u00d2", "pho:* & bo:*")]
+    [InlineData("PH\u1ede B\u00d2", "pho & bo:*")]
+    [InlineData("bún chả", "bun & cha")]
     [InlineData("\u0110\u1eacU", "dau:*")]
     [InlineData("'&|!:*%_", "")]
     public void QueryUsesOnlyLiteralPrefixes(string input, string expected)
@@ -48,15 +49,16 @@ public class VietnameseSearchPostgresTests
         var desc = Add("Other", "m\u00ec b\u00f2");
         var instructions = Add("Steps"); instructions.Instructions = "c\u00e1 kho";
         var ingredient = Add("Ingredient"); ingredient.Ingredients.Add(new RecipeIngredient { Id=Guid.NewGuid(), Name="t\u1ecfi \u0111en" });
+        var rice = Add("Cơm chiên"); Add("Canh chua cá", "Ăn cùng cơm");
         Add("M\u00ec b\u00f2", status: RecipeStatus.Draft); Add("M\u00ec b\u00f2", status: RecipeStatus.Archived); Add("M\u00ec b\u00f2", deleted:true);
         await db.SaveChangesAsync();
         var repo = new RecipeRepository(db);
         foreach (var q in new[] { "mi", "m\u00ec", "M\u00cc", "mi\u0300" })
         {
             var result = await repo.SearchPublishedAsync(q,1,50);
-            Assert.Equal(2, result.TotalCount); Assert.Equal(mi.Id,result.Items[0].Id);
-            Assert.True(result.Items[0].SearchRelevanceScore > result.Items[1].SearchRelevanceScore);
+            Assert.Equal(mi.Id, Assert.Single(result.Items).Id);
         }
+        Assert.Equal(rice.Id, Assert.Single((await repo.SearchPublishedAsync("com",1,50)).Items).Id);
         foreach(var q in new[] { "pho b", "ph\u1edf b\u00f2", "PHO BO" }) Assert.Equal(pho.Id, Assert.Single((await repo.SearchPublishedAsync(q,1,50)).Items).Id);
         foreach (var q in new[] { "pho bo", "Ph\u1edf b\u00f2" })
         {
@@ -75,14 +77,14 @@ public class VietnameseSearchPostgresTests
         }
         var allStatuses = await repo.GetPagedAsync(1, 50, null, null, null,
             "mi bo", "-createdAt", null, true, true, includeAllStatuses: true);
-        Assert.Equal(4, allStatuses.TotalCount);
+        Assert.Equal(3, allStatuses.TotalCount);
         Assert.Contains(allStatuses.Items, item => item.Status == RecipeStatus.Draft);
         Assert.Contains(allStatuses.Items, item => item.Status == RecipeStatus.Archived);
         foreach(var q in new[] { "dau", "\u0110\u1eacU", "\u0111\u1eadu" }) Assert.Equal(dau.Id, Assert.Single((await repo.SearchPublishedAsync(q,1,50)).Items).Id);
         Assert.Equal(instructions.Id, Assert.Single((await repo.SearchPublishedAsync("ca kho",1,50)).Items).Id);
         Assert.Equal(ingredient.Id, Assert.Single((await repo.SearchPublishedAsync("toi d",1,50)).Items).Id);
         var first = await repo.SearchPublishedAsync("mi",1,1); var second = await repo.SearchPublishedAsync("mi",2,1);
-        Assert.Equal(2,first.TotalCount); Assert.NotEqual(first.Items[0].Id,second.Items[0].Id);
+        Assert.Equal(1,first.TotalCount); Assert.Empty(second.Items);
         Assert.Empty((await repo.SearchPublishedAsync("'&|!:*%_",1,50)).Items);
         Assert.Empty((await repo.SearchPublishedAsync("zznotfound",1,50)).Items);
         Assert.Empty((await repo.SearchPublishedAsync("'; DROP TABLE Recipes;--",1,50)).Items);

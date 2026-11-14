@@ -55,16 +55,16 @@ export default function SavedRecipesPage() {
 
   return (
     <section className="space-y-6">
-      <header>
-        <p className="text-sm font-semibold text-brand">Thư viện cá nhân</p>
-        <h1 className="mt-1 text-2xl font-bold text-content-primary sm:text-3xl">Công thức đã lưu</h1>
+      <header className="border-b border-stone-300 pb-5">
+        <p className="editorial-kicker">Thư viện cá nhân</p>
+        <h1 className="mt-2 font-display text-3xl font-bold text-content-primary sm:text-4xl">Công thức đã lưu</h1>
         <p className="mt-2 text-sm text-content-secondary">Danh sách công thức Published bạn đã đánh dấu để xem lại.</p>
       </header>
 
       {savedQuery.isLoading ? (
         <div role="status" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, index) => (
-            <div key={index} className="animate-pulse overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div key={index} className="animate-pulse overflow-hidden rounded-2xl border border-stone-200 bg-surface">
               <div className="aspect-[4/3] bg-slate-100" />
               <div className="space-y-3 p-5"><div className="h-4 w-2/3 rounded bg-slate-100" /><div className="h-3 w-1/2 rounded bg-slate-100" /></div>
             </div>
@@ -80,14 +80,15 @@ export default function SavedRecipesPage() {
         <>
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {result.items.map((recipe) => (
-              <article key={recipe.id} className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-subtle">
+              <article key={recipe.id} className="group relative overflow-hidden rounded-2xl border border-stone-200 bg-surface shadow-subtle transition-shadow hover:shadow-card">
                 <Link href={`/recipes/${encodeURIComponent(recipe.slug)}`} className="block">
                   {resolveApiAssetUrl(recipe.thumbnailUrl) ? (
                     <img
                       src={resolveApiAssetUrl(recipe.thumbnailUrl)!}
                       alt={recipe.title}
-                      className="aspect-[4/3] w-full bg-slate-100 object-cover"
+                      className="aspect-[4/3] w-full bg-surface-subtle object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transform-none"
                       loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 bg-slate-100 text-slate-500">

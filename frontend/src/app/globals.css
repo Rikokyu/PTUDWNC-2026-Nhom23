@@ -11,17 +11,18 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    font-size: 100%;
   }
 
   body {
     @apply bg-surface-muted text-content-primary font-sans antialiased selection:bg-brand-light selection:text-brand-hover;
-    background-color: #f3f4f2;
-    color: #0b0b0b;
+    background-color: #f5f2eb;
+    color: #29271f;
   }
 
   :focus-visible {
-    outline: 3px solid #e11d48;
-    outline-offset: 4px;
+    outline: 2px solid #a94f2d;
+    outline-offset: 3px;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -43,8 +44,23 @@
   h4,
   h5,
   h6 {
-    @apply tracking-tight font-semibold text-content-primary;
+    @apply font-display tracking-tight font-semibold text-content-primary;
   }
+}
+
+@layer components {
+  .editorial-kicker {
+    @apply text-[11px] font-bold uppercase tracking-[0.22em] text-brand;
+  }
+
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 ::-webkit-scrollbar {
@@ -55,11 +71,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
+  background: #c9c1b3;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
+  background: #a49a87;
 }
 
 @media (hover: hover) and (pointer: fine) {

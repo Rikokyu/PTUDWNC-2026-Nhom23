@@ -59,6 +59,18 @@ export const authApi = {
     );
     return response.data;
   },
+  uploadAvatar: async (file: File): Promise<UserProfileDto> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiClient.post<UserProfileDto>(
+      "/api/v1/auth/me/avatar",
+      formData,
+      // Let the browser add the multipart boundary. The shared client defaults
+      // to JSON, so explicitly clear it for FormData requests.
+      { headers: { "Content-Type": undefined }, timeout: 300_000 },
+    );
+    return response.data;
+  },
 };
 
 export function saveAuthSession(session: AuthSessionDto): void {

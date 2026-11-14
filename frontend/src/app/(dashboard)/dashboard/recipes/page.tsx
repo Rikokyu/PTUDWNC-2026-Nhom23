@@ -52,7 +52,7 @@ export default function ManagedRecipesPage() {
     <div className="mx-auto max-w-5xl space-y-7">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-stone-200 pb-6">
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">Không gian tác giả</p>
+          <p className="editorial-kicker mb-2">Không gian tác giả</p>
           <h1 className="font-display text-3xl font-bold text-content-primary">Công thức của tôi</h1>
           <p className="mt-1 text-sm text-content-secondary">
             Quản lý bài viết, nguyên liệu, các bước và hình ảnh.
@@ -64,7 +64,7 @@ export default function ManagedRecipesPage() {
       </header>
 
       <div className="flex items-center justify-between text-sm text-content-secondary"><span>{result.totalCount} công thức</span><span>Mới nhất trước</span></div>
-      <section className="divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-subtle">
+      <section className="divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-surface shadow-subtle">
         {result.items.map((recipe) => (
           <article
             key={recipe.id}

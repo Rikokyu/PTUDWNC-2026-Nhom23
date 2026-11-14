@@ -23,9 +23,9 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col justify-between gap-6 overflow-hidden rounded-3xl bg-[#211d1b] p-7 text-white shadow-card sm:flex-row sm:items-center sm:p-9">
+      <div className="flex flex-col justify-between gap-6 overflow-hidden rounded-3xl bg-[#202b22] p-7 text-white shadow-card sm:flex-row sm:items-center sm:p-9">
         <div className="space-y-1">
-          <p className="pb-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-300">{user?.role === "Admin" ? "Bảng điều khiển quản trị" : "Góc làm việc của tác giả"}</p>
+          <p className="pb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#e5c49d]">{user?.role === "Admin" ? "Bảng điều khiển quản trị" : "Góc làm việc của tác giả"}</p>
           <h1 className="font-display text-3xl font-bold text-white">
             Xin chào, {user?.displayName ?? "bạn"}
           </h1>
@@ -42,17 +42,17 @@ export default function DashboardOverviewPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {recipesQuery.isLoading ? Array.from({ length: 3 }, (_, index) => (
-          <Skeleton key={index} className="h-28 rounded-xl" />
+          <Skeleton key={index} className="h-28 rounded-2xl" />
         )) : (
           <>
             <MetricCard label="Tổng công thức" value={recipesQuery.data?.totalCount ?? 0} icon={<ChefHat className="h-4 w-4 text-brand" />} />
-            <MetricCard label="Đã xuất bản" value={publishedCount} icon={<BookOpen className="h-4 w-4 text-emerald-600" />} />
+            <MetricCard label="Đã xuất bản" value={publishedCount} icon={<BookOpen className="h-4 w-4 text-accent" />} />
             <MetricCard label="Bản nháp" value={draftCount} icon={<FileText className="h-4 w-4 text-amber-600" />} />
           </>
         )}
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-subtle">
+      <section className="overflow-hidden rounded-2xl border border-stone-200 bg-surface shadow-subtle">
         <div className="flex items-center justify-between border-b border-slate-100 p-5">
           <h2 className="font-display text-lg font-bold text-content-primary">Công thức gần đây của bạn</h2>
           <Link href="/dashboard/recipes" className="text-xs font-semibold text-brand hover:text-brand-hover">
@@ -106,7 +106,7 @@ export default function DashboardOverviewPage() {
 
 function MetricCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
-    <div className="space-y-3 rounded-2xl border border-stone-200 bg-white p-5 shadow-subtle">
+    <div className="space-y-3 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle">
       <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-content-tertiary">
         <span>{label}</span>{icon}
       </div>

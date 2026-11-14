@@ -19,10 +19,9 @@ export const Badge: React.FC<BadgeProps> = ({
   const variants = {
     brand: "bg-brand-light text-brand-hover border border-brand-border/40",
     accent: "bg-accent-light text-accent border border-accent/20",
-    // Pastel purple detail strictly under 2% usage for tiny badges or micro accents
-    pastel: "bg-pastel-purple-light text-purple-900 border border-pastel-purple/50",
-    neutral: "bg-slate-100 text-slate-700 border border-slate-200",
-    outline: "bg-transparent text-slate-600 border border-slate-300",
+    pastel: "border border-accent/20 bg-accent-light text-accent-hover",
+    neutral: "border border-stone-200 bg-surface-muted text-content-secondary",
+    outline: "border border-stone-300 bg-transparent text-content-secondary",
   };
 
   const sizes = {

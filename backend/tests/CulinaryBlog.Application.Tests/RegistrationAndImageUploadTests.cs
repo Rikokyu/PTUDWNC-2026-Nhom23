@@ -531,6 +531,7 @@ public sealed class RegistrationAndImageUploadTests
     {
         public IRecipeRepository Recipes { get; } = recipes;
         public ICategoryRepository Categories { get; } = null!;
+        public ISavedRecipeRepository SavedRecipes { get; } = null!;
         public int SaveCount { get; private set; }
         public void AddRecipeImage(RecipeImage image) { }
 
@@ -619,6 +620,24 @@ public sealed class RegistrationAndImageUploadTests
             string slug,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<Recipe?>(null);
+
+        public Task<ApplicationUser?> GetAuthorByIdAsync(
+            Guid authorId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<ApplicationUser?>(null);
+
+        public Task<(IReadOnlyList<Recipe> Items, int TotalCount)> GetPublishedByAuthorAsync(
+            Guid authorId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
+
+        public Task<(IReadOnlyList<Recipe> Items, int TotalCount)> GetUnattributedPublishedAsync(
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
 
         public Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
             GetPagedAsync(

@@ -191,6 +191,9 @@ export const recipeApi = {
   deleteImage: async (recipeId: string, imageId: string): Promise<void> => {
     await apiClient.delete(`/api/v1/recipes/${recipeId}/images/${imageId}`);
   },
+  deleteRecipe: async (recipeId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/recipes/${recipeId}`);
+  },
   setStatus: async (
     recipeId: string,
     action: "publish" | "unpublish" | "archive",

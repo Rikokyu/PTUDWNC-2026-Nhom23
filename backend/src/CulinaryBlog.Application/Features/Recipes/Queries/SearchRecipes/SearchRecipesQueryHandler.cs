@@ -38,26 +38,8 @@ public sealed class SearchRecipesQueryHandler(
             cancellationToken, request.CategoryId, request.Difficulty,
             request.MaxCookTime, request.MinServings);
         var items = result.Items
-            .Select(recipe => new RecipeSummaryDto(
-                recipe.Id,
-                recipe.Title,
-                recipe.Slug,
-                recipe.Images
-                    .OrderByDescending(image => image.IsPrimary)
-                    .ThenBy(image => image.OrderIndex)
-                    .Select(image => image.ThumbnailUrl
-                        ?? image.MediumUrl
-                        ?? image.OriginalUrl)
-                    .FirstOrDefault(),
-                recipe.Category.Name,
-                recipe.CategoryId,
-                recipe.PrepTimeMinutes,
-                recipe.CookTimeMinutes,
-                recipe.Servings,
-                recipe.Difficulty,
-                recipe.Status,
-                recipe.CreatedAt,
-                recipe.SearchRelevanceScore))
+            .Select(recipe => RecipeSummaryDto.FromRecipe(
+                recipe, recipe.SearchRelevanceScore))
             .ToList();
 
         return new PagedResult<RecipeSummaryDto>(

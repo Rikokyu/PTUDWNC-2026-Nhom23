@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-using Hangfire;
->>>>>>> 315339d (Update UI)
 using CulinaryBlog.Application.Common.Interfaces;
 using Hangfire;
 using Hangfire.Server;

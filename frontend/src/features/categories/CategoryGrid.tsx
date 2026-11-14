@@ -16,11 +16,11 @@ export function CategoryGrid({ categories, onEdit, onDelete, deletingCategoryId 
   return <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
     {categories.map((category) => {
       const imageUrl = resolveApiAssetUrl(category.imageUrl);
-      return <article key={category.id} className="group overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-subtle transition duration-300 hover:-translate-y-1 hover:shadow-card-hover motion-reduce:transform-none">
+      return <article key={category.id} className="group overflow-hidden rounded-2xl border border-stone-200/80 bg-surface shadow-subtle transition duration-300 hover:-translate-y-1 hover:border-brand-border hover:shadow-card-hover motion-reduce:transform-none">
         <Link href={`/categories/${encodeURIComponent(category.slug)}`} className="block focus-visible:outline-offset-[-4px]">
-          <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-[#e9d9c7] via-[#f5eee4] to-[#e6e8db]">
+          <div className="relative aspect-[16/10] overflow-hidden bg-surface-subtle">
             <ChefHat className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-stone-400" aria-hidden="true" />
-            {imageUrl && <img src={imageUrl} alt={`Món ăn thuộc danh mục ${category.name}`} className="relative h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} />}
+            {imageUrl && <img src={imageUrl} alt={`Món ăn thuộc danh mục ${category.name}`} className="relative h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = "none"; }} />}
             <span className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-content-primary shadow-sm">{category.recipeCount} công thức</span>
           </div>
           <div className="space-y-3 p-5 sm:p-6">

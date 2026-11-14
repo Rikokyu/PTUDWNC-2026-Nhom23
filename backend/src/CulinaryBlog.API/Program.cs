@@ -14,8 +14,6 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.OpenApi;
 using Hangfire;
 using Asp.Versioning;
-<<<<<<< HEAD
-=======
 using CulinaryBlog.Application.Common.Interfaces;
 using Serilog;
 using Serilog.Events;
@@ -24,13 +22,10 @@ using CulinaryBlog.API.Observability;
 using CulinaryBlog.API.Caching;
 using StackExchange.Redis;
 
->>>>>>> 315339d (Update UI)
 
 var builder =
     WebApplication.CreateBuilder(args);
 
-<<<<<<< HEAD
-=======
 builder.Host.UseSerilog((context, services, loggerConfiguration) =>
 {
     loggerConfiguration
@@ -53,20 +48,12 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) =>
         loggerConfiguration.WriteTo.Seq(seqUri.ToString());
 });
 
->>>>>>> 315339d (Update UI)
 var webRootPath = Path.Combine(
     builder.Environment.ContentRootPath,
     "wwwroot");
 Directory.CreateDirectory(Path.Combine(webRootPath, "uploads"));
 builder.Environment.WebRootPath = webRootPath;
 
-<<<<<<< HEAD
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
-
-=======
->>>>>>> 315339d (Update UI)
 // Application
 builder.Services
     .AddApplicationServices();

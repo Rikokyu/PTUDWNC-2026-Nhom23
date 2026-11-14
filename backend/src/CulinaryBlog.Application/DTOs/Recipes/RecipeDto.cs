@@ -1,4 +1,5 @@
 using CulinaryBlog.Domain.Enums;
+using CulinaryBlog.Domain.Entities;
 
 namespace CulinaryBlog.Application.DTOs.Recipes;
 
@@ -15,8 +16,38 @@ public sealed record RecipeSummaryDto(
     DifficultyLevel Difficulty,
     RecipeStatus Status,
     DateTime CreatedAt,
-    float? RelevanceScore = null
-);
+    float? RelevanceScore = null,
+    RecipeCardAuthorDto? Author = null
+)
+{
+    public static RecipeSummaryDto FromRecipe(Recipe recipe, float? relevanceScore = null) =>
+        new(
+            recipe.Id,
+            recipe.Title,
+            recipe.Slug,
+            recipe.Images.OrderByDescending(image => image.IsPrimary)
+                .ThenBy(image => image.OrderIndex)
+                .Select(image => image.ThumbnailUrl ?? image.MediumUrl ?? image.OriginalUrl)
+                .FirstOrDefault(),
+            recipe.Category.Name,
+            recipe.CategoryId,
+            recipe.PrepTimeMinutes,
+            recipe.CookTimeMinutes,
+            recipe.Servings,
+            recipe.Difficulty,
+            recipe.Status,
+            recipe.CreatedAt,
+            relevanceScore,
+            recipe.Author is null ? null : new RecipeCardAuthorDto(
+                recipe.Author.Id,
+                recipe.Author.DisplayName,
+                recipe.Author.AvatarUrl));
+}
+
+public sealed record RecipeCardAuthorDto(
+    Guid Id,
+    string DisplayName,
+    string? AvatarUrl);
 
 public sealed record RecipeDetailDto(
     Guid Id,
@@ -48,7 +79,9 @@ public sealed record RecipeCategoryDto(
 public sealed record RecipeAuthorDto(
     Guid Id,
     string DisplayName,
-    string Email
+    string Email,
+    string? AvatarUrl = null,
+    string? Bio = null
 );
 
 public sealed record RecipeIngredientDto(

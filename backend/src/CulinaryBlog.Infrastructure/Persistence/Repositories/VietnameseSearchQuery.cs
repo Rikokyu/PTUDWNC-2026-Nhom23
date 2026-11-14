@@ -13,7 +13,12 @@ public static class VietnameseSearchQuery
             if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
                 normalized.Append(c is '\u0111' or '\u0110' ? 'd' : char.ToLowerInvariant(c));
         // Only literal alphanumeric lexemes reach tsquery; operators are never accepted.
-        return string.Join(" & ", Regex.Matches(normalized.ToString(), "[a-z0-9]+")
-            .Select(m => m.Value).Distinct().Select(token => token + ":*"));
+        var tokens = Regex.Matches(normalized.ToString(), "[a-z0-9]+")
+            .Select(m => m.Value).Distinct().ToArray();
+        // Prefixes help while typing one word or an incomplete short word.
+        // For a submitted phrase, exact full words avoid "cha" matching
+        // "chao" and "chat", which made unrelated dishes appear.
+        return string.Join(" & ", tokens.Select(token =>
+            tokens.Length == 1 || token.Length < 3 ? token + ":*" : token));
     }
 }

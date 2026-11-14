@@ -8,14 +8,14 @@ export interface SkeletonProps {
 export const Skeleton: React.FC<SkeletonProps> = ({ className }) => {
   return (
     <div
-      className={cn("animate-pulse bg-slate-200/80 rounded-md", className)}
+      className={cn("animate-pulse rounded-md bg-stone-200/80", className)}
     />
   );
 };
 
 export const RecipeCardSkeleton: React.FC = () => {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-subtle p-0">
+    <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-surface p-0 shadow-subtle">
       <Skeleton className="w-full h-48 rounded-none" />
       <div className="p-4 space-y-3">
         <Skeleton className="h-4 w-1/4 rounded-full" />

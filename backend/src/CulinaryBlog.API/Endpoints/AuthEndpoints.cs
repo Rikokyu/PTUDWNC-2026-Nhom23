@@ -11,11 +11,16 @@ using CulinaryBlog.Application.Features.Auth.Commands.UpdateUserProfile;
 using CulinaryBlog.Application.DTOs.Users;
 using CulinaryBlog.Application.Features.Auth.Queries.GetCurrentUser;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace CulinaryBlog.API.Endpoints;
 
 public static class AuthEndpoints
 {
+    private const long MaxAvatarSize = 100L * 1024 * 1024;
+    private const long AvatarRequestLimit = MaxAvatarSize + 1024 * 1024;
+
     public static IEndpointRouteBuilder MapAuthEndpoints(
         this IEndpointRouteBuilder endpoints)
     {
@@ -95,6 +100,15 @@ public static class AuthEndpoints
             .Produces<UserDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapPost("/me/avatar", UploadAvatarAsync)
+            .WithName($"{routeVersion}UploadAvatar")
+            .WithSummary("Upload a profile avatar from the user's device.")
+            .RequireAuthorization()
+            .Produces<UserDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .WithMetadata(new RequestSizeLimitAttribute(AvatarRequestLimit));
 
         group.MapPatch("/me", PatchProfileAsync)
             .RequireRateLimiting("Api")
@@ -213,6 +227,7 @@ public static class AuthEndpoints
 
     private static async Task<IResult> PatchProfileAsync(JsonElement request,
         ClaimsPrincipal principal, IIdentityService identityService,
+        IOutputCacheStore outputCacheStore,
         CancellationToken cancellationToken)
     {
         if (!TryGetUserId(principal, out var userId)) return Results.Unauthorized();
@@ -248,8 +263,69 @@ public static class AuthEndpoints
         }
         var user = await identityService.PatchProfileAsync(userId, hasName, name,
             hasAvatar, avatar, hasBio, bio, cancellationToken);
+        await outputCacheStore.SafeEvictByTagAsync("recipes", cancellationToken);
         return Results.Ok(user);
     }
+
+    private static async Task<IResult> UploadAvatarAsync(
+        HttpRequest request,
+        ClaimsPrincipal principal,
+        IFileStorageService fileStorage,
+        IIdentityService identityService,
+        IOutputCacheStore outputCacheStore,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(principal, out var userId)) return Results.Unauthorized();
+        if (!request.HasFormContentType)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["Choose an image file."] }, statusCode: 422);
+
+        var form = await request.ReadFormAsync(cancellationToken);
+        var file = form.Files.GetFile("file");
+        if (file is null || file.Length == 0 || file.Length > MaxAvatarSize)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["Choose an image up to 100 MB."] }, statusCode: 422);
+
+        var contentType = file.ContentType.ToLowerInvariant();
+        var extension = contentType switch
+        {
+            "image/jpeg" => ".jpg",
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            "image/avif" => ".avif",
+            _ => null
+        };
+        if (extension is null)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["Use a JPEG, PNG, WebP or AVIF image."] }, statusCode: 422);
+
+        await using var stream = file.OpenReadStream();
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, cancellationToken);
+        var content = buffer.ToArray();
+        if (!HasValidAvatarSignature(content, contentType))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["The selected file is not a valid image."] }, statusCode: 422);
+
+        var avatarUrl = await fileStorage.UploadAsync(content, extension, $"avatars/{userId}", cancellationToken);
+        try
+        {
+            var user = await identityService.PatchProfileAsync(
+                userId, false, null, true, avatarUrl, false, null, cancellationToken);
+            await outputCacheStore.SafeEvictByTagAsync("recipes", cancellationToken);
+            return Results.Ok(user);
+        }
+        catch
+        {
+            await fileStorage.DeleteAsync(avatarUrl, CancellationToken.None);
+            throw;
+        }
+    }
+
+    private static bool HasValidAvatarSignature(byte[] content, string contentType) => contentType switch
+    {
+        "image/jpeg" => content.Length >= 3 && content[0] == 0xFF && content[1] == 0xD8 && content[2] == 0xFF,
+        "image/png" => content.Length >= 8 && content.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }),
+        "image/webp" => content.Length >= 12 && content.AsSpan(0, 4).SequenceEqual("RIFF"u8) && content.AsSpan(8, 4).SequenceEqual("WEBP"u8),
+        "image/avif" => content.Length >= 12 && content.AsSpan(4, 4).SequenceEqual("ftyp"u8),
+        _ => false
+    };
 
     private static async Task<IResult> ChangePasswordAsync(
         ChangePasswordRequest request,

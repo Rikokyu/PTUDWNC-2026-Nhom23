@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/Input";
@@ -10,7 +9,8 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Plus, Trash2, CheckCircle2, ImagePlus } from "lucide-react";
+import { SuccessNotice } from "@/components/ui/SuccessNotice";
+import { Plus, Trash2, ImagePlus } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
 import { recipeApi } from "@/lib/api/recipes";
 import { getApiErrorMessage } from "@/lib/api/error";
@@ -18,6 +18,7 @@ import { IngredientUnitField } from "@/components/recipes/IngredientUnitField";
 import { isNonNegativeIngredientQuantity } from "@/lib/recipeIngredient";
 import { recipeKeys } from "@/hooks/useRecipes";
 import { useAuthStore } from "@/store/useAuthStore";
+import { normalizeImageFile } from "@/lib/imageFile";
 
 export default function NewRecipePage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function NewRecipePage() {
   const userId = useAuthStore((state) => state.user?.id);
   const categoriesQuery = useCategories();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStage, setSubmitStage] = useState<"saving" | "uploading" | "publishing" | null>(null);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
   const [submitMode, setSubmitMode] = useState<"draft" | "publish">("draft");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -34,7 +36,6 @@ export default function NewRecipePage() {
   const [imageError, setImageError] = useState<string | null>(null);
   const [imageAltText, setImageAltText] = useState("");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const [draftSaveFailed, setDraftSaveFailed] = useState(false);
@@ -112,12 +113,8 @@ export default function NewRecipePage() {
   }, [imagePreviewUrl]);
 
   const handleImageFileChange = (file: File | null) => {
-    const supportedTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
-    if (file && !supportedTypes.includes(file.type)) {
-      setImageError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
-      file = null;
-    } else if (file && file.size > 5 * 1024 * 1024) {
-      setImageError("Kích thước ảnh không được vượt quá 5 MB.");
+    if (file && file.size > 20 * 1024 * 1024) {
+      setImageError("Kích thước ảnh không được vượt quá 20 MB.");
       file = null;
     } else {
       setImageError(null);
@@ -125,7 +122,21 @@ export default function NewRecipePage() {
     setImageFile(file);
     setImageAltText("");
     setImagePreviewUrl(file ? URL.createObjectURL(file) : null);
-    if (!file && imageInputRef.current) imageInputRef.current.value = "";
+  };
+
+  const handleImageInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const selectedFile = input.files?.[0] ?? null;
+    input.value = "";
+    if (!selectedFile) return;
+    const normalizedFile = normalizeImageFile(selectedFile);
+    if (!normalizedFile) {
+      setImageError("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
+      setImageFile(null);
+      setImagePreviewUrl(null);
+      return;
+    }
+    handleImageFileChange(normalizedFile);
   };
 
   // Dynamic Ingredients State
@@ -240,17 +251,13 @@ export default function NewRecipePage() {
         fail("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
         return;
       }
-<<<<<<< HEAD
       if (imageFile.size > 20 * 1024 * 1024) {
-        setSubmitError("Kích thước ảnh không được vượt quá 20 MB.");
-=======
-      if (imageFile.size > 5 * 1024 * 1024) {
-        fail("Kích thước ảnh không được vượt quá 5 MB.");
->>>>>>> 315339d (Update UI)
+        fail("Kích thước ảnh không được vượt quá 20 MB.");
         return;
       }
     }
     setIsSubmitting(true);
+    setSubmitStage("saving");
     try {
       const created = await recipeApi.create({
         title: title.trim(),
@@ -278,6 +285,7 @@ export default function NewRecipePage() {
       setCreatedRecipeId(created.id);
       try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* Storage may be unavailable. */ }
       if (imageFile) {
+        setSubmitStage("uploading");
         try {
           await recipeApi.uploadImage(created.id, imageFile, imageAltText.trim());
         } catch (uploadError) {
@@ -289,6 +297,7 @@ export default function NewRecipePage() {
         }
       }
       if (mode === "publish") {
+        setSubmitStage("publishing");
         try {
           const published = await recipeApi.setStatus(created.id, "publish");
           if (published.status !== 1) throw new Error("Máy chủ chưa xác nhận trạng thái đã xuất bản.");
@@ -307,6 +316,7 @@ export default function NewRecipePage() {
       setSubmitError(getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
+      setSubmitStage(null);
     }
   };
 
@@ -322,7 +332,7 @@ export default function NewRecipePage() {
 
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-stone-200 pb-6">
         <div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-brand">Không gian tác giả</p>
+          <p className="editorial-kicker mb-2">Không gian tác giả</p>
           <h1 className="font-display text-3xl font-bold text-content-primary">
             Tạo công thức mới
           </h1>
@@ -333,7 +343,9 @@ export default function NewRecipePage() {
         <span role="status" className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-content-secondary">
           {submittedSuccess ? (submitMode === "publish" ? "Đã xuất bản" : "Đã lưu bản nháp")
             : createdRecipeId ? "Bản nháp đã lưu trên máy chủ"
-              : isSubmitting ? (submitMode === "publish" ? "Đang lưu và xuất bản…" : "Đang lưu bản nháp…")
+              : isSubmitting ? (submitStage === "uploading" ? "Đang tải ảnh thumbnail lên…"
+                : submitStage === "publishing" ? "Đang xuất bản công thức…"
+                  : "Đang lưu công thức…")
                 : draftReady ? (draftSaveFailed ? "Không lưu được bản soạn trên trình duyệt"
                   : draftSaved ? "Bản soạn đã lưu trên trình duyệt" : "Đang lưu bản soạn…")
                   : "Đang mở bản soạn…"}
@@ -341,12 +353,10 @@ export default function NewRecipePage() {
       </div>
 
       {submittedSuccess && (
-        <div className="p-4 rounded-xl bg-brand-light border border-brand-border text-brand-hover flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 shrink-0" />
-          <span className="text-sm font-semibold">
-            {submitMode === "publish" ? "Đã tạo và xuất bản công thức thành công! Đang mở trang quản lý..." : "Đã tạo công thức ở trạng thái bản nháp. Đang mở trang quản lý..."}
-          </span>
-        </div>
+        <SuccessNotice
+          title={submitMode === "publish" ? "Công thức đã được xuất bản" : "Bản nháp đã được lưu"}
+          message="Đang mở trang quản lý công thức…"
+        />
       )}
 
       {submitError && (
@@ -374,50 +384,28 @@ export default function NewRecipePage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <p className="text-sm text-content-secondary">Điền thông tin món ăn, nguyên liệu và các bước. Bạn có thể lưu nháp hoặc xuất bản ngay sau khi hoàn tất. Ảnh sẽ cần chọn lại nếu tải lại trang.</p>
         {/* SECTION 1: OPTIONAL RECIPE IMAGE */}
-        <div className="space-y-5 rounded-2xl border border-stone-200 bg-white p-6 shadow-subtle">
+        <div className="space-y-5 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle sm:p-6">
           <div className="border-b border-slate-100 pb-2">
             <h2 className="text-base font-bold text-content-primary">
               1. Ảnh thumbnail <span className="font-normal text-content-tertiary">(không bắt buộc)</span>
             </h2>
-            <p className="mt-1 text-sm text-content-secondary">
-              Chọn ảnh đại diện cho công thức. Bạn có thể bỏ qua và thêm ảnh sau.
-            </p>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_220px] sm:items-start">
+          <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
             <div className="space-y-4">
-<<<<<<< HEAD
-              <label className="block space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-content-secondary">
-                  Chọn ảnh (JPEG, PNG, WebP hoặc AVIF; tối đa 20 MB)
-                </span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/avif"
-                  onChange={(event) => handleImageFileChange(event.target.files?.[0] ?? null)}
-                  className="block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal"
-                />
-              </label>
-=======
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/avif"
-                aria-label="Chọn ảnh đại diện công thức"
-                onChange={(event) => handleImageFileChange(event.target.files?.[0] ?? null)}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                leftIcon={<ImagePlus className="h-4 w-4" />}
-                onClick={() => imageInputRef.current?.click()}
-              >
+              <label htmlFor="recipe-image-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-brand bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2">
+                <ImagePlus className="h-4 w-4" aria-hidden="true" />
                 {imageFile ? "Đổi ảnh" : "Thêm ảnh"}
-              </Button>
-              <p className="text-xs text-content-tertiary">JPEG, PNG, WebP hoặc AVIF · tối đa 5 MB</p>
+              </label>
+              <input
+                id="recipe-image-upload"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.avif,image/jpeg,image/png,image/webp,image/avif"
+                aria-label="Chọn ảnh công thức"
+                onChange={handleImageInputChange}
+                className="sr-only"
+              />
               {imageError && <p role="alert" className="text-sm font-medium text-rose-600">{imageError}</p>}
->>>>>>> 315339d (Update UI)
               {imageFile && (
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="min-w-0 truncate text-sm text-content-secondary">
@@ -434,36 +422,33 @@ export default function NewRecipePage() {
                   </Button>
                 </div>
               )}
-              <Input
-                label="Mô tả ảnh (không bắt buộc)"
-                value={imageAltText}
-                maxLength={200}
-                onChange={(event) => setImageAltText(event.target.value)}
-                disabled={!imageFile}
-              />
+              <div className="max-w-xs">
+                <Input
+                  label="Mô tả ảnh (không bắt buộc)"
+                  value={imageAltText}
+                  maxLength={200}
+                  onChange={(event) => setImageAltText(event.target.value)}
+                  disabled={!imageFile}
+                />
+              </div>
             </div>
 
-            <div className="flex min-h-36 items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 p-2">
+            <div className="flex h-52 w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 p-2 lg:h-56">
               {imagePreviewUrl ? (
-                <Image
+                <img
                   src={imagePreviewUrl}
                   alt={imageAltText || `Ảnh xem trước ${title || "công thức"}`}
-                  width={400}
-                  height={200}
-                  unoptimized
-                  className="h-36 w-full rounded-md object-cover"
+                  className="h-full w-full rounded-md object-cover"
                 />
               ) : (
-                <p className="flex flex-col items-center gap-2 text-center text-sm text-content-tertiary">
-                  <ImagePlus className="h-7 w-7" aria-hidden="true" />Chưa chọn ảnh
-                </p>
+                <ImagePlus className="h-7 w-7 text-content-tertiary" aria-hidden="true" />
               )}
             </div>
           </div>
         </div>
 
         {/* SECTION 2: GENERAL INFORMATION */}
-        <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-subtle space-y-5">
+        <div className="space-y-5 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle sm:p-6">
           <h2 className="text-base font-bold text-content-primary pb-2 border-b border-slate-100">
             2. Thông tin chung
           </h2>
@@ -486,7 +471,7 @@ export default function NewRecipePage() {
               placeholder="Giới thiệu điểm đặc biệt, hương vị chính hoặc nguồn gốc của món ăn..."
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 placeholder:text-slate-400"
+              className="w-full rounded-xl border border-stone-300 bg-surface-cream p-3 text-sm text-content-primary placeholder:text-content-disabled focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
               required
             />
           </div>
@@ -540,7 +525,7 @@ export default function NewRecipePage() {
 
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6">
+        <div className="rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle sm:p-6">
           <label className="block space-y-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-content-secondary">
               Ghi chú chung (không bắt buộc)
@@ -549,7 +534,7 @@ export default function NewRecipePage() {
               rows={4}
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-content-primary focus:border-brand focus:outline-none"
+              className="w-full rounded-xl border border-stone-300 bg-surface-cream p-3 text-sm text-content-primary focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
               placeholder="Ví dụ: Mẹo chọn nguyên liệu, cách bảo quản hoặc lưu ý khi chế biến."
             />
             <span className="text-xs text-content-tertiary">Các bước chi tiết sẽ được lưu riêng bên dưới.</span>
@@ -557,7 +542,7 @@ export default function NewRecipePage() {
         </div>
 
         {/* SECTION 3: INGREDIENTS BUILDER */}
-        <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-subtle space-y-4">
+        <div className="space-y-4 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle sm:p-6">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <h2 className="text-base font-bold text-content-primary">3. Nguyên liệu</h2>
             <Button
@@ -633,7 +618,7 @@ export default function NewRecipePage() {
         </div>
 
         {/* SECTION 4: STEPS BUILDER */}
-        <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-subtle space-y-4">
+        <div className="space-y-4 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-100">
             <h2 className="text-base font-bold text-content-primary">
               4. Các bước thực hiện
@@ -651,7 +636,7 @@ export default function NewRecipePage() {
 
           <div className="space-y-4">
             {steps.map((step, idx) => (
-              <div key={step.id} className="p-4 border border-slate-200 rounded-lg bg-slate-50/50 space-y-3">
+              <div key={step.id} className="space-y-3 rounded-xl border border-stone-200 bg-surface-cream p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-brand uppercase">
                     Bước {idx + 1}
@@ -677,7 +662,7 @@ export default function NewRecipePage() {
                     setSteps((current) => current.map((item, index) =>
                       index === idx ? { ...item, description: e.target.value } : item));
                   }}
-                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  className="w-full rounded-xl border border-stone-300 bg-surface p-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
                 />
                 <Input
                   label="Thời gian bước (phút, không bắt buộc)"

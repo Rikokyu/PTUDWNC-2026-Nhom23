@@ -24,7 +24,7 @@ export const Tabs: React.FC<TabsProps> = ({
 }) => {
   if (variant === "pills") {
     return (
-      <div className={cn("inline-flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200/80", className)}>
+      <div className={cn("inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-surface-muted p-1", className)}>
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
           return (
@@ -32,7 +32,7 @@ export const Tabs: React.FC<TabsProps> = ({
               key={tab.id}
               onClick={() => onChange(tab.id)}
               className={cn(
-                "px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 flex items-center gap-2 select-none",
+                "flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors duration-150 select-none",
                 isActive
                   ? "bg-white text-content-primary shadow-xs"
                   : "text-content-secondary hover:text-content-primary"

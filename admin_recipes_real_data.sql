@@ -1,0 +1,2 @@
+﻿-- Data update was applied to the local development database on 2026-11-14.
+-- This file is intentionally inert; it contains no executable SQL.

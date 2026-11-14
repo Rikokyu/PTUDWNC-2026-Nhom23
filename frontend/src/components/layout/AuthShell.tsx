@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function AuthShell({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <main className="grid min-h-screen bg-white lg:grid-cols-2">
+    <main id="main-content" className="grid min-h-screen bg-surface-cream lg:grid-cols-2">
       <div className="relative hidden overflow-hidden bg-content-primary lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="absolute inset-0 bg-[url('/images/hero-pho-editorial.webp')] bg-cover bg-center" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/35" />
@@ -19,7 +19,7 @@ export function AuthShell({ title, description, children }: { title: string; des
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">Chào mừng đến với Culinary Blog</p>
           <h1 className="font-display text-3xl font-bold text-content-primary sm:text-4xl">{title}</h1>
           <p className="mt-3 text-sm leading-7 text-content-secondary">{description}</p>
-          <div className="mt-8 border-t border-zinc-200 pt-8">{children}</div>
+          <div className="mt-8 border-t border-stone-200 pt-8">{children}</div>
         </div>
       </div>
     </main>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
-import { Clock, Flame, Bookmark } from "lucide-react";
+import { Clock, Flame, Bookmark, ChefHat } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { RatingStars } from "./RatingStars";
 import { AuthorAvatar } from "./AuthorAvatar";
@@ -40,12 +40,12 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
   imageUrl,
   primaryImageUrl,
   categoryName,
-  categorySlug = "mon-chinh",
+  categorySlug,
   prepTimeMinutes,
   cookTimeMinutes,
   difficulty,
-  rating = 4.8,
-  totalReviews = 24,
+  rating,
+  totalReviews,
   authorName,
   authorAvatar,
   author,
@@ -55,9 +55,9 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
 }) => {
   const [saved, setSaved] = useState(isSaved);
 
-  const displayImage = primaryImageUrl || imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
+  const displayImage = primaryImageUrl || imageUrl;
   const displaySummary = summary || description || "";
-  const nameOfAuthor = authorName || author?.name || "Đầu bếp Culinary";
+  const nameOfAuthor = authorName || author?.name || "Tác giả";
   const avatarOfAuthor = authorAvatar || author?.avatarUrl;
 
   const totalTime = prepTimeMinutes + cookTimeMinutes;
@@ -65,28 +65,28 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
   return (
     <article
       className={cn(
-        "group bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-subtle hover:border-slate-300 hover:shadow-card transition-all duration-200 flex flex-col justify-between",
+        "group flex flex-col justify-between overflow-hidden rounded-2xl border border-stone-200/80 bg-surface shadow-subtle transition-all duration-200 hover:border-brand-border hover:shadow-card",
         className
       )}
     >
       {/* Recipe Image Container */}
-      <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
-        <img
+      <div className="relative aspect-[4/3] overflow-hidden bg-surface-subtle">
+        {displayImage ? <img
           src={displayImage}
           alt={title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
           loading="lazy"
-        />
+          decoding="async"
+        /> : <div className="flex h-full w-full items-center justify-center text-content-tertiary"><ChefHat className="h-10 w-10" aria-label="Chưa có ảnh món ăn" /></div>}
 
         {/* Category Tag Overlay */}
         <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
-          <Link href={`/categories/${categorySlug}`}>
+          {categorySlug ? <Link href={`/categories/${categorySlug}`}>
             <Badge variant="brand" size="sm" className="bg-white/95 text-brand-hover backdrop-blur-xs font-semibold">
               {categoryName}
             </Badge>
-          </Link>
+          </Link> : <Badge variant="brand" size="sm" className="bg-white/95 text-brand-hover backdrop-blur-xs font-semibold">{categoryName}</Badge>}
 
-          {/* Micro Pastel Purple Badge for Featured status (<2% total color budget) */}
           {isFeatured && (
             <Badge variant="pastel" size="sm">
               Nổi bật
@@ -125,7 +125,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
                 {difficulty}
               </span>
             </div>
-            <RatingStars rating={rating} totalReviews={totalReviews} size="sm" />
+            {typeof rating === "number" && <RatingStars rating={rating} totalReviews={totalReviews} size="sm" />}
           </div>
 
           {/* Title */}

@@ -20,9 +20,11 @@ public static class EndpointExtensions
             .Build();
 
         endpoints.MapRecipeEndpoints(versionSet);
+        endpoints.MapAuthorEndpoints(versionSet);
         endpoints.MapRecipeIngredientEndpoints(versionSet);
         endpoints.MapRecipeStepEndpoints(versionSet);
         endpoints.MapRecipeImageEndpoints(versionSet);
+        endpoints.MapSavedRecipeEndpoints(versionSet);
 
         return endpoints;
     }

@@ -39,6 +39,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 .AsNoTracking()
                 .Where(x => !x.IsDeleted)
                 .Include(x => x.Category)
+                .Include(x => x.Author)
                 .Include(x => x.Images.Where(image =>
                     image.IsPrimary))
                 .Where(recipe => !recipe.Category.IsDeleted);
@@ -96,14 +97,22 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            // Keep list and dedicated search endpoints consistent, and use the
-            // indexed Vietnamese-aware vector instead of scanning text columns.
             var tsQuery = VietnameseSearchQuery.Build(search);
-            query = tsQuery.Length == 0
-                ? query.Where(_ => false)
-                : query.Where(recipe =>
-                    EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+            if (tsQuery.Length == 0) query = query.Where(_ => false);
+            else
+            {
+                // A dish name is the clearest match. Search descriptions and
+                // ingredients only when no title matches within these filters.
+                var titleMatches = await query.AnyAsync(recipe =>
+                    EF.Functions.ToTsVector("vietnamese", recipe.Title)
+                        .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)),
+                    cancellationToken);
+                query = titleMatches
+                    ? query.Where(recipe => EF.Functions.ToTsVector("vietnamese", recipe.Title)
+                        .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)))
+                    : query.Where(recipe => EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
                         .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)));
+            }
         }
 
         // Sorting
@@ -166,6 +175,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 currentUserId,
                 isAuthenticated && !isAdmin))
             .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Author)
             .Include(recipe => recipe.Images);
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -207,15 +217,23 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         if (tsQuery.Length == 0) return (Array.Empty<Recipe>(), 0);
         IQueryable<Recipe> query = _context.Recipes.AsNoTracking()
             .Where(recipe => !recipe.IsDeleted && !recipe.Category.IsDeleted
-                && recipe.Status == RecipeStatus.Published
-                && EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
-                    .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)))
+                && recipe.Status == RecipeStatus.Published)
             .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Author)
             .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
         if (categoryId.HasValue) query = query.Where(x => x.CategoryId == categoryId.Value);
         if (difficulty.HasValue) query = query.Where(x => x.Difficulty == difficulty.Value);
         if (maxCookTime.HasValue) query = query.Where(x => x.CookTimeMinutes <= maxCookTime.Value);
         if (minServings.HasValue) query = query.Where(x => x.Servings >= minServings.Value);
+        var titleMatches = await query.AnyAsync(recipe =>
+            EF.Functions.ToTsVector("vietnamese", recipe.Title)
+                .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)),
+            cancellationToken);
+        query = titleMatches
+            ? query.Where(recipe => EF.Functions.ToTsVector("vietnamese", recipe.Title)
+                .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)))
+            : query.Where(recipe => EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+                .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)));
         var totalCount = await query.CountAsync(cancellationToken);
         var ranked = await query
             .OrderByDescending(recipe => EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
@@ -249,6 +267,58 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 x => x.Slug == slug
                     && !x.Category.IsDeleted,
                 cancellationToken);
+    }
+
+    public Task<ApplicationUser?> GetAuthorByIdAsync(
+        Guid authorId,
+        CancellationToken cancellationToken = default) =>
+        _context.ApplicationUsers.AsNoTracking()
+            .FirstOrDefaultAsync(user => user.Id == authorId, cancellationToken);
+
+    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)> GetPublishedByAuthorAsync(
+        Guid authorId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Recipes.AsNoTracking()
+            .Where(recipe => recipe.AuthorId == authorId
+                && recipe.Status == RecipeStatus.Published
+                && !recipe.IsDeleted
+                && !recipe.Category.IsDeleted)
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Author)
+            .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query.OrderByDescending(recipe => recipe.CreatedAt)
+            .ThenBy(recipe => recipe.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+        return (items, totalCount);
+    }
+
+    public async Task<(IReadOnlyList<Recipe> Items, int TotalCount)> GetUnattributedPublishedAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Recipes.AsNoTracking()
+            .Where(recipe => recipe.AuthorId == null
+                && recipe.Status == RecipeStatus.Published
+                && !recipe.IsDeleted
+                && !recipe.Category.IsDeleted)
+            .Include(recipe => recipe.Category)
+            .Include(recipe => recipe.Images.Where(image => image.IsPrimary));
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query.OrderByDescending(recipe => recipe.CreatedAt)
+            .ThenBy(recipe => recipe.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+        return (items, totalCount);
     }
 
     public Task<Recipe?> GetByIdWithImagesAsync(

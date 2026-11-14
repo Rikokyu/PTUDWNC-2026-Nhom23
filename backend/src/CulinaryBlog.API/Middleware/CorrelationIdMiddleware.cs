@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 using Serilog.Context;
 using System.Diagnostics;
 
@@ -40,4 +38,3 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
         }
     }
 }
->>>>>>> 315339d (Update UI)

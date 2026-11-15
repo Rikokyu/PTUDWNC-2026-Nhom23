@@ -47,9 +47,47 @@ export function RecipeDetailPageContent({ slug }: { slug: string }) {
   );
   const isOwnRecipe = Boolean(recipe.author && recipe.author.id === currentUser?.id);
   const authorAvatarUrl = resolveApiAssetUrl(recipe.author?.avatarUrl);
+  const recipeJsonLd = recipe.status === 1
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Recipe",
+        name: recipe.title,
+        description: recipe.description,
+        ...(heroImage ? { image: [heroImage] } : {}),
+        ...(recipe.author ? {
+          author: {
+            "@type": "Person",
+            name: recipe.author.displayName,
+          },
+        } : {}),
+        recipeCategory: recipe.category.name,
+        recipeYield: `${recipe.servings} phần`,
+        prepTime: toIsoDuration(recipe.prepTimeMinutes),
+        cookTime: toIsoDuration(recipe.cookTimeMinutes),
+        totalTime: toIsoDuration(recipe.prepTimeMinutes + recipe.cookTimeMinutes),
+        recipeIngredient: recipe.ingredients.map((ingredient) =>
+          [ingredient.quantity, ingredient.unit, ingredient.name]
+            .filter(Boolean)
+            .join(" "),
+        ),
+        recipeInstructions: recipe.steps.map((step) => ({
+          "@type": "HowToStep",
+          ...(step.title ? { name: step.title } : {}),
+          text: step.description,
+        })),
+      }
+    : null;
 
   return (
     <article className="mx-auto max-w-6xl space-y-9 pb-12">
+      {recipeJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(recipeJsonLd).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
       <Link href="/recipes" className="text-xs font-bold uppercase tracking-[0.15em] text-brand hover:underline">
         ← Tất cả công thức
       </Link>
@@ -143,4 +181,10 @@ export function RecipeDetailPageContent({ slug }: { slug: string }) {
       )}
     </article>
   );
+}
+
+function toIsoDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `PT${hours ? `${hours}H` : ""}${remainingMinutes}M`;
 }

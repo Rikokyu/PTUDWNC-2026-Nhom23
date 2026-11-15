@@ -54,10 +54,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         }
         else if (isAdmin && includeAllStatuses)
         {
-            query = query.Where(x =>
-                x.Status == RecipeStatus.Published
-                || (currentUserId.HasValue
-                    && x.AuthorId == currentUserId.Value));
+            // Administrators may manage every non-deleted recipe status.
         }
         else if (isAuthenticated && currentUserId.HasValue)
         {
@@ -100,17 +97,11 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             var tsQuery = VietnameseSearchQuery.Build(search);
             if (tsQuery.Length == 0) query = query.Where(_ => false);
             else
-            {
-                // A dish name is the clearest match. Search descriptions and
-                // ingredients only when no title matches within these filters.
-                var titleMatches = await query.AnyAsync(recipe =>
-                    EF.Functions.ToTsVector("vietnamese", recipe.Title)
-                        .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)),
-                    cancellationToken);
-                query = titleMatches
-                    ? query.Where(recipe => EF.Functions.ToTsVector("vietnamese", recipe.Title)
-                        .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)))
-                    : query.Where(recipe => EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+            {query = query.Where(recipe =>
+                    EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+                        .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)));
+                query = query.Where(recipe =>
+                    EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
                         .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)));
             }
         }
@@ -173,7 +164,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 && !recipe.Category.IsDeleted)
             .Where(CreateCategoryVisibilityPredicate(
                 currentUserId,
-                isAuthenticated && !isAdmin))
+                isAuthenticated && !isAdmin,
+                isAuthenticated && isAdmin))
             .Include(recipe => recipe.Category)
             .Include(recipe => recipe.Author)
             .Include(recipe => recipe.Images);
@@ -192,13 +184,14 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
     public static Expression<Func<Recipe, bool>>
         CreateCategoryVisibilityPredicate(
             Guid? currentUserId,
-            bool includeOwnDrafts)
+            bool includeOwnPrivateRecipes,
+            bool isAdmin = false)
     {
         return recipe =>
             recipe.Status == RecipeStatus.Published
-            || (includeOwnDrafts
+            || isAdmin
+            || (includeOwnPrivateRecipes
                 && currentUserId.HasValue
-                && recipe.Status == RecipeStatus.Draft
                 && recipe.AuthorId == currentUserId.Value);
     }
 

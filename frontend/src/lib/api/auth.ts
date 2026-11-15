@@ -53,7 +53,7 @@ export const authApi = {
     bio: string | null;
     avatarUrl: string | null;
   }): Promise<UserProfileDto> => {
-    const response = await apiClient.put<UserProfileDto>(
+    const response = await apiClient.patch<UserProfileDto>(
       "/api/v1/auth/me",
       profile,
     );

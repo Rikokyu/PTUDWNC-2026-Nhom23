@@ -8,6 +8,8 @@ const MIME_BY_EXTENSION: Record<string, string> = {
 
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(Object.values(MIME_BY_EXTENSION));
 
+export const MAX_RECIPE_IMAGE_BYTES = 5 * 1024 * 1024;
+
 export function normalizeImageFile(file: File): File | null {
   const declaredType = file.type.toLowerCase();
   const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();

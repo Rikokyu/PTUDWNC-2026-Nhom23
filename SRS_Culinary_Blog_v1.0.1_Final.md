@@ -372,7 +372,7 @@ CONFIDENTIAL  •  Phát triển Ứng dụng Web Nâng cao V4  •  Trang 14 / 
 * Môi trường development có kết nối Internet để pull Docker images và package NuGet/npm.
 * PostgreSQL, Redis và MinIO được cung cấp qua Docker Compose trong development và dưới dạng managed service (hoặc VPS) trong production.
 * Người dùng cuối có trình duyệt hiện đại và kết nối Internet đủ ổn định để load ảnh từ MinIO.
-* Dữ liệu test (seed) được tạo bằng thư viện Bogus với 50 recipe mẫu và 5 tác giả mẫu.
+* Dữ liệu nội dung demo được khai báo tường minh trong DatabaseSeeder và các tệp SQL đi kèm; không dùng Bogus để sinh công thức ngẫu nhiên.
 * Email service (SendGrid hoặc SMTP) được cấu hình sẵn khi triển khai production để gửi email chào mừng.
 * **Giới hạn dữ liệu kỳ vọng (initial scale):** ≤ 10,000 công thức, ≤ 5,000 người dùng, ≤ 50 danh mục – phù hợp với single-server deployment.
 

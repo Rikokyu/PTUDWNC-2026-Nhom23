@@ -8,16 +8,15 @@ import type {
   RecipeIngredientRequest,
   RecipeFilters,
   RecipeStepRequest,
+  UpdateRecipeRequest,
 } from "@/types/api";
 
-// Existing filter controls remain compatible; HTTP uses the agreed explicit fields.
-export function recipeListParams(filters: RecipeFilters): Omit<RecipeFilters, "sort"> {
-  const { sort, ...params } = filters;
-  if (!params.sortBy) {
-    params.sortBy = (sort?.replace(/^-/, "") ?? "createdAt") as NonNullable<RecipeFilters["sortBy"]>;
-  }
-  params.sortOrder ??= sort ? (sort.startsWith("-") ? "desc" : "asc") : "desc";
-  return params;
+export function recipeListParams(filters: RecipeFilters): RecipeFilters {
+  return {
+    ...filters,
+    sortBy: filters.sortBy ?? "createdAt",
+    sortOrder: filters.sortOrder ?? "desc",
+  };
 }
 
 export const recipeApi = {
@@ -71,6 +70,16 @@ export const recipeApi = {
   create: async (request: CreateRecipeRequest): Promise<RecipeApiDetailDto> => {
     const response = await apiClient.post<{ data: RecipeApiDetailDto }>(
       "/api/v1/recipes",
+      request,
+    );
+    return response.data.data;
+  },
+  update: async (
+    recipeId: string,
+    request: UpdateRecipeRequest,
+  ): Promise<RecipeApiDetailDto> => {
+    const response = await apiClient.put<{ data: RecipeApiDetailDto }>(
+      `/api/v1/recipes/${recipeId}`,
       request,
     );
     return response.data.data;

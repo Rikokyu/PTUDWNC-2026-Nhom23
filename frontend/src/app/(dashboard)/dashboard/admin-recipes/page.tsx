@@ -19,7 +19,13 @@ export default function AdminRecipesPage() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const recipesQuery = useAdminRecipes({ page, pageSize: 12, sort: "-createdAt", search }, user?.role === "Admin");
+  const recipesQuery = useAdminRecipes({
+    page,
+    pageSize: 12,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    search,
+  }, user?.role === "Admin");
   const result = recipesQuery.data;
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
@@ -42,7 +48,7 @@ export default function AdminRecipesPage() {
         <p className="editorial-kicker mb-2">Quản trị nội dung</p>
         <h1 className="font-display text-3xl font-bold text-content-primary">Quản lý công thức</h1>
         <p className="mt-1 text-sm text-content-secondary">
-          Theo dõi bài đã xuất bản của tác giả và công thức thuộc tài khoản quản trị.
+          Theo dõi và quản lý công thức ở mọi trạng thái trong hệ thống.
         </p>
       </header>
 

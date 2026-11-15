@@ -1,4 +1,4 @@
-export type Difficulty = "Easy" | "Medium" | "Hard";
+export type Difficulty = "Easy" | "Medium" | "Hard" | "Expert";
 
 export type ApiDifficultyLevel = 1 | 2 | 3 | 4;
 export type ApiRecipeStatus = 0 | 1 | 2;
@@ -64,6 +64,7 @@ export interface CreateRecipeRequest {
   servings: number;
   difficulty: ApiDifficultyLevel;
   instructions: string;
+  nutrition?: RecipeApiNutritionDto | null;
   ingredients: Array<{
     name: string;
     quantity: string | null;
@@ -76,6 +77,19 @@ export interface CreateRecipeRequest {
     timerMinutes: number | null;
     imageUrl: string | null;
   }>;
+}
+
+export interface UpdateRecipeRequest {
+  title: string;
+  description: string;
+  categoryId: string;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  difficulty: ApiDifficultyLevel;
+  instructions: string;
+  rowVersion: number;
+  nutrition: RecipeApiNutritionDto | null;
 }
 
 export interface RecipeApiSummaryDto {
@@ -124,7 +138,6 @@ export interface RecipeApiCategoryDto {
 export interface RecipeApiAuthorDto {
   id: string;
   displayName: string;
-  email: string;
   avatarUrl?: string | null;
   bio?: string | null;
 }
@@ -271,6 +284,5 @@ export interface RecipeFilters {
   minServings?: number;
   sortBy?: "title" | "createdAt" | "cookTime";
   sortOrder?: "asc" | "desc";
-  sort?: "-createdAt" | "createdAt" | "title" | "-title" | "cookTime" | "-cookTime";
   search?: string;
 }

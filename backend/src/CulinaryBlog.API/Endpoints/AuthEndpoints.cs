@@ -78,7 +78,7 @@ public static class AuthEndpoints
 
         group.MapPost("/logout", LogoutAsync)
             .WithName($"{routeVersion}Logout")
-            .WithSummary("Revoke the current user's refresh tokens.")
+            .WithSummary("Revoke a refresh token belonging to the current user.")
             .RequireAuthorization()
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
@@ -105,6 +105,7 @@ public static class AuthEndpoints
             .WithName($"{routeVersion}UploadAvatar")
             .WithSummary("Upload a profile avatar from the user's device.")
             .RequireAuthorization()
+            .RequireRateLimiting("Upload")
             .Produces<UserDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
@@ -196,7 +197,7 @@ public static class AuthEndpoints
         return Results.Ok(session);
     }
 
-    /// <summary>Revokes all active refresh tokens for the authenticated user.</summary>
+    /// <summary>Revokes the supplied refresh token for the authenticated user.</summary>
     private static async Task<IResult> LogoutAsync(
         ClaimsPrincipal principal,
         HttpRequest request,
@@ -218,9 +219,7 @@ public static class AuthEndpoints
             var body = await request.ReadFromJsonAsync<LogoutRequest>(cancellationToken);
             refreshToken = body?.RefreshToken;
         }
-        if (!hasBody)
-            await identityService.RevokeRefreshTokensAsync(userId, cancellationToken);
-        else if (refreshToken is not null)
+        if (!string.IsNullOrWhiteSpace(refreshToken))
             await identityService.LogoutAsync(userId, refreshToken, cancellationToken);
         return Results.NoContent();
     }

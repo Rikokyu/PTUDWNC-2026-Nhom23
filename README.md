@@ -10,6 +10,12 @@ Lệnh này tự khởi động PostgreSQL/Mailpit/Redis, API và frontend; nế
 
 Lưu ý: lệnh chạy toàn bộ có thể khởi động dịch vụ và API sẽ gọi `MigrateAsync` cho PostgreSQL được cấu hình. Hãy sao lưu dữ liệu đang dùng trước khi chạy trên máy có dữ liệu quan trọng. Bản mã launcher mới đã qua kiểm tra cú pháp và cấu hình Compose; chưa được chạy toàn bộ với cơ sở dữ liệu hiện tại.
 
+## Dữ liệu demo
+
+Khi API khởi động, `DatabaseSeeder` áp dụng các migration còn thiếu rồi thêm danh mục, tài khoản demo và công thức đã biên soạn trong `backend/src/CulinaryBlog.Infrastructure/Persistence/Seed/`. Bộ dữ liệu hiện có 8 danh mục, 25 công thức (23 Published, 1 Draft, 1 Archived), 7 tài khoản demo, nguyên liệu, bước nấu, ảnh công thức, thông tin dinh dưỡng và liên kết công thức đã lưu. Dinh dưỡng là ước tính cho mỗi khẩu phần nhằm phục vụ demo, không phải nhãn dinh dưỡng đã được xác minh. Nội dung công thức được biên soạn dựa trên kiến thức nấu ăn phổ biến, không tuyên bố đã được xác minh từ nguồn bên ngoài. Ảnh seed là tệp cục bộ trong `frontend/public/images/`.
+
+Chạy `npm run dev` để khởi động môi trường cục bộ và seed qua API; hoặc chạy riêng API bằng `dotnet run --project backend/src/CulinaryBlog.API/CulinaryBlog.API.csproj` sau khi PostgreSQL/Redis và cấu hình ứng dụng đã sẵn sàng. Seeder không reset database: tài khoản, công thức và danh mục trùng khóa seed được giữ nguyên; chỉ công thức pasta seed có ID xác định được phân loại về Món Âu, ảnh danh mục còn trỏ tới ảnh placeholder cũ được thay bằng ảnh seed phù hợp, và các trường dinh dưỡng chỉ được điền khi toàn bộ trường đang trống. Liên kết SavedRecipes được thêm idempotent. Các bản ghi cũ có slug theo mẫu sinh tự động đã biết chỉ được soft-delete, không xóa vật lý. Seeder không tạo refresh token hoặc dữ liệu đăng nhập đang hoạt động.
+
 ## Thông tin sinh viên
 
 | MSSV    | Họ tên sinh viên      | Mail cá nhân       | Github cá nhân                 | Số điện thoại |

@@ -18,7 +18,42 @@ import { IngredientUnitField } from "@/components/recipes/IngredientUnitField";
 import { isNonNegativeIngredientQuantity } from "@/lib/recipeIngredient";
 import { recipeKeys } from "@/hooks/useRecipes";
 import { useAuthStore } from "@/store/useAuthStore";
-import { normalizeImageFile } from "@/lib/imageFile";
+import {
+  MAX_RECIPE_IMAGE_BYTES,
+  normalizeImageFile,
+} from "@/lib/imageFile";
+import type { RecipeApiNutritionDto } from "@/types/api";
+
+type NutritionFields = Record<keyof RecipeApiNutritionDto, string>;
+
+const emptyNutrition: NutritionFields = {
+  calories: "",
+  protein: "",
+  carbs: "",
+  fat: "",
+  fiber: "",
+  sodium: "",
+};
+
+function isNutritionFields(value: unknown): value is NutritionFields {
+  return typeof value === "object"
+    && value !== null
+    && Object.keys(emptyNutrition).every((key) =>
+      typeof (value as Record<string, unknown>)[key] === "string");
+}
+
+function nutritionRequest(fields: NutritionFields): RecipeApiNutritionDto | null {
+  if (Object.values(fields).every((value) => !value.trim())) return null;
+  const parse = (value: string) => value.trim() ? Number(value) : null;
+  return {
+    calories: parse(fields.calories),
+    protein: parse(fields.protein),
+    carbs: parse(fields.carbs),
+    fat: parse(fields.fat),
+    fiber: parse(fields.fiber),
+    sodium: parse(fields.sodium),
+  };
+}
 
 export default function NewRecipePage() {
   const router = useRouter();
@@ -52,6 +87,7 @@ export default function NewRecipePage() {
   const [cookTime, setCookTime] = useState(20);
   const [servings, setServings] = useState(4);
   const [instructions, setInstructions] = useState("");
+  const [nutrition, setNutrition] = useState<NutritionFields>(emptyNutrition);
 
   // Keep long text drafts per account. Image files cannot be restored by the browser.
   useEffect(() => {
@@ -63,11 +99,12 @@ export default function NewRecipePage() {
         if (typeof draft.title === "string") setTitle(draft.title);
         if (typeof draft.summary === "string") setSummary(draft.summary);
         if (typeof draft.categoryId === "string") setCategoryId(draft.categoryId);
-        if (["Easy", "Medium", "Hard"].includes(draft.difficulty)) setDifficulty(draft.difficulty);
+        if (["Easy", "Medium", "Hard", "Expert"].includes(draft.difficulty)) setDifficulty(draft.difficulty);
         if (Number.isInteger(draft.prepTime)) setPrepTime(draft.prepTime);
         if (Number.isInteger(draft.cookTime)) setCookTime(draft.cookTime);
         if (Number.isInteger(draft.servings)) setServings(draft.servings);
         if (typeof draft.instructions === "string") setInstructions(draft.instructions);
+        if (isNutritionFields(draft.nutrition)) setNutrition(draft.nutrition);
         if (Array.isArray(draft.ingredients) && draft.ingredients.length) {
           const restored = draft.ingredients.filter((item: unknown) =>
             typeof item === "object" && item !== null
@@ -113,8 +150,8 @@ export default function NewRecipePage() {
   }, [imagePreviewUrl]);
 
   const handleImageFileChange = (file: File | null) => {
-    if (file && file.size > 20 * 1024 * 1024) {
-      setImageError("Kích thước ảnh không được vượt quá 20 MB.");
+    if (file && file.size > MAX_RECIPE_IMAGE_BYTES) {
+      setImageError("Kích thước ảnh không được vượt quá 5 MB.");
       file = null;
     } else {
       setImageError(null);
@@ -157,7 +194,7 @@ export default function NewRecipePage() {
       try {
         localStorage.setItem(draftKey, JSON.stringify({
           title, summary, categoryId, difficulty, prepTime, cookTime, servings,
-          instructions, ingredients, steps,
+          instructions, nutrition, ingredients, steps,
         }));
         setDraftSaved(true);
         setDraftSaveFailed(false);
@@ -168,7 +205,7 @@ export default function NewRecipePage() {
     }, 500);
     return () => window.clearTimeout(timer);
   }, [draftReady, draftKey, createdRecipeId, title, summary, categoryId, difficulty,
-    prepTime, cookTime, servings, instructions, ingredients, steps]);
+    prepTime, cookTime, servings, instructions, nutrition, ingredients, steps]);
 
   const addIngredientRow = () => {
     setIngredients([...ingredients, { id: crypto.randomUUID(), name: "", quantity: "", unit: "" }]);
@@ -220,8 +257,8 @@ export default function NewRecipePage() {
       fail("Thời gian chuẩn bị và khẩu phần phải lớn hơn 0; thời gian nấu không được âm.");
       return;
     }
-    if (validIngredients.length === 0 || validSteps.length === 0) {
-      fail("Hãy nhập ít nhất một nguyên liệu và một bước thực hiện.");
+    if (mode === "publish" && validSteps.length === 0) {
+      fail("Công thức cần có ít nhất một bước thực hiện trước khi xuất bản.");
       return;
     }
     if (validIngredients.some((ingredient) => !ingredient.name.trim() || ingredient.name.trim().length > 200
@@ -251,10 +288,18 @@ export default function NewRecipePage() {
         fail("Ảnh phải có định dạng JPEG, PNG, WebP hoặc AVIF.");
         return;
       }
-      if (imageFile.size > 20 * 1024 * 1024) {
-        fail("Kích thước ảnh không được vượt quá 20 MB.");
+      if (imageFile.size > MAX_RECIPE_IMAGE_BYTES) {
+        fail("Kích thước ảnh không được vượt quá 5 MB.");
         return;
       }
+    }
+    const nutritionValues = Object.values(nutrition)
+      .filter((value) => value.trim() !== "")
+      .map(Number);
+    if (nutritionValues.some((value) =>
+      !Number.isFinite(value) || value < 0 || value > 99999999.99)) {
+      fail("Giá trị dinh dưỡng phải là số không âm và không vượt quá giới hạn cho phép.");
+      return;
     }
     setIsSubmitting(true);
     setSubmitStage("saving");
@@ -266,8 +311,11 @@ export default function NewRecipePage() {
         prepTimeMinutes: prepTime,
         cookTimeMinutes: cookTime,
         servings,
-        difficulty: difficulty === "Easy" ? 1 : difficulty === "Hard" ? 3 : 2,
+        difficulty: difficulty === "Easy" ? 1
+          : difficulty === "Medium" ? 2
+            : difficulty === "Hard" ? 3 : 4,
         instructions: instructions.trim(),
+        nutrition: nutritionRequest(nutrition),
         ingredients: validIngredients.map((ingredient) => ({
           name: ingredient.name.trim(),
           quantity: ingredient.quantity.trim() || null,
@@ -495,6 +543,7 @@ export default function NewRecipePage() {
                 { label: "Dễ làm", value: "Easy" },
                 { label: "Trung bình", value: "Medium" },
                 { label: "Cầu kỳ / Khó", value: "Hard" },
+                { label: "Chuyên gia", value: "Expert" },
               ]}
             />
           </div>
@@ -523,6 +572,39 @@ export default function NewRecipePage() {
             />
           </div>
 
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle sm:p-6">
+          <div>
+            <h2 className="text-base font-bold text-content-primary">Dinh dưỡng (không bắt buộc)</h2>
+            <p className="mt-1 text-sm text-content-secondary">
+              Khai báo giá trị dinh dưỡng ước tính cho mỗi khẩu phần nếu có.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {([
+              ["calories", "Năng lượng (kcal)"],
+              ["protein", "Protein (g)"],
+              ["carbs", "Carbohydrate (g)"],
+              ["fat", "Chất béo (g)"],
+              ["fiber", "Chất xơ (g)"],
+              ["sodium", "Natri (mg)"],
+            ] as const).map(([field, label]) => (
+              <Input
+                key={field}
+                label={label}
+                type="number"
+                min={0}
+                max={99999999.99}
+                step="0.01"
+                value={nutrition[field]}
+                onChange={(event) => setNutrition((current) => ({
+                  ...current,
+                  [field]: event.target.value,
+                }))}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle sm:p-6">

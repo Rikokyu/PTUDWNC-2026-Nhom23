@@ -10,7 +10,17 @@ public class RecipeStepConfiguration
     public void Configure(
         EntityTypeBuilder<RecipeStep> builder)
     {
-        builder.ToTable("RecipeSteps");
+        builder.ToTable(
+            "RecipeSteps",
+            table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_RecipeSteps_StepNumber_Positive",
+                    "\"StepNumber\" > 0");
+                table.HasCheckConstraint(
+                    "CK_RecipeSteps_TimerMinutes_NonNegative",
+                    "\"TimerMinutes\" >= 0");
+            });
 
         builder.HasKey(x => x.Id);
 
@@ -20,6 +30,9 @@ public class RecipeStepConfiguration
 
         builder.Property(x => x.Description)
             .IsRequired();
+
+        builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
 
         builder.HasIndex(x =>
             new { x.RecipeId, x.StepNumber })

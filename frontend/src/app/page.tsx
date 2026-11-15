@@ -15,14 +15,19 @@ import { useCategories } from "@/hooks/useCategories";
 import { useRecipes } from "@/hooks/useRecipes";
 import { useRecipeSuggestions } from "@/hooks/useRecipeSuggestions";
 
-const QUICK_SEARCHES = ["Phở", "Bún chả", "Bánh mì", "Salad", "Cơm tấm"];
+const QUICK_SEARCHES = ["Phở", "Bún chả", "Mì Quảng", "Cơm chiên", "Canh chua"];
 
 export default function HomePage() {
   const router = useRouter();
   const [searchDraft, setSearchDraft] = useState("");
   const recipeSuggestions = useRecipeSuggestions(searchDraft);
   const categoriesQuery = useCategories();
-  const recipesQuery = useRecipes({ page: 1, pageSize: 8, sort: "-createdAt" });
+  const recipesQuery = useRecipes({
+    page: 1,
+    pageSize: 8,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
   const featuredRecipe = recipesQuery.data?.items[0];
   const gridRecipes = recipesQuery.data?.items.slice(1) ?? [];
 

@@ -79,7 +79,6 @@ public sealed record RecipeCategoryDto(
 public sealed record RecipeAuthorDto(
     Guid Id,
     string DisplayName,
-    string Email,
     string? AvatarUrl = null,
     string? Bio = null
 );

@@ -101,14 +101,23 @@ public sealed class RecipeSortingHttpTests : IAsyncLifetime
 
     [Theory]
     [InlineData("", "-createdAt")]
-    [InlineData("?sort=title", "title")]
-    [InlineData("?sort=-cookTime", "-cookTime")]
-    [InlineData("?sort=title&sortBy=cookTime&sortOrder=desc", "-cookTime")]
-    public async Task DefaultLegacyAndCanonicalPrecedence(string query, string expected)
+    [InlineData("?sortBy=title", "-title")]
+    [InlineData("?sortOrder=asc", "createdAt")]
+    public async Task CanonicalSortDefaults(string query, string expected)
     {
         using var response = await _client.GetAsync("/api/v1/recipes" + query);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(expected, _handler.Last?.Sort);
+    }
+
+    [Theory]
+    [InlineData("?sort=title")]
+    [InlineData("?sort=-cookTime")]
+    [InlineData("?sort=title&sortBy=cookTime&sortOrder=desc")]
+    public async Task LegacySortParameter_Returns422(string query)
+    {
+        using var response = await _client.GetAsync("/api/v1/recipes" + query);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
 
     [Theory]
@@ -161,6 +170,14 @@ public sealed class RecipeSortingHttpTests : IAsyncLifetime
         Assert.Equal(4, _search.Last?.MinServings);
         Assert.Equal(10, _search.Last?.MaxCookTime);
         Assert.Equal(CulinaryBlog.Domain.Enums.DifficultyLevel.Easy, _search.Last?.Difficulty);
+    }
+
+    [Fact]
+    public async Task Search_DefaultsToTwelveItems()
+    {
+        using var response = await _client.GetAsync("/api/v1/recipes/search?q=mi");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(12, _search.Last?.PageSize);
     }
 
     public sealed class SearchStubHandler : IRequestHandler<SearchRecipesQuery, PagedResult<RecipeSummaryDto>>

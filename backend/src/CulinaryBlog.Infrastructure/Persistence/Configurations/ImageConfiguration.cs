@@ -27,6 +27,12 @@ public class RecipeImageConfiguration
         builder.Property(x => x.AltText)
             .HasMaxLength(200);
 
+        builder.Property(x => x.IsDeleted)
+            .HasDefaultValue(false);
+
         builder.HasIndex(x => x.RecipeId);
+        builder.HasIndex(x => x.RecipeId, "IX_RecipeImages_RecipeId_Primary")
+            .IsUnique()
+            .HasFilter("\"IsPrimary\" = TRUE");
     }
 }

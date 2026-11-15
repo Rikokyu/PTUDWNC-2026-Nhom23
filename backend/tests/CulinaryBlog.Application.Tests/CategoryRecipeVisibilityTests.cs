@@ -8,7 +8,24 @@ namespace CulinaryBlog.Application.Tests;
 public sealed class CategoryRecipeVisibilityTests
 {
     [Fact]
-    public void GuestAndAdmin_CanOnlySeePublishedRecipes()
+    public void Guest_CanOnlySeePublishedRecipes()
+    {
+        var published = CreateRecipe(RecipeStatus.Published, Guid.NewGuid());
+        var draft = CreateRecipe(RecipeStatus.Draft, Guid.NewGuid());
+        var archived = CreateRecipe(RecipeStatus.Archived, Guid.NewGuid());
+
+        AssertVisibleStatuses(
+            currentUserId: null,
+            includeOwnDrafts: false,
+            isAdmin: false,
+            published,
+            draft,
+            archived,
+            RecipeStatus.Published);
+    }
+
+    [Fact]
+    public void Admin_CanSeeEveryNonDeletedStatus()
     {
         var adminId = Guid.NewGuid();
         var published = CreateRecipe(RecipeStatus.Published, Guid.NewGuid());
@@ -18,14 +35,17 @@ public sealed class CategoryRecipeVisibilityTests
         AssertVisibleStatuses(
             currentUserId: adminId,
             includeOwnDrafts: false,
+            isAdmin: true,
             published,
             adminDraft,
             adminArchived,
-            RecipeStatus.Published);
+            RecipeStatus.Published,
+            RecipeStatus.Draft,
+            RecipeStatus.Archived);
     }
 
     [Fact]
-    public void Author_CanSeePublishedAndOwnDrafts_ButNotOthersDraftsOrArchived()
+    public void Author_CanSeePublishedAndOwnPrivateRecipes()
     {
         var authorId = Guid.NewGuid();
         var published = CreateRecipe(RecipeStatus.Published, Guid.NewGuid());
@@ -36,17 +56,20 @@ public sealed class CategoryRecipeVisibilityTests
         AssertVisibleStatuses(
             authorId,
             includeOwnDrafts: true,
+            isAdmin: false,
             published,
             ownDraft,
             anotherAuthorsDraft,
             ownArchived,
             RecipeStatus.Published,
-            RecipeStatus.Draft);
+            RecipeStatus.Draft,
+            RecipeStatus.Archived);
     }
 
     private static void AssertVisibleStatuses(
         Guid? currentUserId,
         bool includeOwnDrafts,
+        bool isAdmin,
         Recipe published,
         Recipe draft,
         Recipe archived,
@@ -55,7 +78,8 @@ public sealed class CategoryRecipeVisibilityTests
         var predicate = RecipeRepository
             .CreateCategoryVisibilityPredicate(
                 currentUserId,
-                includeOwnDrafts)
+                includeOwnDrafts,
+                isAdmin)
             .Compile();
 
         var visible = new[] { published, draft, archived }
@@ -69,6 +93,7 @@ public sealed class CategoryRecipeVisibilityTests
     private static void AssertVisibleStatuses(
         Guid? currentUserId,
         bool includeOwnDrafts,
+        bool isAdmin,
         Recipe published,
         Recipe ownDraft,
         Recipe anotherAuthorsDraft,
@@ -78,7 +103,8 @@ public sealed class CategoryRecipeVisibilityTests
         var predicate = RecipeRepository
             .CreateCategoryVisibilityPredicate(
                 currentUserId,
-                includeOwnDrafts)
+                includeOwnDrafts,
+                isAdmin)
             .Compile();
 
         var visible = new[]

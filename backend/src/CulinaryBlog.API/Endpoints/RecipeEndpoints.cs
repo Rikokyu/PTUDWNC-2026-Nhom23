@@ -60,7 +60,7 @@ public static class RecipeEndpoints
 
                     var q = request.Query["q"].FirstOrDefault();
                     var page = ReadPagination(request, "page", 1);
-                    var pageSize = ReadPagination(request, "pageSize", 10);
+                    var pageSize = ReadPagination(request, "pageSize", 12);
                     int? ReadFilter(string name, int minimum)
                     {
                         if (!request.Query.ContainsKey(name)) return null;
@@ -431,21 +431,24 @@ public static class RecipeEndpoints
                 "search cannot be longer than 100 characters.");
         }
 
-        var sort =
-            query["sort"].FirstOrDefault()
-            ?? "-createdAt";
+        if (query.ContainsKey("sort"))
+        {
+            throw new ValidationException(
+                "Use sortBy and sortOrder instead of sort.");
+        }
 
+        var sortBy = query["sortBy"].FirstOrDefault() ?? "createdAt";
+        var sortOrder = query["sortOrder"].FirstOrDefault() ?? "desc";
         if (query.ContainsKey("sortBy") || query.ContainsKey("sortOrder"))
         {
             if (query["sortBy"].Count > 1 || query["sortOrder"].Count > 1)
                 throw new ValidationException("Sort parameters must occur only once.");
-            var sortBy = query["sortBy"].FirstOrDefault() ?? "createdAt";
-            var sortOrder = query["sortOrder"].FirstOrDefault() ?? "desc";
-            if (sortBy is not ("title" or "createdAt" or "cookTime")
-                || sortOrder is not ("asc" or "desc"))
-                throw new ValidationException("sortBy must be title, createdAt or cookTime; sortOrder must be asc or desc.");
-            sort = (sortOrder == "desc" ? "-" : "") + sortBy;
         }
+
+        if (sortBy is not ("title" or "createdAt" or "cookTime")
+            || sortOrder is not ("asc" or "desc"))
+            throw new ValidationException("sortBy must be title, createdAt or cookTime; sortOrder must be asc or desc.");
+        var sort = (sortOrder == "desc" ? "-" : "") + sortBy;
 
         var allowedSorts =
             new[]
@@ -458,9 +461,7 @@ public static class RecipeEndpoints
                 "-cookTime"
             };
 
-        if (!allowedSorts.Contains(
-                sort,
-                StringComparer.OrdinalIgnoreCase))
+        if (!allowedSorts.Contains(sort, StringComparer.Ordinal))
         {
             throw new ValidationException(
                 "Invalid sort value.");

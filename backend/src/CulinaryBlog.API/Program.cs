@@ -21,6 +21,7 @@ using Serilog.Formatting.Compact;
 using CulinaryBlog.API.Observability;
 using CulinaryBlog.API.Caching;
 using StackExchange.Redis;
+using CulinaryBlog.Infrastructure.BackgroundJobs;
 
 
 var builder =
@@ -80,6 +81,16 @@ builder.Services
     });
 
 // Infrastructure
+if (builder.Configuration.GetValue("Hangfire:Enabled", true)
+    && !builder.Environment.IsDevelopment()
+    && string.IsNullOrWhiteSpace(
+        builder.Configuration["Sitemap:BaseUrl"]
+        ?? builder.Configuration["Frontend:BaseUrl"]))
+{
+    throw new InvalidOperationException(
+        "Sitemap:BaseUrl or Frontend:BaseUrl must be configured when Hangfire is enabled outside Development.");
+}
+
 builder.Services
     .AddInfrastructure(
         builder.Configuration,
@@ -188,6 +199,8 @@ if (string.Equals(builder.Configuration["FileStorage:Provider"],
 var app =
     builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
+
 app.UseSerilogRequestLogging(options =>
 {
     options.EnrichDiagnosticContext = (diagnostics, http) =>
@@ -249,36 +262,40 @@ if (builder.Configuration.GetValue("Hangfire:Enabled", true)
 // API endpoints
 app.MapApplicationEndpoints();
 
-// Seed database
+if (builder.Configuration.GetValue("Hangfire:Enabled", true))
+{
+    RecurringJob.AddOrUpdate<SitemapGenerationJob>(
+        SitemapGenerationJob.RecurringJobId,
+        job => job.GenerateAsync(CancellationToken.None),
+        SitemapGenerationJob.CronExpression,
+        new RecurringJobOptions
+        {
+            TimeZone = SitemapGenerationJob.ScheduleTimeZone
+        });
+}
+
+// Migrate the schema in every environment, but only seed demo content locally.
 using (var scope =
        app.Services.CreateScope())
 {
     var context =
         scope.ServiceProvider
             .GetRequiredService<CulinaryBlogDbContext>();
-    var passwordHasher =
-        scope.ServiceProvider
-            .GetRequiredService<IPasswordHasher<ApplicationUser>>();
-
-    try
+    if (app.Environment.IsDevelopment())
     {
+        var passwordHasher =
+            scope.ServiceProvider
+                .GetRequiredService<IPasswordHasher<ApplicationUser>>();
         await DatabaseSeeder
             .SeedAsync(
                 context,
                 passwordHasher,
                 app.Lifetime.ApplicationStopping);
     }
-    catch (DbUpdateConcurrencyException ex)
+    else
     {
-        app.Logger.LogWarning(
-            ex,
-            "Database seed detected a concurrency conflict; app will continue startup with existing database state.");
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(
-            ex,
-            "Database seed failed during startup.");
+        await context.Database.MigrateAsync(
+            app.Lifetime.ApplicationStopping);
     }
 }
 
@@ -298,7 +315,7 @@ internal sealed class RecipeListOutputCachePolicy : IOutputCachePolicy
             && !CacheEpochMiddleware.IsBypassed(context.HttpContext);
         context.AllowCacheStorage = context.AllowCacheLookup;
         context.ResponseExpirationTimeSpan =
-            TimeSpan.FromMinutes(5);
+            TimeSpan.FromMinutes(15);
         context.CacheVaryByRules.QueryKeys =
             new Microsoft.Extensions.Primitives.StringValues("*");
         context.CacheVaryByRules.HeaderNames =
@@ -339,7 +356,7 @@ internal sealed class RecipeDetailOutputCachePolicy : IOutputCachePolicy
             && !CacheEpochMiddleware.IsBypassed(context.HttpContext);
         context.AllowCacheStorage = context.AllowCacheLookup;
         context.ResponseExpirationTimeSpan =
-            TimeSpan.FromMinutes(5);
+            TimeSpan.FromMinutes(60);
         context.CacheVaryByRules.HeaderNames =
             new Microsoft.Extensions.Primitives.StringValues(CacheEpochMiddleware.HeaderName);
 

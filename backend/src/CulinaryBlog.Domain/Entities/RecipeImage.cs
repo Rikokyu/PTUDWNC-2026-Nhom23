@@ -18,6 +18,8 @@ public class RecipeImage : BaseEntity
 
     public int OrderIndex { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public static RecipeImage Create(
         Guid recipeId,
         string originalUrl,

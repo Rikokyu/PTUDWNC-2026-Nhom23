@@ -61,11 +61,11 @@ public sealed class AuthHttpPostgresTests : IAsyncLifetime
         await _app.DisposeAsync();
     }
 
-    private async Task<(Guid Id, string Access, string Refresh)> RegisterAsync()
+    private async Task<(Guid Id, string Access, string Refresh)> RegisterAsync(string? email = null)
     {
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
-            displayName = "Auth HTTP User", email = $"http-{Guid.NewGuid():N}@example.test", password = "SecurePass1!"
+            displayName = "Auth HTTP User", email = email ?? $"http-{Guid.NewGuid():N}@example.test", password = "SecurePass1!"
         });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -127,6 +127,33 @@ public sealed class AuthHttpPostgresTests : IAsyncLifetime
                 setters => setters.SetProperty(token => token.ExpiresAt, DateTime.UtcNow.AddMinutes(-1)));
         }
         Assert.Equal(HttpStatusCode.Unauthorized, (await Rotate(expiring.Refresh)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Logout_WithoutOrWithBlankToken_PreservesOtherSessions()
+    {
+        var email = $"logout-{Guid.NewGuid():N}@example.test";
+        var first = await RegisterAsync(email);
+        using var login = await _client.PostAsJsonAsync("/api/v1/auth/login",
+            new { email, password = "SecurePass1!" });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        using var loginJson = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
+        var secondRefresh = loginJson.RootElement.GetProperty("refreshToken").GetString()!;
+
+        using (var noBody = await _client.SendAsync(Auth(HttpMethod.Post,
+            "/api/v1/auth/logout", first.Access)))
+            Assert.Equal(HttpStatusCode.NoContent, noBody.StatusCode);
+
+        using (var blankToken = await _client.SendAsync(Auth(HttpMethod.Post,
+            "/api/v1/auth/logout", first.Access, new { refreshToken = "  " })))
+            Assert.Equal(HttpStatusCode.NoContent, blankToken.StatusCode);
+
+        using var firstRefresh = await _client.PostAsJsonAsync("/api/v1/auth/refresh",
+            new { refreshToken = first.Refresh });
+        using var secondRefreshResponse = await _client.PostAsJsonAsync("/api/v1/auth/refresh",
+            new { refreshToken = secondRefresh });
+        Assert.Equal(HttpStatusCode.OK, firstRefresh.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondRefreshResponse.StatusCode);
     }
 
     [Fact]

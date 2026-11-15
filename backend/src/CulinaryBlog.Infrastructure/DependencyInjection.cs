@@ -44,6 +44,18 @@ public static class DependencyInjection
 
         if (configuration.GetValue("Hangfire:Enabled", true))
         {
+            services.AddScoped(provider => new SitemapGenerationJob(
+                provider.GetRequiredService<CulinaryBlogDbContext>(),
+                Path.Combine(
+                    contentRootPath ?? Directory.GetCurrentDirectory(),
+                    "wwwroot"),
+                configuration["Sitemap:BaseUrl"]
+                    ?? configuration["Frontend:BaseUrl"]
+                    ?? "http://localhost:3000",
+                configuration.GetSection("Sitemap:StaticPaths").Get<string[]>()
+                    ?? ["/", "/recipes", "/categories"],
+                provider.GetRequiredService<ILogger<SitemapGenerationJob>>()));
+
             var connectionString = configuration.GetConnectionString(
                 "HangfireConnection")
                 ?? configuration.GetConnectionString("DefaultConnection")

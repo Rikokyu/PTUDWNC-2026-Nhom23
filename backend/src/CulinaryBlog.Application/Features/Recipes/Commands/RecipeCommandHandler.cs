@@ -171,7 +171,7 @@ public sealed class RecipeCommandHandler :
         SetRecipeStatusCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
 
@@ -212,10 +212,25 @@ public sealed class RecipeCommandHandler :
         DeleteRecipeCommand request,
         CancellationToken cancellationToken)
     {
-        var recipe = await GetOwnedRecipeAsync(
+        var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
         recipe.SoftDelete();
+        foreach (var ingredient in recipe.Ingredients)
+        {
+            ingredient.IsDeleted = true;
+        }
+
+        foreach (var step in recipe.Steps)
+        {
+            step.IsDeleted = true;
+        }
+
+        foreach (var image in recipe.Images)
+        {
+            image.IsDeleted = true;
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
@@ -293,15 +308,22 @@ public sealed class RecipeCommandHandler :
         var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
+        var maxStepNumber = recipe.Steps.Count == 0
+            ? 0
+            : recipe.Steps.Max(item => item.StepNumber);
+        if (maxStepNumber < 0 || maxStepNumber == int.MaxValue)
+        {
+            throw new ValidationException(
+                "Recipe step numbers cannot be safely extended.");
+        }
+
         var step = CreateStep(
             new RecipeStepInput(
                 request.Title,
                 request.Description,
                 request.TimerMinutes,
                 request.ImageUrl),
-            recipe.Steps.Count == 0
-                ? 1
-                : recipe.Steps.Max(item => item.StepNumber) + 1);
+            maxStepNumber + 1);
         step.Recipe = recipe;
         recipe.Steps.Add(step);
         recipe.UpdatedAt = DateTime.UtcNow;
@@ -429,17 +451,35 @@ public sealed class RecipeCommandHandler :
                 "Select another primary image before unsetting the current one.");
         }
 
-        image.AltText = request.AltText?.Trim();
-        if (request.IsPrimary == true)
-        {
-            foreach (var recipeImage in recipe.Images)
+        await _unitOfWork.ExecuteInTransactionAsync(
+            async transactionToken =>
             {
-                recipeImage.IsPrimary = recipeImage.Id == image.Id;
-            }
-        }
+                if (request.AltText is not null)
+                {
+                    image.AltText = request.AltText.Trim();
+                }
+                if (request.IsPrimary == true)
+                {
+                    var hadOtherPrimary = false;
+                    foreach (var recipeImage in recipe.Images)
+                    {
+                        if (recipeImage.Id == image.Id) continue;
+                        hadOtherPrimary |= recipeImage.IsPrimary;
+                        recipeImage.IsPrimary = false;
+                    }
 
-        recipe.UpdatedAt = DateTime.UtcNow;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    if (hadOtherPrimary)
+                    {
+                        await _unitOfWork.SaveChangesAsync(transactionToken);
+                    }
+
+                    image.IsPrimary = true;
+                }
+
+                recipe.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.SaveChangesAsync(transactionToken);
+            },
+            cancellationToken);
     }
 
     public async Task Handle(
@@ -462,21 +502,33 @@ public sealed class RecipeCommandHandler :
             .Where(url => !string.IsNullOrWhiteSpace(url))
             .Select(url => url!)
             .ToArray();
-        recipe.Images.Remove(image);
-
-        if (wasPrimary)
-        {
-            var replacement = recipe.Images
+        var replacement = wasPrimary
+            ? recipe.Images
+                .Where(item => item.Id != image.Id)
                 .OrderBy(item => item.OrderIndex)
-                .FirstOrDefault();
-            if (replacement != null)
-            {
-                replacement.IsPrimary = true;
-            }
-        }
+                .FirstOrDefault()
+            : null;
 
-        recipe.UpdatedAt = DateTime.UtcNow;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.ExecuteInTransactionAsync(
+            async transactionToken =>
+            {
+                recipe.UpdatedAt = DateTime.UtcNow;
+                if (replacement != null)
+                {
+                    image.IsPrimary = false;
+                    await _unitOfWork.SaveChangesAsync(transactionToken);
+                }
+
+                recipe.Images.Remove(image);
+                await _unitOfWork.SaveChangesAsync(transactionToken);
+
+                if (replacement != null)
+                {
+                    replacement.IsPrimary = true;
+                    await _unitOfWork.SaveChangesAsync(transactionToken);
+                }
+            },
+            cancellationToken);
 
         foreach (var fileUrl in filesToDelete)
         {
@@ -494,26 +546,6 @@ public sealed class RecipeCommandHandler :
         }
     }
 
-    private async Task<Recipe> GetOwnedRecipeAsync(
-        Guid recipeId,
-        CancellationToken cancellationToken)
-    {
-        var recipe = await _recipes.GetByIdWithDetailsAsync(
-            recipeId,
-            cancellationToken)
-            ?? throw new NotFoundException("Recipe was not found.");
-
-        if (!_currentUser.IsAuthenticated
-            || !_currentUser.UserId.HasValue
-            || recipe.AuthorId != _currentUser.UserId)
-        {
-            throw new ForbiddenException(
-                "You do not have permission to modify this recipe.");
-        }
-
-        return recipe;
-    }
-
     private async Task<Recipe> GetEditableRecipeAsync(
         Guid recipeId,
         CancellationToken cancellationToken)
@@ -524,14 +556,12 @@ public sealed class RecipeCommandHandler :
             ?? throw new NotFoundException("Recipe was not found.");
         var isOwner = _currentUser.UserId.HasValue
             && recipe.AuthorId == _currentUser.UserId;
-        var adminCanEditPublished = _currentUser.IsAdmin
-            && recipe.Status == RecipeStatus.Published;
 
         if (!_currentUser.IsAuthenticated
-            || (!isOwner && !adminCanEditPublished))
+            || (!isOwner && !_currentUser.IsAdmin))
         {
             throw new ForbiddenException(
-                "You can edit only your own recipes or, as an administrator, another author's published recipe.");
+                "Only the recipe owner or an administrator can modify this recipe.");
         }
 
         return recipe;
@@ -810,9 +840,22 @@ public sealed class RecipeCommandHandler :
     private static void SetTemporaryStepNumbers(
         IReadOnlyList<RecipeStep> steps)
     {
+        if (steps.Count == 0)
+        {
+            return;
+        }
+
+        var maxStepNumber = steps.Max(step => step.StepNumber);
+        if (maxStepNumber < 0
+            || maxStepNumber > int.MaxValue - steps.Count)
+        {
+            throw new ValidationException(
+                "Recipe step numbers cannot be safely normalized.");
+        }
+
         for (var index = 0; index < steps.Count; index++)
         {
-            steps[index].StepNumber = -(index + 1);
+            steps[index].StepNumber = maxStepNumber + index + 1;
         }
     }
 

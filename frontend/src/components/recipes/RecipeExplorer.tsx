@@ -20,7 +20,14 @@ const difficultyOptions: NonNullable<RecipeFilters["difficulty"]>[] = [
   "Hard",
   "Expert",
 ];
-const sortOptions: NonNullable<RecipeFilters["sort"]>[] = [
+type SortOption =
+  | "-createdAt"
+  | "createdAt"
+  | "title"
+  | "-title"
+  | "cookTime"
+  | "-cookTime";
+const sortOptions: SortOption[] = [
   "-createdAt",
   "createdAt",
   "title",
@@ -33,7 +40,7 @@ export function RecipeExplorer() {
   const [page, setPage] = useState(1);
   const [categoryId, setCategoryId] = useState("");
   const [difficulty, setDifficulty] = useState<RecipeFilters["difficulty"]>();
-  const [sort, setSort] = useState<RecipeFilters["sort"]>("-createdAt");
+  const [sort, setSort] = useState<SortOption>("-createdAt");
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [maxCookTime, setMaxCookTime] = useState<number>();
@@ -86,7 +93,8 @@ export function RecipeExplorer() {
     minServings,
     categoryId: categoryId || undefined,
     difficulty,
-    sort,
+    sortBy: sort.replace(/^-/, "") as NonNullable<RecipeFilters["sortBy"]>,
+    sortOrder: sort.startsWith("-") ? "desc" : "asc",
     search: search || undefined,
   });
   const categoriesQuery = useCategories();

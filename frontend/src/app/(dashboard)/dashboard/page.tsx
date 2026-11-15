@@ -16,7 +16,12 @@ const statusLabels = ["Bản nháp", "Đã xuất bản", "Đã lưu trữ"];
 
 export default function DashboardOverviewPage() {
   const { user } = useAuth();
-  const recipesQuery = useMyRecipes({ page: 1, pageSize: 50, sort: "-createdAt" });
+  const recipesQuery = useMyRecipes({
+    page: 1,
+    pageSize: 50,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
   const recipes = recipesQuery.data?.items ?? [];
   const publishedCount = recipes.filter((recipe) => recipe.status === 1).length;
   const draftCount = recipes.filter((recipe) => recipe.status === 0).length;

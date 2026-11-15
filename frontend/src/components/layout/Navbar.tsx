@@ -8,6 +8,7 @@ import { Search, Plus, Menu, X, ChefHat, User, Bookmark, LogOut } from "lucide-r
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { authApi } from "@/lib/api/auth";
+import { clearAuthSession } from "@/lib/auth/session";
 import { AvatarImage } from "@/components/common/AvatarImage";
 import { resolveApiAssetUrl } from "@/lib/api/axios";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -24,7 +25,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const pathname = usePathname();
   const router = useRouter();
   const authUser = useAuthStore((state) => state.user);
-  const clearSession = useAuthStore((state) => state.clearSession);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const currentUser = user ?? (authUser
@@ -40,7 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
     } catch {
       // Always clear the local session, even if the API is unavailable.
     } finally {
-      clearSession();
+      clearAuthSession();
       setUserDropdownOpen(false);
       router.push("/");
     }

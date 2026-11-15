@@ -6,9 +6,6 @@ namespace CulinaryBlog.Infrastructure.Persistence.Seed;
 
 public static class DatabaseSeeder
 {
-    private const int MinimumCategoryCount = 20;
-    private const int MinimumRecipeCount = 100;
-
     public static async Task SeedAsync(
         CulinaryBlogDbContext context,
         IPasswordHasher<ApplicationUser> passwordHasher,
@@ -55,11 +52,15 @@ public static class DatabaseSeeder
         IPasswordHasher<ApplicationUser> passwordHasher,
         CancellationToken cancellationToken)
     {
-        var seedUsers = new (string Email, string UserName, string DisplayName, string Password, string Role)[]
+        var seedUsers = new (string Email, string UserName, string DisplayName, string Password, string Role, string? Bio)[]
         {
-            ("admin@culinaryblog.com", "admin", "System Admin", "Admin@123", "Admin"),
-            ("author@culinaryblog.com", "author", "Sample Author", "Author@123", "Author"),
-            ("user@culinaryblog.com", "user", "Sample User", "User@123", "User")
+            ("admin@culinaryblog.com", "admin", "Quản trị viên", "Admin@123", "Admin", "Quản lý nội dung và vận hành Culinary Blog."),
+            ("author@culinaryblog.com", "author", "Nguyễn Lan", "Author@123", "Author", "Chia sẻ những món ăn gia đình và công thức quen thuộc từ căn bếp Việt."),
+            ("minhtran@culinaryblog.com", "minhtran", "Trần Minh", "Minh@123", "Author", "Yêu thích các món ăn thường ngày, món xào và cách nấu gọn nhẹ."),
+            ("phuong@culinaryblog.com", "phuong", "Bếp nhà Phương", "Phuong@123", "Author", "Ghi lại những món Việt thân thuộc và mẹo nấu ăn trong căn bếp gia đình."),
+            ("thanh@culinaryblog.com", "thanh", "Phạm Thanh Hà", "Thanh@123", "Author", "Chia sẻ món ăn theo mùa, món ngọt và cách chuẩn bị bữa cơm nhà."),
+            ("user@culinaryblog.com", "user", "Nguyễn Gia Bảo", "User@123", "User", null),
+            ("an@culinaryblog.com", "an", "Lê Khánh An", "An@123", "User", null)
         };
 
         foreach (var seedUser in seedUsers)
@@ -80,6 +81,7 @@ public static class DatabaseSeeder
                 Email = seedUser.Email,
                 UserName = seedUser.UserName,
                 DisplayName = seedUser.DisplayName,
+                Bio = seedUser.Bio,
                 Role = seedUser.Role,
                 CreatedAt = DateTime.UtcNow
             };

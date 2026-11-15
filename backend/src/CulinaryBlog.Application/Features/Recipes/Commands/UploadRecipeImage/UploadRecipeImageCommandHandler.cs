@@ -12,7 +12,7 @@ namespace CulinaryBlog.Application.Features.Recipes.Commands.UploadRecipeImage;
 public sealed class UploadRecipeImageCommandHandler
     : IRequestHandler<UploadRecipeImageCommand, RecipeImageDto>
 {
-    private const int MaxFileSize = 20 * 1024 * 1024;
+    private const int MaxFileSize = 5 * 1024 * 1024;
 
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -52,65 +52,84 @@ public sealed class UploadRecipeImageCommandHandler
         }
 
         var isOwner = recipe.AuthorId == _currentUser.UserId;
-        var adminCanEditPublished = _currentUser.IsAdmin
-            && recipe.Status == Domain.Enums.RecipeStatus.Published;
-        if (!isOwner && !adminCanEditPublished)
+        if (!isOwner && !_currentUser.IsAdmin)
         {
             throw new ForbiddenException(
-                "You can upload images only to your own recipe or, as an administrator, another author's published recipe.");
+                "Only the recipe owner or an administrator can upload images.");
         }
 
         var shouldBePrimary =
             recipe.Images.Count == 0 || request.IsPrimary == true;
 
-        if (shouldBePrimary)
-        {
-            foreach (var currentImage in recipe.Images)
-            {
-                currentImage.IsPrimary = false;
-                currentImage.UpdatedAt = DateTime.UtcNow;
-            }
-        }
-
         var extension = GetExtension(request.ContentType);
-        var originalUrl = await _fileStorage.UploadAsync(
-            request.Content,
-            extension,
-            $"recipes/{recipe.Id}",
-            cancellationToken);
-
-        var image = RecipeImage.Create(
-            recipe.Id,
-            originalUrl,
-            NormalizeAltText(request.AltText),
-            shouldBePrimary,
-            recipe.Images.Count == 0
-                ? 1
-                : recipe.Images.Max(item => item.OrderIndex) + 1);
-
-        recipe.Images.Add(image);
-        // Explicitly mark the new dependent as Added; RecipeImage IDs are generated
-        // in the domain, so graph discovery can otherwise treat it as an existing row.
-        _unitOfWork.AddRecipeImage(image);
-
+        string? originalUrl = null;
+        RecipeImage? image = null;
         try
         {
-            // The recipe was loaded by this DbContext and remains tracked. Adding the
-            // image to its collection is sufficient; marking the whole graph modified
-            // would issue stale updates for existing images.
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.ExecuteInTransactionAsync(
+                async transactionToken =>
+                {
+                    if (shouldBePrimary && recipe.Images.Count > 0)
+                    {
+                        foreach (var currentImage in recipe.Images)
+                        {
+                            currentImage.IsPrimary = false;
+                            currentImage.UpdatedAt = DateTime.UtcNow;
+                        }
+
+                        await _unitOfWork.SaveChangesAsync(transactionToken);
+                    }
+
+                    originalUrl = await _fileStorage.UploadAsync(
+                        request.Content,
+                        extension,
+                        $"recipes/{recipe.Id}",
+                        transactionToken);
+
+                    image = RecipeImage.Create(
+                        recipe.Id,
+                        originalUrl,
+                        NormalizeAltText(request.AltText),
+                        shouldBePrimary,
+                        recipe.Images.Count == 0
+                            ? 1
+                            : recipe.Images.Max(item => item.OrderIndex) + 1);
+
+                    recipe.Images.Add(image);
+                    _unitOfWork.AddRecipeImage(image);
+                    await _unitOfWork.SaveChangesAsync(transactionToken);
+                },
+                cancellationToken);
         }
         catch
         {
-            await _fileStorage.DeleteAsync(
-                originalUrl,
-                CancellationToken.None);
+            if (originalUrl != null)
+            {
+                try
+                {
+                    await _fileStorage.DeleteAsync(
+                        originalUrl,
+                        CancellationToken.None);
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogError(
+                        exception,
+                        "Could not remove uncommitted recipe image file {FileUrl}.",
+                        originalUrl);
+                }
+            }
+
             throw;
         }
 
+        var savedImage = image
+            ?? throw new InvalidOperationException(
+                "The recipe image transaction completed without creating an image.");
+
         try
         {
-            _imageResizeJobs.Enqueue(image.Id);
+            _imageResizeJobs.Enqueue(savedImage.Id);
         }
         catch (Exception exception)
         {
@@ -119,17 +138,17 @@ public sealed class UploadRecipeImageCommandHandler
             _logger.LogError(
                 exception,
                 "Could not enqueue image resize job for image {ImageId}.",
-                image.Id);
+                savedImage.Id);
         }
 
         return new RecipeImageDto(
-            image.Id,
-            image.OriginalUrl,
-            image.MediumUrl,
-            image.ThumbnailUrl,
-            image.AltText,
-            image.IsPrimary,
-            image.OrderIndex);
+            savedImage.Id,
+            savedImage.OriginalUrl,
+            savedImage.MediumUrl,
+            savedImage.ThumbnailUrl,
+            savedImage.AltText,
+            savedImage.IsPrimary,
+            savedImage.OrderIndex);
     }
 
     private void EnsureAuthenticated()
@@ -154,7 +173,7 @@ public sealed class UploadRecipeImageCommandHandler
         if (content.Length > MaxFileSize)
         {
             throw new ArgumentException(
-                "Image size cannot exceed 20 MB.");
+                "Image size cannot exceed 5 MB.");
         }
 
         if (altText?.Length > 200)

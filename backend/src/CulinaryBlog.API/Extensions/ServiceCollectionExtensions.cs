@@ -35,6 +35,9 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient(
             typeof(IPipelineBehavior<,>),
+            typeof(LoggingBehavior<,>));
+        services.AddTransient(
+            typeof(IPipelineBehavior<,>),
             typeof(FluentValidationBehavior<,>));
         services.AddTransient<
             IValidator<RegisterCommand>,
@@ -122,12 +125,13 @@ public static class ServiceCollectionExtensions
             };
             options.AddPolicy(
                 "Auth",
-                context => RateLimitPartition.GetFixedWindowLimiter(
+                context => RateLimitPartition.GetSlidingWindowLimiter(
                     GetClientAddress(context),
-                    _ => new FixedWindowRateLimiterOptions
+                    _ => new SlidingWindowRateLimiterOptions
                     {
-                        PermitLimit = 20,
+                        PermitLimit = 10,
                         Window = TimeSpan.FromMinutes(1),
+                        SegmentsPerWindow = 6,
                         QueueLimit = 0,
                         AutoReplenishment = true
                     }));

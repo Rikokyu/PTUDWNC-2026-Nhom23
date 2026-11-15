@@ -56,7 +56,9 @@ public class VietnameseSearchPostgresTests
         foreach (var q in new[] { "mi", "m\u00ec", "M\u00cc", "mi\u0300" })
         {
             var result = await repo.SearchPublishedAsync(q,1,50);
-            Assert.Equal(mi.Id, Assert.Single(result.Items).Id);
+            Assert.Equal(2, result.TotalCount);
+            Assert.Contains(result.Items, item => item.Id == mi.Id);
+            Assert.Contains(result.Items, item => item.Id == desc.Id);
         }
         Assert.Equal(rice.Id, Assert.Single((await repo.SearchPublishedAsync("com",1,50)).Items).Id);
         foreach(var q in new[] { "pho b", "ph\u1edf b\u00f2", "PHO BO" }) Assert.Equal(pho.Id, Assert.Single((await repo.SearchPublishedAsync(q,1,50)).Items).Id);
@@ -77,14 +79,15 @@ public class VietnameseSearchPostgresTests
         }
         var allStatuses = await repo.GetPagedAsync(1, 50, null, null, null,
             "mi bo", "-createdAt", null, true, true, includeAllStatuses: true);
-        Assert.Equal(3, allStatuses.TotalCount);
+        Assert.Equal(4, allStatuses.TotalCount);
+        Assert.Contains(allStatuses.Items, item => item.Id == desc.Id);
         Assert.Contains(allStatuses.Items, item => item.Status == RecipeStatus.Draft);
         Assert.Contains(allStatuses.Items, item => item.Status == RecipeStatus.Archived);
         foreach(var q in new[] { "dau", "\u0110\u1eacU", "\u0111\u1eadu" }) Assert.Equal(dau.Id, Assert.Single((await repo.SearchPublishedAsync(q,1,50)).Items).Id);
         Assert.Equal(instructions.Id, Assert.Single((await repo.SearchPublishedAsync("ca kho",1,50)).Items).Id);
         Assert.Equal(ingredient.Id, Assert.Single((await repo.SearchPublishedAsync("toi d",1,50)).Items).Id);
         var first = await repo.SearchPublishedAsync("mi",1,1); var second = await repo.SearchPublishedAsync("mi",2,1);
-        Assert.Equal(1,first.TotalCount); Assert.Empty(second.Items);
+        Assert.Equal(2, first.TotalCount); Assert.Single(first.Items); Assert.Single(second.Items);
         Assert.Empty((await repo.SearchPublishedAsync("'&|!:*%_",1,50)).Items);
         Assert.Empty((await repo.SearchPublishedAsync("zznotfound",1,50)).Items);
         Assert.Empty((await repo.SearchPublishedAsync("'; DROP TABLE Recipes;--",1,50)).Items);

@@ -6,6 +6,7 @@ using ApplicationValidationException =
     CulinaryBlog.Application.Common.Exceptions.ValidationException;
 using CulinaryBlog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Xunit;
 
@@ -122,6 +123,27 @@ public sealed class RecipeWorkflowTests
         Assert.True(property.IsConcurrencyToken);
         Assert.Equal(ValueGenerated.OnAddOrUpdate, property.ValueGenerated);
         Assert.Equal("xmin", property.GetColumnName(table));
+    }
+
+    [Fact]
+    public void RecipeChildSchema_EnforcesPositiveStepsAndOnePrimaryImage()
+    {
+        using var context = CreateContext(new SharedRowVersion());
+        var model = context.GetService<IDesignTimeModel>().Model;
+        var stepType = model.FindEntityType(typeof(RecipeStep))!;
+        var imageType = model.FindEntityType(typeof(RecipeImage))!;
+        var stepChecks = stepType.GetCheckConstraints();
+        var primaryImageIndex = imageType.GetIndexes()
+            .Single(index => index.GetDatabaseName()
+                == "IX_RecipeImages_RecipeId_Primary");
+
+        Assert.Contains(
+            stepChecks,
+            constraint => constraint.Name
+                    == "CK_RecipeSteps_StepNumber_Positive"
+                && constraint.Sql == "\"StepNumber\" > 0");
+        Assert.True(primaryImageIndex.IsUnique);
+        Assert.Equal("\"IsPrimary\" = TRUE", primaryImageIndex.GetFilter());
     }
 
     [Fact]

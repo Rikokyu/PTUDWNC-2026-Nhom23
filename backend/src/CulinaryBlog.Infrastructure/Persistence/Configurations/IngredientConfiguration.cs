@@ -27,6 +27,9 @@ public class RecipeIngredientConfiguration
 		builder.Property(x => x.Notes)
 			.HasMaxLength(500);
 
+		builder.Property(x => x.IsDeleted)
+			.HasDefaultValue(false);
+
 		builder.HasIndex(x => x.RecipeId);
 	}
 }

@@ -1,7 +1,9 @@
 using CulinaryBlog.Application.Common.Exceptions;
 using CulinaryBlog.Application.Common.Interfaces;
+using CulinaryBlog.Application.DTOs.Recipes;
 using CulinaryBlog.Application.Features.Recipes.Commands;
 using CulinaryBlog.Application.Features.Recipes.Commands.UploadRecipeImage;
+using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipeBySlug;
 using CulinaryBlog.Application.Features.Recipes.Queries.GetRecipes;
 using CulinaryBlog.Domain.Entities;
 using CulinaryBlog.Domain.Enums;
@@ -13,6 +15,47 @@ namespace CulinaryBlog.Application.Tests;
 
 public sealed class RegistrationAndImageUploadTests
 {
+    [Fact]
+    public async Task CreateRecipe_SavesNutritionAndStringQuantitiesWithDraftStatus()
+    {
+        var userId = Guid.NewGuid();
+        var existing = CreateRecipe(Guid.NewGuid());
+        var repository = new FakeRecipeRepository(existing);
+        var unitOfWork = new FakeUnitOfWork(repository);
+        var handler = new RecipeCommandHandler(
+            repository,
+            new FakeCategoryStore(),
+            repository,
+            unitOfWork,
+            new FakeCurrentUser(userId),
+            new FakeImageCleanupJobScheduler(),
+            NullLogger<RecipeCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new CreateRecipeCommand(
+                "Phở bò",
+                "Nước dùng thơm, thịt bò mềm.",
+                "Nêm nếm vừa khẩu vị.",
+                existing.CategoryId,
+                30,
+                180,
+                4,
+                DifficultyLevel.Medium,
+                new RecipeNutritionDto(350, 22, 40, 10, 3, 900),
+                [new RecipeIngredientInput("Bánh phở", "1/2", "kg", null)],
+                [new RecipeStepInput("Nấu nước dùng", "Ninh xương.", 180, null)]),
+            CancellationToken.None);
+
+        var created = Assert.IsType<Recipe>(repository.AddedRecipe);
+        Assert.Equal("pho-bo", result.Slug);
+        Assert.Equal(RecipeStatus.Draft, created.Status);
+        Assert.Equal(userId, created.AuthorId);
+        Assert.Equal(350, created.Nutrition?.Calories);
+        Assert.Equal("1/2", Assert.Single(created.Ingredients).Quantity);
+        Assert.Equal(1, Assert.Single(created.Steps).StepNumber);
+        Assert.Equal(1, unitOfWork.SaveCount);
+    }
+
     [Fact]
     public async Task UploadImage_FirstValidImageBecomesPrimary()
     {
@@ -70,6 +113,61 @@ public sealed class RegistrationAndImageUploadTests
     }
 
     [Fact]
+    public async Task UploadImage_RejectsMagicBytesThatDoNotMatchMimeType()
+    {
+        var userId = Guid.NewGuid();
+        var handler = new UploadRecipeImageCommandHandler(
+            new FakeUnitOfWork(
+                new FakeRecipeRepository(CreateRecipe(userId))),
+            new FakeCurrentUser(userId),
+            new FakeFileStorageService(),
+            new FakeImageResizeJobScheduler(),
+            NullLogger<UploadRecipeImageCommandHandler>.Instance);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            handler.Handle(
+                new UploadRecipeImageCommand(
+                    Guid.NewGuid(),
+                    ValidPngBytes(),
+                    "image/jpeg",
+                    null,
+                    null),
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UploadImage_RejectsFilesLargerThanFiveMegabytes()
+    {
+        var userId = Guid.NewGuid();
+        var storage = new FakeFileStorageService();
+        var handler = new UploadRecipeImageCommandHandler(
+            new FakeUnitOfWork(
+                new FakeRecipeRepository(CreateRecipe(userId))),
+            new FakeCurrentUser(userId),
+            storage,
+            new FakeImageResizeJobScheduler(),
+            NullLogger<UploadRecipeImageCommandHandler>.Instance);
+        var content = new byte[5 * 1024 * 1024 + 1];
+        content[0] = 0x89;
+        content[1] = 0x50;
+        content[2] = 0x4E;
+        content[3] = 0x47;
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            handler.Handle(
+                new UploadRecipeImageCommand(
+                    Guid.NewGuid(),
+                    content,
+                    "image/png",
+                    null,
+                    null),
+                CancellationToken.None));
+
+        Assert.Contains("5 MB", exception.Message);
+        Assert.Equal(0, storage.UploadCount);
+    }
+
+    [Fact]
     public async Task UploadImage_RejectsNonOwner()
     {
         var recipe = CreateRecipe(Guid.NewGuid());
@@ -89,6 +187,31 @@ public sealed class RegistrationAndImageUploadTests
                     null,
                     null),
                 CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UploadImage_AdminCanManageAnotherAuthorsDraft()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        var storage = new FakeFileStorageService();
+        var handler = new UploadRecipeImageCommandHandler(
+            new FakeUnitOfWork(new FakeRecipeRepository(recipe)),
+            new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true),
+            storage,
+            new FakeImageResizeJobScheduler(),
+            NullLogger<UploadRecipeImageCommandHandler>.Instance);
+
+        var image = await handler.Handle(
+            new UploadRecipeImageCommand(
+                recipe.Id,
+                ValidPngBytes(),
+                "image/png",
+                null,
+                null),
+            CancellationToken.None);
+
+        Assert.True(image.IsPrimary);
+        Assert.Equal(1, storage.UploadCount);
     }
 
     [Fact]
@@ -140,7 +263,7 @@ public sealed class RegistrationAndImageUploadTests
     }
 
     [Fact]
-    public async Task RecipeList_AdminDoesNotIncludeOtherAuthorsPrivateStatuses()
+    public async Task RecipeList_AdminIncludesAllStatuses()
     {
         var repository = new FakeRecipeRepository(
             CreateRecipe(Guid.NewGuid()));
@@ -159,7 +282,49 @@ public sealed class RegistrationAndImageUploadTests
                 "-createdAt"),
             CancellationToken.None);
 
-        Assert.False(repository.LastPagedIncludeAllStatuses);
+        Assert.True(repository.LastPagedIncludeAllStatuses);
+    }
+
+    [Fact]
+    public async Task RecipeDetail_AdminCanViewAnotherAuthorsDraft()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        recipe.Category = new Category
+        {
+            Id = recipe.CategoryId,
+            Name = "Main dishes",
+            Slug = "main-dishes"
+        };
+        var handler = new GetRecipeBySlugQueryHandler(
+            new FakeRecipeRepository(recipe),
+            new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true));
+
+        var result = await handler.Handle(
+            new GetRecipeBySlugQuery(recipe.Slug),
+            CancellationToken.None);
+
+        Assert.Equal(recipe.Id, result.Id);
+        Assert.Equal(RecipeStatus.Draft, result.Status);
+    }
+
+    [Fact]
+    public async Task RecipeDetail_GuestCannotViewDraft()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        recipe.Category = new Category
+        {
+            Id = recipe.CategoryId,
+            Name = "Main dishes",
+            Slug = "main-dishes"
+        };
+        var handler = new GetRecipeBySlugQueryHandler(
+            new FakeRecipeRepository(recipe),
+            new FakeCurrentUser(Guid.Empty, isAuthor: false, isAuthenticated: false));
+
+        await Assert.ThrowsAsync<ForbiddenException>(() =>
+            handler.Handle(
+                new GetRecipeBySlugQuery(recipe.Slug),
+                CancellationToken.None));
     }
 
     [Fact]
@@ -206,23 +371,80 @@ public sealed class RegistrationAndImageUploadTests
     }
 
     [Fact]
-    public async Task UpdateRecipe_RejectsAdminForAnotherAuthorsDraft()
+    public async Task UpdateRecipe_AllowsAdminToUpdateAnotherAuthorsDraft()
     {
         var recipe = CreateRecipe(Guid.NewGuid());
         var repository = new FakeRecipeRepository(recipe);
+        var unitOfWork = new FakeUnitOfWork(repository);
+        var handler = new RecipeCommandHandler(
+            repository,
+            new FakeCategoryStore(),
+            repository,
+            unitOfWork,
+            new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true),
+            new FakeImageCleanupJobScheduler(),
+            NullLogger<RecipeCommandHandler>.Instance);
+
+        await handler.Handle(
+            UpdateCommand(recipe, recipe.RowVersion),
+            CancellationToken.None);
+
+        Assert.Equal(1, unitOfWork.SaveCount);
+    }
+
+    [Fact]
+    public async Task UpdateRecipe_ReplacesNutritionWhenIncluded()
+    {
+        var ownerId = Guid.NewGuid();
+        var recipe = CreateRecipe(ownerId);
+        recipe.Nutrition = new RecipeNutrition { Calories = 100 };
+        var repository = new FakeRecipeRepository(recipe);
+        var handler = CreateRecipeCommandHandler(
+            repository,
+            new FakeUnitOfWork(repository),
+            ownerId);
+
+        await handler.Handle(
+            UpdateCommand(
+                recipe,
+                recipe.RowVersion,
+                new RecipeNutritionDto(250, 12, 30, 8, 4, 500)),
+            CancellationToken.None);
+
+        Assert.Equal(250, recipe.Nutrition?.Calories);
+        Assert.Equal(12, recipe.Nutrition?.Protein);
+    }
+
+    [Fact]
+    public async Task DeleteRecipe_AdminSoftDeletesRecipeAndRelatedRecords()
+    {
+        var recipe = CreateRecipe(Guid.NewGuid());
+        var ingredient = new RecipeIngredient { Id = Guid.NewGuid(), Name = "Rice" };
+        var step = new RecipeStep { Id = Guid.NewGuid(), StepNumber = 1, Description = "Cook." };
+        var image = new RecipeImage { Id = Guid.NewGuid(), OriginalUrl = "/uploads/rice.png" };
+        recipe.Ingredients.Add(ingredient);
+        recipe.Steps.Add(step);
+        recipe.Images.Add(image);
+        var repository = new FakeRecipeRepository(recipe);
+        var cleanupJobs = new FakeImageCleanupJobScheduler();
         var handler = new RecipeCommandHandler(
             repository,
             new FakeCategoryStore(),
             repository,
             new FakeUnitOfWork(repository),
             new FakeCurrentUser(Guid.NewGuid(), isAuthor: false, isAdmin: true),
-            new FakeImageCleanupJobScheduler(),
+            cleanupJobs,
             NullLogger<RecipeCommandHandler>.Instance);
 
-        await Assert.ThrowsAsync<ForbiddenException>(() =>
-            handler.Handle(
-                UpdateCommand(recipe, recipe.RowVersion),
-                CancellationToken.None));
+        await handler.Handle(
+            new DeleteRecipeCommand(recipe.Id),
+            CancellationToken.None);
+
+        Assert.True(recipe.IsDeleted);
+        Assert.True(ingredient.IsDeleted);
+        Assert.True(step.IsDeleted);
+        Assert.True(image.IsDeleted);
+        Assert.Empty(cleanupJobs.EnqueuedFileUrls);
     }
 
     [Fact]
@@ -274,6 +496,42 @@ public sealed class RegistrationAndImageUploadTests
     }
 
     [Fact]
+    public async Task IngredientUpdateAndDelete_PreserveStringQuantity()
+    {
+        var ownerId = Guid.NewGuid();
+        var recipe = CreateRecipe(ownerId);
+        var ingredient = new RecipeIngredient
+        {
+            Id = Guid.NewGuid(),
+            Name = "Flour",
+            Quantity = "1",
+            Unit = "cup"
+        };
+        recipe.Ingredients.Add(ingredient);
+        var repository = new FakeRecipeRepository(recipe);
+        var unitOfWork = new FakeUnitOfWork(repository);
+        var handler = CreateRecipeCommandHandler(repository, unitOfWork, ownerId);
+
+        await handler.Handle(
+            new UpdateRecipeIngredientCommand(
+                recipe.Id,
+                ingredient.Id,
+                "Flour",
+                "1.5",
+                "cup",
+                null),
+            CancellationToken.None);
+        Assert.Equal("1.5", ingredient.Quantity);
+
+        await handler.Handle(
+            new DeleteRecipeIngredientCommand(recipe.Id, ingredient.Id),
+            CancellationToken.None);
+
+        Assert.Empty(recipe.Ingredients);
+        Assert.Equal(2, unitOfWork.SaveCount);
+    }
+
+    [Fact]
     public async Task AddStep_RenumbersStepsContiguously()
     {
         var ownerId = Guid.NewGuid();
@@ -305,6 +563,42 @@ public sealed class RegistrationAndImageUploadTests
             new[] { 1, 2 },
             recipe.Steps.OrderBy(step => step.StepNumber)
                 .Select(step => step.StepNumber));
+    }
+
+    [Fact]
+    public async Task DeleteStep_RenumbersRemainingStepsToPositiveConsecutiveNumbers()
+    {
+        var ownerId = Guid.NewGuid();
+        var recipe = CreateRecipe(ownerId);
+        var steps = Enumerable.Range(1, 3)
+            .Select(number => new RecipeStep
+            {
+                Id = Guid.NewGuid(),
+                RecipeId = recipe.Id,
+                StepNumber = number,
+                Description = $"Step {number}."
+            })
+            .ToArray();
+        foreach (var step in steps)
+        {
+            recipe.Steps.Add(step);
+        }
+
+        var repository = new FakeRecipeRepository(recipe);
+        var handler = CreateRecipeCommandHandler(
+            repository,
+            new FakeUnitOfWork(repository),
+            ownerId);
+
+        await handler.Handle(
+            new DeleteRecipeStepCommand(recipe.Id, steps[1].Id),
+            CancellationToken.None);
+
+        Assert.Equal(
+            new[] { 1, 2 },
+            recipe.Steps.OrderBy(step => step.StepNumber)
+                .Select(step => step.StepNumber));
+        Assert.All(recipe.Steps, step => Assert.True(step.StepNumber > 0));
     }
 
     [Fact]
@@ -415,7 +709,7 @@ public sealed class RegistrationAndImageUploadTests
 
         Assert.DoesNotContain(primary, recipe.Images);
         Assert.True(replacement.IsPrimary);
-        Assert.Equal(1, unitOfWork.SaveCount);
+        Assert.Equal(3, unitOfWork.SaveCount);
         Assert.Equal(
             new[]
             {
@@ -424,6 +718,43 @@ public sealed class RegistrationAndImageUploadTests
                 primary.ThumbnailUrl
             },
             cleanupJobs.EnqueuedFileUrls);
+    }
+
+    [Fact]
+    public async Task SetPrimaryImage_PromotesRequestedImageWithoutClearingItsAltText()
+    {
+        var ownerId = Guid.NewGuid();
+        var recipe = CreateRecipe(ownerId);
+        var primary = new RecipeImage
+        {
+            Id = Guid.NewGuid(),
+            RecipeId = recipe.Id,
+            OriginalUrl = "/uploads/primary.png",
+            IsPrimary = true,
+            AltText = "Primary"
+        };
+        var replacement = new RecipeImage
+        {
+            Id = Guid.NewGuid(),
+            RecipeId = recipe.Id,
+            OriginalUrl = "/uploads/replacement.png",
+            IsPrimary = false,
+            AltText = "Replacement"
+        };
+        recipe.Images.Add(primary);
+        recipe.Images.Add(replacement);
+        var repository = new FakeRecipeRepository(recipe);
+        var unitOfWork = new FakeUnitOfWork(repository);
+        var handler = CreateRecipeCommandHandler(repository, unitOfWork, ownerId);
+
+        await handler.Handle(
+            new UpdateRecipeImageCommand(recipe.Id, replacement.Id, null, true),
+            CancellationToken.None);
+
+        Assert.False(primary.IsPrimary);
+        Assert.True(replacement.IsPrimary);
+        Assert.Equal("Replacement", replacement.AltText);
+        Assert.Equal(2, unitOfWork.SaveCount);
     }
 
     private static RecipeCommandHandler CreateRecipeCommandHandler(
@@ -442,7 +773,8 @@ public sealed class RegistrationAndImageUploadTests
 
     private static UpdateRecipeCommand UpdateCommand(
         Recipe recipe,
-        uint rowVersion) =>
+        uint rowVersion,
+        RecipeNutritionDto? nutrition = null) =>
         new(
             recipe.Id,
             "Updated recipe",
@@ -454,7 +786,7 @@ public sealed class RegistrationAndImageUploadTests
             2,
             DifficultyLevel.Easy,
             rowVersion,
-            null);
+            nutrition);
 
     private static Recipe CreateRecipe(Guid authorId) =>
         new()
@@ -476,10 +808,11 @@ public sealed class RegistrationAndImageUploadTests
     private sealed class FakeCurrentUser(
         Guid userId,
         bool isAuthor = true,
-        bool isAdmin = false) : ICurrentUser
+        bool isAdmin = false,
+        bool isAuthenticated = true) : ICurrentUser
     {
         public Guid? UserId { get; } = userId;
-        public bool IsAuthenticated => true;
+        public bool IsAuthenticated { get; } = isAuthenticated;
         public bool IsAuthor { get; } = isAuthor;
         public bool IsAdmin { get; } = isAdmin;
     }
@@ -579,6 +912,7 @@ public sealed class RegistrationAndImageUploadTests
     {
         public Guid? LastPagedCurrentUserId { get; private set; }
         public bool LastPagedIncludeAllStatuses { get; private set; }
+        public Recipe? AddedRecipe { get; private set; }
 
         public Task<Recipe?> GetByIdWithImagesAsync(
             Guid id,
@@ -601,8 +935,11 @@ public sealed class RegistrationAndImageUploadTests
 
         public Task AddAsync(
             Recipe entity,
-            CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+            CancellationToken cancellationToken = default)
+        {
+            AddedRecipe = entity;
+            return Task.CompletedTask;
+        }
 
         public void Update(Recipe entity)
         {
@@ -619,7 +956,7 @@ public sealed class RegistrationAndImageUploadTests
         public Task<Recipe?> GetBySlugWithDetailsAsync(
             string slug,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<Recipe?>(null);
+            Task.FromResult(slug == recipe.Slug ? recipe : null);
 
         public Task<ApplicationUser?> GetAuthorByIdAsync(
             Guid authorId,

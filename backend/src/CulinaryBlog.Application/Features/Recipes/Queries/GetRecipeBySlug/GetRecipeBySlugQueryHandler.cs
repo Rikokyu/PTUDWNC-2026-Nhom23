@@ -47,8 +47,10 @@ public sealed class GetRecipeBySlugQueryHandler
                 && recipe.AuthorId.HasValue
                 && recipe.AuthorId.Value ==
                    _currentUser.UserId.Value;
+            var canViewPrivateRecipe = _currentUser.IsAuthenticated
+                && (isOwner || _currentUser.IsAdmin);
 
-            if (!isOwner)
+            if (!canViewPrivateRecipe)
             {
                 throw new ForbiddenException(
                     "You do not have permission to view this recipe.");
@@ -104,7 +106,6 @@ public sealed class GetRecipeBySlugQueryHandler
                 new RecipeAuthorDto(
                     recipe.Author.Id,
                     recipe.Author.DisplayName,
-                    recipe.Author.Email,
                     recipe.Author.AvatarUrl,
                     recipe.Author.Bio);
         }

@@ -23,15 +23,8 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
 
         context.Response.Headers[HeaderName] = correlationId;
 
-        var userId = context.User.Identity?.IsAuthenticated == true
-            ? context.User.FindFirst(
-                    System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-              ?? context.User.FindFirst("sub")?.Value
-            : null;
-
         using (LogContext.PushProperty("CorrelationId", correlationId))
         using (LogContext.PushProperty("RequestPath", context.Request.Path.Value))
-        using (LogContext.PushProperty("UserId", userId))
         using (LogContext.PushProperty("TraceId", Activity.Current?.TraceId.ToString()))
         {
             await next(context);

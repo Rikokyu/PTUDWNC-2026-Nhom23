@@ -41,7 +41,9 @@ public sealed class GetRecipesQueryHandler
                 _currentUser.IsAuthenticated,
                 _currentUser.IsAdmin,
                 request.OwnRecipesOnly,
-                request.IncludeAllStatuses,
+                _currentUser.IsAdmin
+                    && !request.OwnRecipesOnly
+                    || request.IncludeAllStatuses,
                 cancellationToken,
                 request.MinServings);
 

@@ -40,41 +40,41 @@ Chạy `npm run dev` để khởi động môi trường cục bộ và seed qua
 | ----------- | --------------------------------- | ------- | ------- | -------------------------------------------------- | --------------- |
 | **2312610** | Xem Danh sách Công thức           | 1       | 100%    | Hoàn thành API                                     | Hoàn thành      |
 |             | Xem Chi tiết Công thức            | 1       | 100%    | Hoàn thành API                                     | Hoàn thành      |
-|             | Tạo Công thức Nấu ăn Mới          | 2       |         | Tạo công thức ở trạng thái Draft                   |                 |
-|             | Cập nhật Công thức                | 3       |         | Cập nhật có phân quyền và xử lý concurrency        |                 |
-|             | Xuất bản / Hủy Xuất bản Công thức | 3       |         | Chuyển đổi trạng thái Published/Draft              |                 |
-|             | Lưu trữ Công thức (Archive)       | 4       |         | Chuyển công thức sang trạng thái Archived          |                 |
-|             | Xóa Công thức                     | 4       |         | Xóa công thức và dữ liệu liên quan                 |                 |
-|             | Quản lý Ảnh Công thức             | 5       |         | Tải lên, đặt ảnh chính và xóa ảnh công thức        |                 |
-|             | Quản lý Nguyên liệu (CRUD)        | 5       |         | Hoàn thành CRUD nguyên liệu                        |                 |
-|             | Quản lý Các bước Thực hiện (CRUD) | 6       |         | CRUD bước nấu và tự động đánh lại số thứ tự        |                 |
+|             | Tạo Công thức Nấu ăn Mới          | 2       | 100%    | Tạo công thức ở trạng thái Draft                   | Hoàn thành      |
+|             | Cập nhật Công thức                | 3       | 100%    | Cập nhật có phân quyền và xử lý concurrency        | Hoàn thành      |
+|             | Xuất bản / Hủy Xuất bản Công thức | 3       | 100%    | Chuyển đổi trạng thái Published/Draft              | Hoàn thành      |
+|             | Lưu trữ Công thức (Archive)       | 4       | 100%    | Chuyển công thức sang trạng thái Archived          | Hoàn thành      |
+|             | Xóa Công thức                     | 4       | 100%    | Xóa công thức và dữ liệu liên quan                 | Hoàn thành      |
+|             | Quản lý Ảnh Công thức             | 5       | 100%    | Tải lên, đặt ảnh chính và xóa ảnh công thức        | Hoàn thành      |
+|             | Quản lý Nguyên liệu (CRUD)        | 5       | 100%    | Hoàn thành CRUD nguyên liệu                        | Hoàn thành      |
+|             | Quản lý Các bước Thực hiện (CRUD) | 6       | 100%    | CRUD bước nấu và tự động đánh lại số thứ tự        | Hoàn thành      |
 | --- | --- | --- | --- | --- | --- |
-| **2312569** | Welcome Email Job                 | 1       |         | Thiết lập job gửi email chào mừng bằng Hangfire    |                 |
-|             | Image Resize / Thumbnail Job      | 2       |  85%    | Tạo thumbnail và resize ảnh                        |                 |
-|             | Sitemap Generation Job            | 3       |         | Tạo sitemap tự động bằng Hangfire                  |                 |
-|             | Xem Danh sách Danh mục            | 4       |  80%    | Hoàn thành API xem danh sách danh mục              |                 |
-|             | Xem Chi tiết Danh mục & Công thức | 4       |  80%    | Xem chi tiết danh mục và danh sách công thức       |                 |
-|             | Tạo Danh mục Mới [Admin]          | 5       |  80%    | Admin tạo được danh mục mới                        |                 |
-|             | Cập nhật Danh mục [Admin]         | 5       |         | Admin cập nhật được danh mục                       |                 |
-|             | Xóa Danh mục [Admin]              | 6       |         | Admin xóa danh mục khi kiểm tra điều kiện dữ liệu  |                 |
+| **2312569** | Welcome Email Job                 | 1       | 100%    | Thiết lập job gửi email chào mừng bằng Hangfire    | Hoàn thành      |
+|             | Image Resize / Thumbnail Job      | 2       | 100%    | Tạo thumbnail và resize ảnh                        | Hoàn thành      |
+|             | Sitemap Generation Job            | 3       | 100%    | Tạo sitemap tự động bằng Hangfire                  | Hoàn thành      |
+|             | Xem Danh sách Danh mục            | 4       | 100%    | Hoàn thành API xem danh sách danh mục              | Hoàn thành      |
+|             | Xem Chi tiết Danh mục & Công thức | 4       | 100%    | Xem chi tiết danh mục và danh sách công thức       | Hoàn thành      |
+|             | Tạo Danh mục Mới [Admin]          | 5       | 100%    | Admin tạo được danh mục mới                        | Hoàn thành      |
+|             | Cập nhật Danh mục [Admin]         | 5       | 100%    | Admin cập nhật được danh mục                       | Hoàn thành      |
+|             | Xóa Danh mục [Admin]              | 6       | 100%    | Admin xóa danh mục khi kiểm tra điều kiện dữ liệu  | Hoàn thành      |
 | --- | --- | --- | --- | --- | --- |
-| **2312789** | Health Check Endpoints            | 1       |         | Thiết lập Health Check cho hệ thống                |                 |
-|             | Structured Logging                | 2       |         | Thiết lập structured logging cho backend           |                 |
-|             | Upload File lên MinIO             | 2       |         | Tích hợp chức năng tải file lên MinIO              |                 |
-|             | Xóa File khỏi MinIO               | 3       |         | Hoàn thành chức năng xóa file khỏi MinIO           |                 |
-|             | Tìm kiếm Toàn văn bản (FTS)       | 4       |         | Tìm kiếm toàn văn bằng PostgreSQL Full-Text Search |                 |
-|             | Bộ lọc Công thức nâng cao         | 5       |         | Hoàn thành bộ lọc công thức                        |                 |
-|             | Sắp xếp Kết quả                   | 5       |         | Hoàn thành sắp xếp kết quả tìm kiếm                |                 |
-|             | Phân trang Offset-based           | 6       |         | Phân trang offset-based cho kết quả tìm kiếm       |                 |
-|             | Distributed Tracing & Metrics     | 7       |         | Hoàn thiện tracing và metrics bằng OpenTelemetry   |                 |
+| **2312789** | Health Check Endpoints            | 1       | 100%    | Thiết lập Health Check cho hệ thống                | Hoàn thành      |
+|             | Structured Logging                | 2       | 100%    | Thiết lập structured logging cho backend           | Hoàn thành      |
+|             | Upload File lên MinIO             | 2       | 100%    | Tích hợp chức năng tải file lên MinIO              | Hoàn thành      |
+|             | Xóa File khỏi MinIO               | 3       | 100%    | Hoàn thành chức năng xóa file khỏi MinIO           | Hoàn thành      |
+|             | Tìm kiếm Toàn văn bản (FTS)       | 4       | 100%    | Tìm kiếm toàn văn bằng PostgreSQL Full-Text Search | Hoàn thành      |
+|             | Bộ lọc Công thức nâng cao         | 5       | 100%    | Hoàn thành bộ lọc công thức                        | Hoàn thành      |
+|             | Sắp xếp Kết quả                   | 5       | 100%    | Hoàn thành sắp xếp kết quả tìm kiếm                | Hoàn thành      |
+|             | Phân trang Offset-based           | 6       | 100%    | Phân trang offset-based cho kết quả tìm kiếm       | Hoàn thành      |
+|             | Distributed Tracing & Metrics     | 7       | 100%    | Hoàn thiện tracing và metrics bằng OpenTelemetry   | Hoàn thành      |
 | --- | --- | --- | --- | --- | --- |
-| **2312622** | Đăng ký Tài khoản                 | 1       |         | Khởi tạo chức năng đăng ký tài khoản               |                 |
-|             | Đăng nhập Email/Mật khẩu          | 2       |         | Hoàn thành đăng nhập bằng Email/Mật khẩu           |                 |
-|             | Đăng xuất                         | 3       |         | Hoàn thành đăng xuất và thu hồi token              |                 |
-|             | Xem Hồ sơ Cá nhân                 | 4       |         | Người dùng xem được thông tin cá nhân              |                 |
-|             | Cập nhật Hồ sơ Cá nhân            | 5       |         | Hoàn thành cập nhật thông tin cá nhân              |                 |
-|             | Đăng nhập Google OAuth 2.0        | 6       |         | Hoàn thành đăng nhập Google OAuth 2.0              |                 |
-|             | Làm mới Access Token              | 7       |         | Hoàn thành cơ chế Refresh Token                    |                 |
+| **2312622** | Đăng ký Tài khoản                 | 1       | 100%    | Khởi tạo chức năng đăng ký tài khoản               | Hoàn thành      |
+|             | Đăng nhập Email/Mật khẩu          | 2       | 100%    | Hoàn thành đăng nhập bằng Email/Mật khẩu           | Hoàn thành      |
+|             | Đăng xuất                         | 3       | 100%    | Hoàn thành đăng xuất và thu hồi token              | Hoàn thành      |
+|             | Xem Hồ sơ Cá nhân                 | 4       | 100%    | Người dùng xem được thông tin cá nhân              | Hoàn thành      |
+|             | Cập nhật Hồ sơ Cá nhân            | 5       | 100%    | Hoàn thành cập nhật thông tin cá nhân              | Hoàn thành      |
+|             | Đăng nhập Google OAuth 2.0        | 6       | 100%    | Hoàn thành đăng nhập Google OAuth 2.0              | Hoàn thành      |
+|             | Làm mới Access Token              | 7       | 100%    | Hoàn thành cơ chế Refresh Token                    | Hoàn thành      |
 
 ### Tuần 1 – Nền tảng
 

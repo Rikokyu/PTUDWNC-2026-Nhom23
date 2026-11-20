@@ -25,6 +25,7 @@ public sealed class CategoryPaginationTests : IAsyncLifetime
 {
     private WebApplication _app = null!;
     private HttpClient _client = null!;
+    private StubCategoryHandler _handler = null!;
 
     public async Task InitializeAsync()
     {
@@ -49,6 +50,8 @@ public sealed class CategoryPaginationTests : IAsyncLifetime
             }));
         builder.Services.AddMediatR(config =>
             config.RegisterServicesFromAssemblyContaining<CategoryPaginationTests>());
+        _handler = new StubCategoryHandler();
+        builder.Services.AddSingleton<IRequestHandler<GetCategoryBySlugQuery, CategoryDetailDto>>(_handler);
         _app = builder.Build();
         _app.UseMiddleware<GlobalExceptionMiddleware>();
         _app.UseRouting();
@@ -96,6 +99,28 @@ public sealed class CategoryPaginationTests : IAsyncLifetime
     }
 
     [Theory]
+    [InlineData("", "-createdAt")]
+    [InlineData("?sortBy=title&sortOrder=asc", "title")]
+    [InlineData("?sortBy=cookTime&sortOrder=desc", "-cookTime")]
+    public async Task SortParameters_ReachesHandler(
+        string query, string expectedSort)
+    {
+        using var response = await _client.GetAsync("/api/v1/categories/soup" + query);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expectedSort, _handler.Last?.Sort);
+    }
+
+    [Theory]
+    [InlineData("?sortBy=invalid")]
+    [InlineData("?sortOrder=invalid")]
+    [InlineData("?sortBy=title&sortBy=cookTime")]
+    public async Task InvalidSort_ReturnsValidationProblem(string query)
+    {
+        using var response = await _client.GetAsync("/api/v1/categories/soup" + query);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("?page=1&pageSize=12")]
     public async Task MissingCategory_ReturnsNotFound(string query)
@@ -114,11 +139,14 @@ public sealed class CategoryPaginationTests : IAsyncLifetime
     {
         public Task<CategoryDetailDto> Handle(GetCategoryBySlugQuery request, CancellationToken cancellationToken)
         {
+            Last = request;
             if (request.Slug == "missing")
                 throw new NotFoundException("Category not found.");
             return Task.FromResult(new CategoryDetailDto(
                 new CategoryDto(Guid.Empty, "Soup", request.Slug, null, null, 0, 0),
                 new PagedResult<RecipeSummaryDto>([], 0, request.Page, request.PageSize)));
         }
+
+        public GetCategoryBySlugQuery? Last { get; private set; }
     }
 }

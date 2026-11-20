@@ -21,6 +21,7 @@ export function Footer() {
             <Link href="/recipes" className="block text-sm transition-colors hover:text-[#e5a981]">Tất cả công thức</Link>
             <Link href="/categories" className="block text-sm transition-colors hover:text-[#e5a981]">Danh mục món ăn</Link>
             <Link href="/saved" className="block text-sm transition-colors hover:text-[#e5a981]">Công thức đã lưu</Link>
+            <Link href="/image-credits" className="block text-sm transition-colors hover:text-[#e5a981]">Ghi công hình ảnh</Link>
           </nav>
           <div className="space-y-4">
             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">Chia sẻ</h2>

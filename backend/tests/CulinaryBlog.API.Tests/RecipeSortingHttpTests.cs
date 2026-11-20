@@ -164,12 +164,13 @@ public sealed class RecipeSortingHttpTests : IAsyncLifetime
     {
         var category = Guid.NewGuid();
         using var response = await _client.GetAsync(
-            $"/api/v1/recipes/search?q=mi&categoryId={category}&difficulty=Easy&maxCookTime=10&minServings=4");
+            $"/api/v1/recipes/search?q=mi&categoryId={category}&difficulty=Easy&maxCookTime=10&minServings=4&sortBy=title&sortOrder=asc");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(category, _search.Last?.CategoryId);
         Assert.Equal(4, _search.Last?.MinServings);
         Assert.Equal(10, _search.Last?.MaxCookTime);
         Assert.Equal(CulinaryBlog.Domain.Enums.DifficultyLevel.Easy, _search.Last?.Difficulty);
+        Assert.Equal("title", _search.Last?.Sort);
     }
 
     [Fact]
@@ -178,6 +179,18 @@ public sealed class RecipeSortingHttpTests : IAsyncLifetime
         using var response = await _client.GetAsync("/api/v1/recipes/search?q=mi");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(12, _search.Last?.PageSize);
+        Assert.Equal("-createdAt", _search.Last?.Sort);
+    }
+
+    [Theory]
+    [InlineData("&sortBy=invalid")]
+    [InlineData("&sortOrder=invalid")]
+    [InlineData("&sortBy=title&sortBy=cookTime")]
+    [InlineData("&sort=title")]
+    public async Task Search_InvalidSort_Returns422(string query)
+    {
+        using var response = await _client.GetAsync("/api/v1/recipes/search?q=mi" + query);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
 
     public sealed class SearchStubHandler : IRequestHandler<SearchRecipesQuery, PagedResult<RecipeSummaryDto>>

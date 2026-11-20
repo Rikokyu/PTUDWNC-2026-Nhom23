@@ -6,5 +6,6 @@ namespace CulinaryBlog.Application.Features.Categories.Queries.GetCategoryBySlug
 public sealed record GetCategoryBySlugQuery(
     string Slug,
     int Page,
-    int PageSize)
+    int PageSize,
+    string Sort = "-createdAt")
     : IRequest<CategoryDetailDto>;

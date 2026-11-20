@@ -107,31 +107,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         }
 
         // Sorting
-        query = sort switch
-        {
-            "createdAt" =>
-                query.OrderBy(x => x.CreatedAt),
-
-            "-createdAt" =>
-                query.OrderByDescending(x => x.CreatedAt),
-
-            "title" =>
-                query.OrderBy(x => x.Title),
-
-            "-title" =>
-                query.OrderByDescending(x => x.Title),
-
-            "cookTime" =>
-                query.OrderBy(x => x.CookTimeMinutes),
-
-            "-cookTime" =>
-                query.OrderByDescending(x =>
-                    x.CookTimeMinutes),
-
-            _ =>
-                query.OrderByDescending(x =>
-                    x.CreatedAt)
-        };
+        query = ApplySort(query, sort);
 
         var totalCount =
             await query.CountAsync(cancellationToken);
@@ -154,7 +130,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             Guid? currentUserId,
             bool isAuthenticated,
             bool isAdmin,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            string sort = "-createdAt")
     {
         var query = _context.Recipes
             .AsNoTracking()
@@ -171,8 +148,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             .Include(recipe => recipe.Images);
 
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query
-            .OrderByDescending(recipe => recipe.CreatedAt)
+        var items = await ApplySort(query, sort)
             .ThenBy(recipe => recipe.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -204,7 +180,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             Guid? categoryId = null,
             DifficultyLevel? difficulty = null,
             int? maxCookTime = null,
-            int? minServings = null)
+            int? minServings = null,
+            string sort = "-createdAt")
     {
         var tsQuery = VietnameseSearchQuery.Build(searchTerm);
         if (tsQuery.Length == 0) return (Array.Empty<Recipe>(), 0);
@@ -228,10 +205,8 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             : query.Where(recipe => EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
                 .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)));
         var totalCount = await query.CountAsync(cancellationToken);
-        var ranked = await query
-            .OrderByDescending(recipe => EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
-                .Rank(EF.Functions.ToTsQuery("vietnamese", tsQuery)))
-            .ThenByDescending(recipe => recipe.CreatedAt).ThenBy(recipe => recipe.Id)
+        var ranked = await ApplySort(query, sort)
+            .ThenBy(recipe => recipe.Id)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(recipe => new { Recipe = recipe,
                 Score = EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
@@ -241,6 +216,22 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         var items = ranked.Select(row => row.Recipe).ToList();
 
         return (items, totalCount);
+    }
+
+    private static IOrderedQueryable<Recipe> ApplySort(
+        IQueryable<Recipe> query,
+        string sort)
+    {
+        return sort switch
+        {
+            "createdAt" => query.OrderBy(recipe => recipe.CreatedAt),
+            "-createdAt" => query.OrderByDescending(recipe => recipe.CreatedAt),
+            "title" => query.OrderBy(recipe => recipe.Title),
+            "-title" => query.OrderByDescending(recipe => recipe.Title),
+            "cookTime" => query.OrderBy(recipe => recipe.CookTimeMinutes),
+            "-cookTime" => query.OrderByDescending(recipe => recipe.CookTimeMinutes),
+            _ => query.OrderByDescending(recipe => recipe.CreatedAt)
+        };
     }
 
     public async Task<Recipe?> GetBySlugWithDetailsAsync(

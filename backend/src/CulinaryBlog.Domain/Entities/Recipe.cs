@@ -29,6 +29,8 @@ public class Recipe : BaseEntity
 
     public RecipeStatus Status { get; set; }
 
+    public DateTime? PublishedAt { get; set; }
+
     public bool IsDeleted { get; set; }
 
     public Guid CategoryId { get; set; }
@@ -70,6 +72,7 @@ public class Recipe : BaseEntity
         }
 
         Status = RecipeStatus.Published;
+        PublishedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -87,6 +90,7 @@ public class Recipe : BaseEntity
         }
 
         Status = RecipeStatus.Draft;
+        PublishedAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 

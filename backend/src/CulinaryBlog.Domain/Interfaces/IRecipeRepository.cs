@@ -30,7 +30,8 @@ public interface IRecipeRepository : IRepository<Recipe>
             Guid? currentUserId,
             bool isAuthenticated,
             bool isAdmin,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default,
+            string sort = "-createdAt");
 
     Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
         SearchPublishedAsync(
@@ -41,7 +42,8 @@ public interface IRecipeRepository : IRepository<Recipe>
             Guid? categoryId = null,
             DifficultyLevel? difficulty = null,
             int? maxCookTime = null,
-            int? minServings = null);
+            int? minServings = null,
+            string sort = "-createdAt");
 
     Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,

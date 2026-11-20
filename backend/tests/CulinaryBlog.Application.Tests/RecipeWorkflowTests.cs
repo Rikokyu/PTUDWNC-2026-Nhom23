@@ -26,6 +26,7 @@ public sealed class RecipeWorkflowTests
         recipe.Publish();
 
         Assert.Equal(RecipeStatus.Published, recipe.Status);
+        Assert.NotNull(recipe.PublishedAt);
         Assert.Empty(recipe.Ingredients);
     }
 
@@ -48,6 +49,18 @@ public sealed class RecipeWorkflowTests
 
         Assert.Equal(RecipeStatus.Published, published.Status);
         Assert.Equal(RecipeStatus.Draft, draft.Status);
+        Assert.Null(draft.PublishedAt);
+    }
+
+    [Fact]
+    public void Unpublish_ClearsPublishedAt()
+    {
+        var recipe = CreateRecipe(RecipeStatus.Published);
+        recipe.PublishedAt = DateTime.UtcNow;
+
+        recipe.Unpublish();
+
+        Assert.Null(recipe.PublishedAt);
     }
 
     [Fact]

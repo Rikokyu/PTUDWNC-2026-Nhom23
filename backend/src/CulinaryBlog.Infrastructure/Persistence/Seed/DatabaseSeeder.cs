@@ -27,7 +27,13 @@ public static class DatabaseSeeder
         await context.Database.OpenConnectionAsync(cancellationToken);
         try
         {
-            foreach (var fileName in new[] { "real-content.sql", "author-recipes.sql" })
+            foreach (var fileName in new[]
+                     {
+                         "real-content.sql",
+                         "author-recipes.sql",
+                         "additional-recipes.sql",
+                         "commons-photo-assignments.sql"
+                     })
             {
                 var resourceName =
                     $"CulinaryBlog.Infrastructure.Persistence.Seed.{fileName}";

@@ -191,6 +191,9 @@ namespace CulinaryBlog.Infrastructure.Persistence.Migrations
                     b.Property<int>("PrepTimeMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<uint>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -474,28 +477,29 @@ namespace CulinaryBlog.Infrastructure.Persistence.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<decimal?>("Calories")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)");
+                                .HasPrecision(8, 2)
+                                .HasColumnType("numeric(8,2)");
 
                             b1.Property<decimal?>("Carbs")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)");
+                                .HasPrecision(8, 2)
+                                .HasColumnType("numeric(8,2)")
+                                .HasColumnName("Nutrition_Carbohydrates");
 
                             b1.Property<decimal?>("Fat")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)");
+                                .HasPrecision(8, 2)
+                                .HasColumnType("numeric(8,2)");
 
                             b1.Property<decimal?>("Fiber")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)");
+                                .HasPrecision(8, 2)
+                                .HasColumnType("numeric(8,2)");
 
                             b1.Property<decimal?>("Protein")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)");
+                                .HasPrecision(8, 2)
+                                .HasColumnType("numeric(8,2)");
 
                             b1.Property<decimal?>("Sodium")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)");
+                                .HasPrecision(8, 2)
+                                .HasColumnType("numeric(8,2)");
 
                             b1.HasKey("RecipeId");
 

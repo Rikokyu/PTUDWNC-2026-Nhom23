@@ -92,6 +92,7 @@ public static class CategoryEndpoints
 
 		var page = ReadPaginationParameter(request, "page", 1);
 		var pageSize = ReadPaginationParameter(request, "pageSize", 12);
+		var sort = RecipeSortParameters.Read(request.Query);
 
 		if (page < 1)
 		{
@@ -109,7 +110,8 @@ public static class CategoryEndpoints
 			new GetCategoryBySlugQuery(
 				slug.Trim(),
 				page,
-				pageSize),
+				pageSize,
+				sort),
 			cancellationToken);
 
 		return Results.Ok(result);

@@ -76,22 +76,23 @@ public class RecipeConfiguration
             nutrition =>
             {
                 nutrition.Property(x => x.Calories)
-                    .HasPrecision(10, 2);
+                    .HasPrecision(8, 2);
 
                 nutrition.Property(x => x.Protein)
-                    .HasPrecision(10, 2);
+                    .HasPrecision(8, 2);
 
                 nutrition.Property(x => x.Carbs)
-                    .HasPrecision(10, 2);
+                    .HasColumnName("Nutrition_Carbohydrates")
+                    .HasPrecision(8, 2);
 
                 nutrition.Property(x => x.Fat)
-                    .HasPrecision(10, 2);
+                    .HasPrecision(8, 2);
 
                 nutrition.Property(x => x.Fiber)
-                    .HasPrecision(10, 2);
+                    .HasPrecision(8, 2);
 
                 nutrition.Property(x => x.Sodium)
-                    .HasPrecision(10, 2);
+                    .HasPrecision(8, 2);
             });
     }
 }

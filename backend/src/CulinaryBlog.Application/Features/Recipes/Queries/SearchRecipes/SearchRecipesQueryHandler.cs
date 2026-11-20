@@ -31,12 +31,15 @@ public sealed class SearchRecipesQueryHandler(
             || (request.Difficulty.HasValue && !Enum.IsDefined(request.Difficulty.Value)))
             throw new ValidationException("Invalid recipe search filters.");
 
+        if (request.Sort is not ("createdAt" or "-createdAt" or "title" or "-title" or "cookTime" or "-cookTime"))
+            throw new ValidationException("Invalid sort value.");
+
         var result = await recipes.SearchPublishedAsync(
             term,
             request.Page,
             request.PageSize,
             cancellationToken, request.CategoryId, request.Difficulty,
-            request.MaxCookTime, request.MinServings);
+            request.MaxCookTime, request.MinServings, request.Sort);
         var items = result.Items
             .Select(recipe => RecipeSummaryDto.FromRecipe(
                 recipe, recipe.SearchRelevanceScore))

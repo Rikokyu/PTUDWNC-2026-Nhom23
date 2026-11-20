@@ -264,7 +264,9 @@ app.MapApplicationEndpoints();
 
 if (builder.Configuration.GetValue("Hangfire:Enabled", true))
 {
-    RecurringJob.AddOrUpdate<SitemapGenerationJob>(
+    var recurringJobManager =
+        app.Services.GetRequiredService<IRecurringJobManager>();
+    recurringJobManager.AddOrUpdate<SitemapGenerationJob>(
         SitemapGenerationJob.RecurringJobId,
         job => job.GenerateAsync(CancellationToken.None),
         SitemapGenerationJob.CronExpression,

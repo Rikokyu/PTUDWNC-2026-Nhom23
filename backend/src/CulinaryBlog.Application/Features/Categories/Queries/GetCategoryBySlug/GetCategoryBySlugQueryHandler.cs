@@ -62,7 +62,8 @@ public sealed class GetCategoryBySlugQueryHandler
                 : null,
             _currentUser.IsAuthenticated,
             _currentUser.IsAdmin,
-            cancellationToken);
+            cancellationToken,
+            request.Sort);
 
         var recipeDtos = recipes.Items
             .Select(recipe => RecipeSummaryDto.FromRecipe(recipe))

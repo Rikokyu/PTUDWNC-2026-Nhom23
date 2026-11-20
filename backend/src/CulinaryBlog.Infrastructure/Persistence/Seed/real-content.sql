@@ -13,7 +13,11 @@ FROM jsonb_to_recordset($categories$[
   {"name":"Tráng miệng","slug":"trang-mieng","description":"Bánh, chè và các món ngọt.","image_url":"/images/dishes/che-dau-xanh-nuoc-cot-dua.webp","order_index":5},
   {"name":"Đồ uống","slug":"do-uong","description":"Thức uống nóng và lạnh.","image_url":null,"order_index":6},
   {"name":"Bữa sáng","slug":"bua-sang","description":"Món ăn cho một ngày mới.","image_url":"/images/dishes/chao-ga-hanh-gung.webp","order_index":7},
-  {"name":"Món nhanh","slug":"mon-nhanh","description":"Món đơn giản cho ngày bận rộn.","image_url":"/images/dishes/com-chien-trung.webp","order_index":8}
+  {"name":"Món nhanh","slug":"mon-nhanh","description":"Món đơn giản cho ngày bận rộn.","image_url":"/images/dishes/com-chien-trung.webp","order_index":8},
+  {"name":"Món nướng","slug":"mon-nuong","description":"Các món nướng thơm ngon, dễ thực hiện tại nhà.","image_url":"/images/dishes/bun-cha-ha-noi.webp","order_index":9},
+  {"name":"Hải sản","slug":"hai-san","description":"Món ăn từ cá, tôm, mực và các loại hải sản.","image_url":"/images/dishes/canh-chua-ca.webp","order_index":10},
+  {"name":"Món gà","slug":"mon-ga","description":"Công thức chế biến thịt gà đa dạng cho bữa cơm gia đình.","image_url":"/images/dishes/ga-hap-la-chanh.webp","order_index":11},
+  {"name":"Món nước","slug":"mon-nuoc","description":"Các món bún, mì và phở dùng cùng nước lèo đậm đà.","image_url":"/images/dishes/bun-bo-hue-gia-dinh.webp","order_index":12}
 ]$categories$::jsonb) AS category(name text, slug text, description text, image_url text, order_index integer)
 ON CONFLICT ("Slug") DO NOTHING;
 
@@ -110,8 +114,10 @@ SET "ImageUrl" = CASE category."Slug"
     WHEN 'mon-a' THEN '/images/dishes/admin-com-chien-hai-san.jpg'
     WHEN 'mon-au' THEN '/images/dishes/nui-xao-bo-rau-cu.webp'
     WHEN 'mon-nhanh' THEN '/images/dishes/com-chien-trung.webp'
+    WHEN 'do-uong' THEN NULL
     ELSE NULL
   END, "UpdatedAt" = now()
 WHERE category."Slug" IN ('mon-viet','mon-chay','trang-mieng','do-uong','bua-sang','mon-a','mon-au','mon-nhanh')
-  AND category."ImageUrl" = '/images/image 1.png';
+  AND (category."ImageUrl" = '/images/image 1.png'
+       OR category."ImageUrl" IS NULL);
 COMMIT;

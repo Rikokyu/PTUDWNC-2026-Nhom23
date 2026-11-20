@@ -11,4 +11,5 @@ public sealed record SearchRecipesQuery(
     Guid? CategoryId = null,
     CulinaryBlog.Domain.Enums.DifficultyLevel? Difficulty = null,
     int? MaxCookTime = null,
-    int? MinServings = null) : IRequest<PagedResult<RecipeSummaryDto>>;
+    int? MinServings = null,
+    string Sort = "-createdAt") : IRequest<PagedResult<RecipeSummaryDto>>;

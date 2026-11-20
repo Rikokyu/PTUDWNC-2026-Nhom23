@@ -143,7 +143,7 @@ ON CONFLICT ("Id") DO NOTHING;
 UPDATE "Recipes" AS recipe
 SET "Nutrition_Calories" = nutrition.calories,
     "Nutrition_Protein" = nutrition.protein,
-    "Nutrition_Carbs" = nutrition.carbs,
+    "Nutrition_Carbohydrates" = nutrition.carbs,
     "Nutrition_Fat" = nutrition.fat,
     "Nutrition_Fiber" = nutrition.fiber,
     "Nutrition_Sodium" = nutrition.sodium,
@@ -188,7 +188,7 @@ WHERE recipe."Slug" = nutrition.slug
   )
   AND recipe."Nutrition_Calories" IS NULL
   AND recipe."Nutrition_Protein" IS NULL
-  AND recipe."Nutrition_Carbs" IS NULL
+  AND recipe."Nutrition_Carbohydrates" IS NULL
   AND recipe."Nutrition_Fat" IS NULL
   AND recipe."Nutrition_Fiber" IS NULL
   AND recipe."Nutrition_Sodium" IS NULL;

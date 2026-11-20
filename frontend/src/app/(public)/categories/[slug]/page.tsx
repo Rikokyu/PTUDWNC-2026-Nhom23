@@ -53,7 +53,7 @@ export default function CategoryDetailPage({
   }
   const data = categoryQuery.data;
   if (!data) return <ErrorState message="Máy chủ không trả về dữ liệu danh mục." />;
-  const heroImageUrl = resolveApiAssetUrl(data.category.imageUrl ?? data.recipes.items.find((recipe) => recipe.thumbnailUrl)?.thumbnailUrl);
+  const heroImageUrl = resolveApiAssetUrl(data.category.imageUrl);
 
   return (
     <div className="space-y-10 pb-12">

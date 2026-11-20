@@ -1006,7 +1006,8 @@ public sealed class RegistrationAndImageUploadTests
                 Guid? currentUserId,
                 bool isAuthenticated,
                 bool isAdmin,
-                CancellationToken cancellationToken = default) =>
+                CancellationToken cancellationToken = default,
+                string sort = "-createdAt") =>
             Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
 
         public Task<(IReadOnlyList<Recipe> Items, int TotalCount)>
@@ -1018,7 +1019,8 @@ public sealed class RegistrationAndImageUploadTests
             Guid? categoryId = null,
             DifficultyLevel? difficulty = null,
             int? maxCookTime = null,
-            int? minServings = null) =>
+            int? minServings = null,
+            string sort = "-createdAt") =>
                 Task.FromResult<(IReadOnlyList<Recipe>, int)>(([], 0));
 
         public Task<Recipe?> GetByIdWithDetailsAsync(

@@ -42,6 +42,8 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Persistence\Seed\real-content.sql" />
 		<EmbeddedResource Include="Persistence\Seed\author-recipes.sql" />
+		<EmbeddedResource Include="Persistence\Seed\additional-recipes.sql" />
+		<EmbeddedResource Include="Persistence\Seed\commons-photo-assignments.sql" />
 	</ItemGroup>
 
 	<ItemGroup>

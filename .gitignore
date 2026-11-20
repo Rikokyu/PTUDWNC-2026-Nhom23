@@ -342,3 +342,14 @@ frontend/temp/
 !.env.example
 !README.md
 !CHANGELOG.md
+
+# Local Word chapter with demo screenshots; keep it off GitHub.
+docs/Chuong_4_Demo_san_pham_Le_Thi_Mai_Anh.docx
+docs/Chuong_4_Demo_san_pham_Le_Thi_Mai_Anh_cap_nhat.docx
+docs/Cau_Tra_Loi_On_Tap_FR_JOB_FR_CAT_Le_Thi_Mai_Anh.docx
+docs/Cau_Tra_Loi_On_Tap_FR_JOB_FR_CAT_Le_Thi_Mai_Anh_cap_nhat_tien_do.docx
+docs/Cau_Tra_Loi_On_Tap_FR_JOB_FR_CAT_Le_Thi_Mai_Anh_de_hieu.docx
+docs/Cau_Tra_Loi_On_Tap_FR_JOB_FR_CAT_Le_Thi_Mai_Anh_bo_test.docx
+docs/Cau_Tra_Loi_On_Tap_FR_JOB_FR_CAT_Le_Thi_Mai_Anh_vi_du_du_an.docx
+docs/Cau_Tra_Loi_On_Tap_FR_JOB_FR_CAT_Le_Thi_Mai_Anh_giai_thich_ham.docx
+docs/Cau_Tra_Loi_On_Tap_FR_JOB_FR_CAT_Le_Thi_Mai_Anh_code_va_giai_thich.docx

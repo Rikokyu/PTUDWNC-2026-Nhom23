@@ -11,12 +11,29 @@ const rootDirectory = path.resolve(
 const apiPort = 5080;
 const frontendPortStart = 3000;
 const frontendPortEnd = 3010;
-const composeServices = ["postgres", "mailpit", "redis"];
+const composeServices = ["postgres", "redis"];
 const runningChildren = [];
 
 let servicesToStop = [];
 let isShuttingDown = false;
 let shutdownTask;
+
+function getSmtpEnvironment() {
+  const values = {
+    Smtp__Host: process.env.SMTP_HOST,
+    Smtp__Port: process.env.SMTP_PORT,
+    Smtp__UseSsl: process.env.SMTP_USE_SSL,
+    Smtp__UserName: process.env.SMTP_USERNAME,
+    Smtp__Password: process.env.SMTP_PASSWORD,
+    Smtp__FromAddress: process.env.SMTP_FROM_ADDRESS,
+    Smtp__FromName: process.env.SMTP_FROM_NAME,
+    WelcomeEmail__ApplicationUrl: process.env.WELCOME_EMAIL_APPLICATION_URL,
+  };
+
+  return Object.fromEntries(
+    Object.entries(values).filter(([, value]) => value?.trim()),
+  );
+}
 
 function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -340,6 +357,11 @@ process.once("SIGINT", () => void shutdown(0));
 process.once("SIGTERM", () => void shutdown(0));
 
 async function main() {
+  const envFile = path.join(rootDirectory, ".env");
+  if (existsSync(envFile)) {
+    process.loadEnvFile(envFile);
+  }
+
   await ensureFrontendDependencies();
   await ensureDockerReady();
 
@@ -376,12 +398,7 @@ async function main() {
       {
         env: {
           ...process.env,
-          Smtp__Host: "127.0.0.1",
-          Smtp__Port: "1025",
-          Smtp__UseSsl: "false",
-          Smtp__UserName: "",
-          Smtp__Password: "",
-          Smtp__FromAddress: "no-reply@culinary.local",
+          ...getSmtpEnvironment(),
           FileStorage__Provider: "Local",
         },
       },

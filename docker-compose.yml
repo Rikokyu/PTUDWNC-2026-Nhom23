@@ -17,14 +17,6 @@ services:
       timeout: 5s
       retries: 10
 
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: culinary-blog-mailpit
-    restart: unless-stopped
-    ports:
-      - "1025:1025"
-      - "8025:8025"
-
   minio:
     # Community-maintained MinIO image; upstream no longer publishes the CE image.
     image: soldevelo/minio:2026.7.17
@@ -69,12 +61,12 @@ services:
       Minio__AccessKey: ${Minio__AccessKey:-minioadmin}
       Minio__SecretKey: ${Minio__SecretKey:-minioadmin}
       Minio__Bucket: ${Minio__Bucket:-culinary-blog}
-      Smtp__Host: ${SMTP_HOST:-mailpit}
-      Smtp__Port: ${SMTP_PORT:-1025}
-      Smtp__UseSsl: ${SMTP_USE_SSL:-false}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__UseSsl: ${SMTP_USE_SSL:-true}
       Smtp__UserName: ${SMTP_USERNAME:-}
       Smtp__Password: ${SMTP_PASSWORD:-}
-      Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-no-reply@culinary.local}
+      Smtp__FromAddress: ${SMTP_FROM_ADDRESS:-}
       Smtp__FromName: ${SMTP_FROM_NAME:-Culinary Blog}
       WelcomeEmail__ApplicationUrl: ${WELCOME_EMAIL_APPLICATION_URL:-http://localhost:3000}
     ports:
@@ -84,8 +76,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      mailpit:
-        condition: service_started
       minio:
         condition: service_started
       redis:

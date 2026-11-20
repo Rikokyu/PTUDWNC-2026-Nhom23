@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
+using System.Text;
 using CulinaryBlog.Application.Common.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -22,8 +24,12 @@ public sealed class MailKitEmailService(
                 "Smtp:Host is required to send welcome emails.");
         }
 
-        var fromAddress = configuration["Smtp:FromAddress"]
-            ?? "no-reply@culinary.local";
+        var fromAddress = configuration["Smtp:FromAddress"];
+        if (string.IsNullOrWhiteSpace(fromAddress))
+        {
+            throw new InvalidOperationException(
+                "Smtp:FromAddress is required to send welcome emails.");
+        }
         var fromName = configuration["Smtp:FromName"]
             ?? "Culinary Blog";
         var applicationUrl = configuration["WelcomeEmail:ApplicationUrl"]
@@ -43,10 +49,23 @@ public sealed class MailKitEmailService(
         {
             From = new MailAddress(fromAddress, fromName),
             Subject = content.Subject,
-            Body = content.HtmlBody,
-            IsBodyHtml = true
+            SubjectEncoding = Encoding.UTF8,
+            Body = $"Xin chào {displayName},\n\nTài khoản Culinary Blog của bạn đã được tạo thành công.\n{(activationUrl ?? applicationUrl)}",
+            BodyEncoding = Encoding.UTF8,
+            IsBodyHtml = false
         };
         message.To.Add(new MailAddress(email, displayName));
+
+        using var logoStream = typeof(MailKitEmailService).Assembly.GetManifestResourceStream(
+            "CulinaryBlog.Infrastructure.Email.Assets.logo.png")
+            ?? throw new InvalidOperationException("Welcome email logo resource is missing.");
+        var htmlView = AlternateView.CreateAlternateViewFromString(
+            content.HtmlBody, Encoding.UTF8, MediaTypeNames.Text.Html);
+        htmlView.LinkedResources.Add(new LinkedResource(logoStream, MediaTypeNames.Image.Png)
+        {
+            ContentId = WelcomeEmailTemplate.LogoContentId
+        });
+        message.AlternateViews.Add(htmlView);
 
 #pragma warning disable SYSLIB0014
         using var client = new SmtpClient(

@@ -37,6 +37,9 @@ public sealed class WelcomeEmailJobTests
         Assert.Contains("token=a&amp;user=1", content.HtmlBody);
         Assert.Contains("charset=\"utf-8\"", content.HtmlBody);
         Assert.Contains("Chào mừng", content.HtmlBody);
+        Assert.Contains($"src=\"cid:{WelcomeEmailTemplate.LogoContentId}\"", content.HtmlBody);
+        Assert.NotNull(typeof(WelcomeEmailTemplate).Assembly.GetManifestResourceStream(
+            "CulinaryBlog.Infrastructure.Email.Assets.logo.png"));
     }
 
     [Fact]

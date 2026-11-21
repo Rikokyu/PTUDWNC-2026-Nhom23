@@ -589,7 +589,7 @@ CONFIDENTIAL  •  Phát triển Ứng dụng Web Nâng cao V4  •  Trang 22 / 
 
 #### **3.2. Module Quản lý Danh mục (FR-CAT)**
 
-Module quản lý danh mục (Category) phân loại công thức nấu ăn. Danh mục được tạo và duy trì bởi Admin; Author và Guest chỉ có quyền đọc. Mỗi danh mục có Slug duy nhất phục vụ URL thân thiện SEO. Danh mục được cache với IMemoryCache (TTL 1 giờ) vì thay đổi ít thường xuyên.
+Module quản lý danh mục (Category) phân loại công thức nấu ăn. Danh mục được tạo và duy trì bởi Admin; Author và Guest chỉ có quyền đọc. Mỗi danh mục có Slug duy nhất phục vụ URL thân thiện SEO. Danh sách danh mục được cache ở tầng HTTP bằng Redis với TTL 30 phút và được xóa cache khi dữ liệu liên quan thay đổi.
 
 **FR-CAT-001: Xem Danh sách Danh mục**
 
@@ -607,9 +607,9 @@ CONFIDENTIAL  •  Phát triển Ứng dụng Web Nâng cao V4  •  Trang 23 / 
 |-|-|
 |**Tác nhân**|Tất cả (Guest / Author / Admin)|
 |**Mức ưu tiên**<br>**(MoSCoW)**|M – Must Have|
-|**Mô tả**|Trả về danh sách tất cả danh mục công thức hiện có trong hệ thống,<br>kèm số lượng công thức đã xuất bản (Published) trong mỗi danh mục.<br>Kết quả được cache với IMemoryCache (TTL 60 phút) và sắp xếp theo<br>Name tăng dần.|
+|**Mô tả**|Trả về danh sách tất cả danh mục công thức hiện có trong hệ thống,<br>kèm số lượng công thức đã xuất bản (Published) trong mỗi danh mục.<br>Kết quả được cache ở tầng HTTP bằng Redis với TTL 30 phút và sắp xếp theo<br>Name tăng dần.|
 |**Điều kiện tiên quyết**|1. Ít nhất một danh mục tồn tại trong database (hoặc trả về mảng rỗng).<br>2. Không yêu cầu xác thực.|
-|**Luồng chính (Happy**<br>**Path)**|1. Client gửi GET /api/v1/categories.<br>2. GetCategoriesQuery dispatch qua MediatR.<br>3. Handler kiểm tra IMemoryCache với key "categories:all".<br>4. Cache hit: trả về dữ liệu từ cache.<br>5. Cache miss: query database<br>(IUnitOfWork.Categories.GetAllWithRecipeCount()), map sang<br>CategoryDto\[].<br>6. Lưu vào IMemoryCache với TTL 60 phút (sliding expiration).<br>7. Trả về HTTP 200 OK với CategoryDto\[].|
+|**Luồng chính (Happy**<br>**Path)**|1. Client gửi GET /api/v1/categories.<br>2. Redis Output Cache kiểm tra phản hồi đã lưu theo URL và query string.<br>3. Cache hit: trả về HTTP 200 với dữ liệu từ cache.<br>4. Cache miss: GetCategoriesQuery dispatch qua MediatR; handler query database bằng IUnitOfWork.Categories.GetAllWithPublishedRecipeCountAsync(), map sang CategoryDto\[].<br>5. Tầng HTTP lưu phản hồi hợp lệ vào Redis trong 30 phút và gắn tag categories để xóa cache khi dữ liệu thay đổi.<br>6. Trả về HTTP 200 OK với CategoryDto\[].|
 |**Luồng thay thế /**<br>**Ngoại lệ**|A1 – Không có danh mục nào: HTTP 200 OK với mảng rỗng \[].|
 |**HTTP Method \&**<br>**Endpoint**|GET  /api/v1/categories|
 |**Kết quả mong đợi**|Mảng CategoryDto\[] với các field: { id, name, slug, description,<br>recipeCount }. Kết quả được serve từ cache khi có.|
@@ -652,9 +652,9 @@ CONFIDENTIAL  •  Phát triển Ứng dụng Web Nâng cao V4  •  Trang 24 / 
 |**Nhóm chức năng**|Module Quản lý Danh mục (FR-CAT)|
 |**Tác nhân**|Quản trị viên (Admin)|
 |**Mức ưu tiên**<br>**(MoSCoW)**|M – Must Have|
-|**Mô tả**|Admin tạo danh mục công thức mới. Slug được tự động sinh từ Name<br>(slugify: chuyển sang chữ thường, bỏ dấu, thay khoảng trắng bằng "-").<br>Nếu Slug đã tồn tại, hệ thống thêm suffix số (e.g., "mon-chinh-2"). Sau<br>khi tạo, cache danh mục (IMemoryCache key "categories:all") bị<br>invalidate.|
+|**Mô tả**|Admin tạo danh mục công thức mới. Slug được tự động sinh từ Name<br>(slugify: chuyển sang chữ thường, bỏ dấu, thay khoảng trắng bằng "-").<br>Nếu Slug đã tồn tại, hệ thống thêm suffix số (e.g., "mon-chinh-2"). Sau<br>khi tạo, Redis Output Cache của danh mục được xóa theo tag categories.|
 |**Điều kiện tiên quyết**|1. Người dùng đang đăng nhập với role Admin. 2. Name chưa tồn tại<br>trong database.|
-|**Luồng chính (Happy**<br>**Path)**|1. Admin gửi POST /api/v1/categories với Authorization: Bearer<br>{adminJwt} và body: { "name": "...", "description": "..." }.<br>2. RequireAuthorization("Admin") middleware kiểm tra role.<br>3. CreateCategoryCommand dispatch qua MediatR.<br>4. ValidationBehavior: name 2–50 ký tự, không chứa HTML.<br>5. SlugHelper.Generate(name) tạo slug.<br>6. Kiểm tra slug chưa tồn tại. Nếu trùng, thêm "-2", "-3",... cho đến khi<br>unique.<br>7. Category.Create(name, slug, description) tạo entity.<br>8. \_unitOfWork.Categories.AddAsync(entity).<br>9. \_unitOfWork.SaveChangesAsync().<br>10. MemoryCache.Remove("categories:all") – invalidate cache.<br>11. Trả về HTTP 201 Created với CategoryDto và Location header.|
+|**Luồng chính (Happy**<br>**Path)**|1. Admin gửi POST /api/v1/categories với Authorization: Bearer<br>{adminJwt} và body: { "name": "...", "description": "..." }.<br>2. RequireAuthorization("Admin") middleware kiểm tra role.<br>3. CreateCategoryCommand dispatch qua MediatR.<br>4. ValidationBehavior: name 2–50 ký tự, không chứa HTML.<br>5. SlugHelper.Generate(name) tạo slug.<br>6. Kiểm tra slug chưa tồn tại. Nếu trùng, thêm "-2", "-3",... cho đến khi<br>unique.<br>7. Category.Create(name, slug, description) tạo entity.<br>8. \_unitOfWork.Categories.AddAsync(entity).<br>9. \_unitOfWork.SaveChangesAsync().<br>10. Xóa Redis Output Cache theo tag categories.<br>11. Trả về HTTP 201 Created với CategoryDto và Location header.|
 
 
 

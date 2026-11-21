@@ -274,6 +274,10 @@ if (builder.Configuration.GetValue("Hangfire:Enabled", true))
         {
             TimeZone = SitemapGenerationJob.ScheduleTimeZone
         });
+
+    // Refresh persisted files on deployment as well as on the daily schedule.
+    app.Services.GetRequiredService<IBackgroundJobClient>()
+        .Enqueue<SitemapGenerationJob>(job => job.GenerateAsync(CancellationToken.None));
 }
 
 // Migrate the schema in every environment, but only seed demo content locally.

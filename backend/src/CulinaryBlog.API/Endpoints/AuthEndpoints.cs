@@ -2,7 +2,9 @@ using System.Security.Claims;
 using System.Text.Json;
 using CulinaryBlog.Application.Common.Interfaces;
 using CulinaryBlog.Application.Features.Auth.Commands.Login;
+using CulinaryBlog.Application.Features.Auth.Commands.GoogleLogin;
 using CulinaryBlog.Application.Features.Auth.Commands.Logout;
+using CulinaryBlog.Application.Features.Auth.Commands.RefreshToken;
 using CulinaryBlog.Application.Features.Auth.Commands.Register;
 using CulinaryBlog.Application.Features.Auth.Commands.ChangePassword;
 using CulinaryBlog.Application.Features.Auth.Commands.ForgotPassword;
@@ -74,7 +76,9 @@ public static class AuthEndpoints
             .RequireRateLimiting("Auth").AllowAnonymous()
             .WithName($"{routeVersion}GoogleLogin")
             .Produces(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status401Unauthorized);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status502BadGateway);
 
         group.MapPost("/logout", LogoutAsync)
             .WithName($"{routeVersion}Logout")
@@ -184,16 +188,21 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> RefreshAsync(RefreshRequest request,
-        IIdentityService identityService, CancellationToken cancellationToken)
+        ISender sender, CancellationToken cancellationToken)
     {
-        var session = await identityService.RefreshAsync(request.RefreshToken, cancellationToken);
+        var session = await sender.Send(new RefreshTokenCommand(request.RefreshToken), cancellationToken);
         return session is null ? Results.Unauthorized() : Results.Ok(session);
     }
 
     private static async Task<IResult> GoogleLoginAsync(GoogleLoginRequest request,
-        IIdentityService identityService, CancellationToken cancellationToken)
+        ISender sender, CancellationToken cancellationToken)
     {
-        var session = await identityService.GoogleLoginAsync(request.IdToken, cancellationToken);
+        if (string.IsNullOrWhiteSpace(request.IdToken))
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest,
+                title: "Google token is required.");
+
+        var session = await sender.Send(
+            new GoogleLoginCommand(request.IdToken), cancellationToken);
         return Results.Ok(session);
     }
 
@@ -201,7 +210,7 @@ public static class AuthEndpoints
     private static async Task<IResult> LogoutAsync(
         ClaimsPrincipal principal,
         HttpRequest request,
-        IIdentityService identityService,
+        ISender sender,
         CancellationToken cancellationToken)
     {
         var userIdValue = principal.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -219,8 +228,7 @@ public static class AuthEndpoints
             var body = await request.ReadFromJsonAsync<LogoutRequest>(cancellationToken);
             refreshToken = body?.RefreshToken;
         }
-        if (!string.IsNullOrWhiteSpace(refreshToken))
-            await identityService.LogoutAsync(userId, refreshToken, cancellationToken);
+        await sender.Send(new LogoutCommand(userId, refreshToken), cancellationToken);
         return Results.NoContent();
     }
 

@@ -50,7 +50,7 @@ public interface IIdentityService
 
     Task LogoutAsync(Guid userId, string? refreshToken, CancellationToken cancellationToken);
 
-    Task<AuthSessionDto> GoogleLoginAsync(string idToken, CancellationToken cancellationToken);
+    Task<GoogleLoginResult> GoogleLoginAsync(string idToken, CancellationToken cancellationToken);
 
     Task<UserDto> PatchProfileAsync(Guid userId, bool hasDisplayName, string? displayName,
         bool hasAvatarUrl, string? avatarUrl, bool hasBio, string? bio,

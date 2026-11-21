@@ -564,11 +564,12 @@ public sealed class IdentityService : IIdentityService
                 .SetProperty(token => token.UpdatedAt, now), cancellationToken);
     }
 
-    public async Task<AuthSessionDto> GoogleLoginAsync(string idToken,
+    public async Task<GoogleLoginResult> GoogleLoginAsync(string idToken,
         CancellationToken cancellationToken)
     {
         var profile = await _googleTokenVerifier.VerifyAsync(idToken, cancellationToken)
             ?? throw new UnauthorizedException("Invalid Google ID token.");
+        var isNewUser = false;
         var user = await _context.ApplicationUsers.SingleOrDefaultAsync(
             candidate => candidate.GoogleSubject == profile.Subject, cancellationToken);
         if (user is null)
@@ -579,6 +580,7 @@ public sealed class IdentityService : IIdentityService
                 throw new UnauthorizedException("Account is unavailable.");
             if (user is null)
             {
+                isNewUser = true;
                 user = new ApplicationUser
                 {
                     Id = Guid.NewGuid(), Email = profile.Email,
@@ -598,7 +600,8 @@ public sealed class IdentityService : IIdentityService
         }
         if (!user.IsActive || user.LockoutEnd > DateTime.UtcNow)
             throw new UnauthorizedException("Account is unavailable.");
-        return await CreateSessionAsync(user, cancellationToken);
+        var session = await CreateSessionAsync(user, cancellationToken);
+        return new GoogleLoginResult(session, isNewUser);
     }
 
     public async Task<UserDto> PatchProfileAsync(Guid userId, bool hasDisplayName,

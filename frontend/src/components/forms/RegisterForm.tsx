@@ -9,8 +9,9 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Input } from "@/components/ui/Input";
 import { authApi, saveAuthSession } from "@/lib/api/auth";
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/error";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
-export function RegisterForm() {
+export function RegisterForm({ googleEnabled = false }: { googleEnabled?: boolean }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,6 +40,7 @@ export function RegisterForm() {
   }
 
   return (
+    <div>
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <ErrorState title="Không thể tạo tài khoản" message={error} />}
       {registered && (
@@ -101,5 +103,7 @@ export function RegisterForm() {
         </Link>
       </p>
     </form>
+    <div className="mt-5"><GoogleSignInButton enabled={googleEnabled} /></div>
+    </div>
   );
 }

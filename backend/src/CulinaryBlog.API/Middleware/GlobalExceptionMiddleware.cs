@@ -78,6 +78,11 @@ public class GlobalExceptionMiddleware
             await WriteProblemAsync(context, StatusCodes.Status502BadGateway,
                 "Identity provider unavailable", ex.Message);
         }
+        catch (GoogleProfileUnavailableException ex)
+        {
+            await WriteProblemAsync(context, StatusCodes.Status400BadRequest,
+                "Google profile is incomplete", ex.Message);
+        }
         catch (CulinaryBlog.Application.Common.Exceptions.EmailServiceUnavailableException ex)
         {
             await WriteProblemAsync(

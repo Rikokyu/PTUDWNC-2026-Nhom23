@@ -16,8 +16,9 @@ public sealed class LogoutCommandHandler : IRequestHandler<LogoutCommand>
         LogoutCommand request,
         CancellationToken cancellationToken)
     {
-        await _identityService.RevokeRefreshTokensAsync(
+        await _identityService.LogoutAsync(
             request.UserId,
+            request.RefreshToken,
             cancellationToken);
     }
 }

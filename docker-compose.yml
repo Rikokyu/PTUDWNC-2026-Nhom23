@@ -55,6 +55,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=culinary_blog;Username=admin;Password=admin;SSL Mode=Disable
       ConnectionStrings__Redis: redis:6379,abortConnect=false,connectTimeout=1000,asyncTimeout=1000,syncTimeout=1000,connectRetry=0
+      Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       FileStorage__Provider: Minio
       Minio__Endpoint: http://minio:9000
       Minio__PublicEndpoint: ${Minio__PublicEndpoint:-http://localhost:9000}
@@ -72,6 +73,7 @@ services:
     ports:
       - "5080:8080"
     volumes:
+      - culinary_blog_wwwroot:/app/wwwroot
       - culinary_blog_uploads:/app/wwwroot/uploads
     depends_on:
       postgres:

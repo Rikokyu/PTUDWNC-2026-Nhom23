@@ -215,23 +215,13 @@ public sealed class RecipeCommandHandler :
         var recipe = await GetEditableRecipeAsync(
             request.RecipeId,
             cancellationToken);
-        recipe.SoftDelete();
-        foreach (var ingredient in recipe.Ingredients)
-        {
-            ingredient.IsDeleted = true;
-        }
 
-        foreach (var step in recipe.Steps)
+        await _unitOfWork.ExecuteInTransactionAsync(async token =>
         {
-            step.IsDeleted = true;
-        }
+            if (!await _recipes.SoftDeleteWithChildrenAsync(recipe.Id, token))
+                throw new NotFoundException("Recipe was not found.");
+        }, cancellationToken);
 
-        foreach (var image in recipe.Images)
-        {
-            image.IsDeleted = true;
-        }
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
         return new RecipeMutationResult(recipe.Id, recipe.Slug);
     }
 

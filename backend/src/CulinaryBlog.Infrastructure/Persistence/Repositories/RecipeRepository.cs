@@ -181,7 +181,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             DifficultyLevel? difficulty = null,
             int? maxCookTime = null,
             int? minServings = null,
-            string sort = "-createdAt")
+            string sort = "relevance")
     {
         var tsQuery = VietnameseSearchQuery.Build(searchTerm);
         if (tsQuery.Length == 0) return (Array.Empty<Recipe>(), 0);
@@ -195,22 +195,28 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
         if (difficulty.HasValue) query = query.Where(x => x.Difficulty == difficulty.Value);
         if (maxCookTime.HasValue) query = query.Where(x => x.CookTimeMinutes <= maxCookTime.Value);
         if (minServings.HasValue) query = query.Where(x => x.Servings >= minServings.Value);
-        var titleMatches = await query.AnyAsync(recipe =>
-            EF.Functions.ToTsVector("vietnamese", recipe.Title)
-                .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)),
-            cancellationToken);
-        query = titleMatches
-            ? query.Where(recipe => EF.Functions.ToTsVector("vietnamese", recipe.Title)
-                .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)))
-            : query.Where(recipe => EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+        query = query.Where(recipe =>
+            EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
                 .Matches(EF.Functions.ToTsQuery("vietnamese", tsQuery)));
         var totalCount = await query.CountAsync(cancellationToken);
-        var ranked = await ApplySort(query, sort)
-            .ThenBy(recipe => recipe.Id)
+        var scored = query.Select(recipe => new
+        {
+            Recipe = recipe,
+            Score = EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
+                .Rank(EF.Functions.ToTsQuery("vietnamese", tsQuery))
+        });
+        var ordered = sort switch
+        {
+            "createdAt" => scored.OrderBy(row => row.Recipe.CreatedAt).ThenBy(row => row.Recipe.Id),
+            "-createdAt" => scored.OrderByDescending(row => row.Recipe.CreatedAt).ThenBy(row => row.Recipe.Id),
+            "title" => scored.OrderBy(row => row.Recipe.Title).ThenBy(row => row.Recipe.Id),
+            "-title" => scored.OrderByDescending(row => row.Recipe.Title).ThenBy(row => row.Recipe.Id),
+            "cookTime" => scored.OrderBy(row => row.Recipe.CookTimeMinutes).ThenBy(row => row.Recipe.Id),
+            "-cookTime" => scored.OrderByDescending(row => row.Recipe.CookTimeMinutes).ThenBy(row => row.Recipe.Id),
+            _ => scored.OrderByDescending(row => row.Score).ThenBy(row => row.Recipe.Id)
+        };
+        var ranked = await ordered
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(recipe => new { Recipe = recipe,
-                Score = EF.Property<NpgsqlTypes.NpgsqlTsVector>(recipe, "SearchVector")
-                    .Rank(EF.Functions.ToTsQuery("vietnamese", tsQuery)) })
             .ToListAsync(cancellationToken);
         foreach (var row in ranked) row.Recipe.SearchRelevanceScore = row.Score;
         var items = ranked.Select(row => row.Recipe).ToList();
@@ -331,6 +337,35 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
             .FirstOrDefaultAsync(
                 x => x.Id == id && !x.IsDeleted,
                 cancellationToken);
+    }
+
+    public async Task<bool> SoftDeleteWithChildrenAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var deleted = await _context.Recipes
+            .Where(recipe => recipe.Id == id && !recipe.IsDeleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(recipe => recipe.IsDeleted, true)
+                .SetProperty(recipe => recipe.UpdatedAt, now), cancellationToken);
+
+        if (deleted == 0) return false;
+
+        await _context.RecipeIngredients
+            .Where(ingredient => ingredient.RecipeId == id && !ingredient.IsDeleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(ingredient => ingredient.IsDeleted, true), cancellationToken);
+        await _context.RecipeSteps
+            .Where(step => step.RecipeId == id && !step.IsDeleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(step => step.IsDeleted, true), cancellationToken);
+        await _context.RecipeImages
+            .Where(image => image.RecipeId == id && !image.IsDeleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(image => image.IsDeleted, true), cancellationToken);
+
+        return true;
     }
 
     public Task<bool> SlugExistsAsync(

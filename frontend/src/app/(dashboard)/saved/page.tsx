@@ -26,11 +26,12 @@ export default function SavedRecipesPage() {
   const removeMutation = useRemoveSavedRecipe();
 
   async function deleteRecipe(recipeId: string, title: string) {
-    if (!window.confirm(`Xóa công thức “${title}” khỏi hệ thống? Bài sẽ bị ẩn với mọi người; dữ liệu vẫn được giữ để có thể khôi phục sau này.`)) return;
+    if (user?.role !== "Admin") return;
+    if (!window.confirm(`Xóa công thức “${title}”?`)) return;
     setDeleteError(null);
     setDeletingRecipeId(recipeId);
     try {
-      await recipeApi.deleteRecipe(recipeId);
+      await recipeApi.deleteRecipeAsAdmin(recipeId);
       await Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: savedRecipeKeys.all(user?.id ?? "") }),
         queryClient.invalidateQueries({ queryKey: recipeKeys.all() }),
@@ -113,9 +114,9 @@ export default function SavedRecipesPage() {
                       onClick={() => void deleteRecipe(recipe.id, recipe.title)}
                       disabled={Boolean(deletingRecipeId) || removeMutation.isPending}
                       className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-rose-700 px-3 text-xs font-semibold text-white shadow-md transition hover:bg-rose-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 disabled:opacity-60"
-                      aria-label={`Xóa công thức ${recipe.title} khỏi hệ thống`}
+                      aria-label={`Xóa công thức ${recipe.title}`}
                     >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" /> Xóa công thức
+                      <Trash2 className="h-4 w-4" aria-hidden="true" /> Xóa
                     </button>
                   )}
                 </div>

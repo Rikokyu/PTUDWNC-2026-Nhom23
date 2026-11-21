@@ -179,12 +179,13 @@ public sealed class RecipeSortingHttpTests : IAsyncLifetime
         using var response = await _client.GetAsync("/api/v1/recipes/search?q=mi");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(12, _search.Last?.PageSize);
-        Assert.Equal("-createdAt", _search.Last?.Sort);
+        Assert.Equal("relevance", _search.Last?.Sort);
     }
 
     [Theory]
     [InlineData("&sortBy=invalid")]
     [InlineData("&sortOrder=invalid")]
+    [InlineData("&sortBy=relevance&sortOrder=asc")]
     [InlineData("&sortBy=title&sortBy=cookTime")]
     [InlineData("&sort=title")]
     public async Task Search_InvalidSort_Returns422(string query)

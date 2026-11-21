@@ -10,6 +10,18 @@ Lệnh này tự khởi động PostgreSQL, Redis, API và frontend; nếu front
 
 Lưu ý: lệnh chạy toàn bộ có thể khởi động dịch vụ và API sẽ gọi `MigrateAsync` cho PostgreSQL được cấu hình. Hãy sao lưu dữ liệu đang dùng trước khi chạy trên máy có dữ liệu quan trọng. Bản mã launcher mới đã qua kiểm tra cú pháp và cấu hình Compose; chưa được chạy toàn bộ với cơ sở dữ liệu hiện tại.
 
+### Cache danh mục và Sitemap
+
+Danh sách danh mục được cache tại tầng HTTP trong Redis trong **30 phút** theo NFR-PERF-003; cache được xóa khi danh mục hoặc công thức liên quan thay đổi. FR-CAT-001 trong SRS Markdown v1.0.1 đã được thống nhất ở mức 30 phút; PDF v1.0.0 vẫn là bản cũ ghi 60 phút.
+
+Hangfire tạo `sitemap.xml` và `robots.txt` lúc 02:00 UTC mỗi ngày và xếp thêm một lần tạo khi API khởi động để cập nhật file cũ sau khi triển khai. Docker lưu `wwwroot` trên volume `culinary_blog_wwwroot`; volume `culinary_blog_uploads` tiếp tục dành riêng cho ảnh tải lên. Frontend phục vụ `/sitemap.xml` và `/robots.txt` trực tiếp từ file mới nhất của API, không cần sao chép thủ công. Khi triển khai frontend và API trên các máy hoặc container khác nhau, đặt `API_BASE_URL` ở phía frontend thành địa chỉ API mà máy chủ Next.js truy cập được; đặt `Sitemap:BaseUrl` thành domain công khai của website.
+
+### Đăng nhập bằng Google
+
+Trong Google Cloud Console, tạo OAuth Client loại **Web application** và thêm Authorized redirect URI `http://localhost:3000/oauth/callback/google`. Bật Google Identity/OpenID Connect và cấu hình consent screen cho tài khoản dùng để thử. Auth.js xử lý Authorization Code Flow với PKCE; sau callback, frontend gửi Google ID token đến `POST /api/v1/auth/google` để nhận JWT của Culinary Blog.
+
+Điền cùng một **Client ID** vào `GOOGLE_CLIENT_ID` trong `.env` ở thư mục gốc (cho API Docker) và `GOOGLE_CLIENT_ID` trong `frontend/.env.local`. Chỉ điền **Client Secret** vào `GOOGLE_CLIENT_SECRET` trong `frontend/.env.local`. File `frontend/.env.local` cũng cần `AUTH_SECRET` là chuỗi ngẫu nhiên dài và `AUTH_URL=http://localhost:3000`; các file chứa giá trị thật không được commit. Nếu chạy backend bằng `dotnet run` thay vì Docker, đặt `Google__ClientId` trong .NET User Secrets hoặc biến môi trường cho tiến trình API. Sau khi sửa cấu hình Docker, chạy `docker compose up -d --no-deps --force-recreate api`, rồi khởi động lại frontend. Khi chưa có Client ID/Secret, nút Google vẫn hiển thị nhưng bị vô hiệu hóa.
+
 ## Dữ liệu demo
 
 Khi API khởi động, `DatabaseSeeder` áp dụng các migration còn thiếu rồi thêm danh mục, tài khoản demo và công thức đã biên soạn trong `backend/src/CulinaryBlog.Infrastructure/Persistence/Seed/`. Bộ dữ liệu có 12 danh mục và 60 công thức (50 Published, 5 Draft, 5 Archived); mỗi công thức có nguyên liệu, các bước chế biến và ảnh minh họa cục bộ, cùng thông tin mô tả, thời gian, khẩu phần và độ khó. Mỗi công thức và danh mục dùng một ảnh riêng, tải từ Wikimedia Commons; nguồn, tác giả và giấy phép được liệt kê tại `/image-credits`. Dữ liệu dinh dưỡng là ước tính cho mỗi khẩu phần, không phải nhãn đã được xác minh. Nội dung công thức được biên soạn dựa trên kiến thức nấu ăn phổ biến, không trích từ một website cụ thể và chưa được xác minh độc lập.

@@ -25,12 +25,14 @@ public sealed class CategoryRecipeVisibilityTests
     }
 
     [Fact]
-    public void Admin_CanSeeEveryNonDeletedStatus()
+    public void Admin_CanSeeRecipesInEveryStatusRegardlessOfAuthor()
     {
         var adminId = Guid.NewGuid();
         var published = CreateRecipe(RecipeStatus.Published, Guid.NewGuid());
         var adminDraft = CreateRecipe(RecipeStatus.Draft, adminId);
         var adminArchived = CreateRecipe(RecipeStatus.Archived, adminId);
+        var anotherAuthorsDraft = CreateRecipe(RecipeStatus.Draft, Guid.NewGuid());
+        var anotherAuthorsArchived = CreateRecipe(RecipeStatus.Archived, Guid.NewGuid());
 
         AssertVisibleStatuses(
             currentUserId: adminId,
@@ -42,6 +44,10 @@ public sealed class CategoryRecipeVisibilityTests
             RecipeStatus.Published,
             RecipeStatus.Draft,
             RecipeStatus.Archived);
+
+        var predicate = RecipeRepository.CreateCategoryVisibilityPredicate(adminId, false, true).Compile();
+        Assert.True(predicate(anotherAuthorsDraft));
+        Assert.True(predicate(anotherAuthorsArchived));
     }
 
     [Fact]

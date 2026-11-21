@@ -43,7 +43,7 @@ public interface IRecipeRepository : IRepository<Recipe>
             DifficultyLevel? difficulty = null,
             int? maxCookTime = null,
             int? minServings = null,
-            string sort = "-createdAt");
+            string sort = "relevance");
 
     Task<Recipe?> GetBySlugWithDetailsAsync(
         string slug,
@@ -69,6 +69,10 @@ public interface IRecipeRepository : IRepository<Recipe>
         CancellationToken cancellationToken = default);
 
     Task<Recipe?> GetByIdWithDetailsAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> SoftDeleteWithChildrenAsync(
         Guid id,
         CancellationToken cancellationToken = default);
 

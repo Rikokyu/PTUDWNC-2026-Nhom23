@@ -35,6 +35,11 @@ function getSmtpEnvironment() {
   );
 }
 
+function getGoogleEnvironment() {
+  const clientId = process.env.Google__ClientId || process.env.GOOGLE_CLIENT_ID;
+  return clientId?.trim() ? { Google__ClientId: clientId } : {};
+}
+
 function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -399,6 +404,7 @@ async function main() {
         env: {
           ...process.env,
           ...getSmtpEnvironment(),
+          ...getGoogleEnvironment(),
           FileStorage__Provider: "Local",
         },
       },
@@ -420,19 +426,24 @@ async function main() {
     "bin",
     "next",
   );
+  const websiteUrl = `http://localhost:${frontendPort}`;
+  const frontendEnvironment = {
+    ...process.env,
+    API_BASE_URL: process.env.API_BASE_URL ?? `http://127.0.0.1:${apiPort}`,
+    AUTH_URL: websiteUrl,
+  };
+  if (!frontendEnvironment.GOOGLE_CLIENT_ID?.trim()) {
+    delete frontendEnvironment.GOOGLE_CLIENT_ID;
+  }
   const frontend = startManagedProcess(
     "Frontend",
     process.execPath,
     [nextCli, "dev", "--hostname", "127.0.0.1", "--port", String(frontendPort)],
     {
       cwd: frontendDirectory,
-      env: {
-        ...process.env,
-        API_BASE_URL: process.env.API_BASE_URL ?? `http://127.0.0.1:${apiPort}`,
-      },
+      env: frontendEnvironment,
     },
   );
-  const websiteUrl = `http://localhost:${frontendPort}`;
 
   await waitForHttp(websiteUrl, frontend, "Frontend", 240_000);
   console.log(`\nCulinaryBlog is ready: ${websiteUrl}`);

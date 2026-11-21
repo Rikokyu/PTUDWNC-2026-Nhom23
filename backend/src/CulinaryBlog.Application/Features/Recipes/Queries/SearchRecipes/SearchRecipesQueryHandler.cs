@@ -31,7 +31,7 @@ public sealed class SearchRecipesQueryHandler(
             || (request.Difficulty.HasValue && !Enum.IsDefined(request.Difficulty.Value)))
             throw new ValidationException("Invalid recipe search filters.");
 
-        if (request.Sort is not ("createdAt" or "-createdAt" or "title" or "-title" or "cookTime" or "-cookTime"))
+        if (request.Sort is not ("relevance" or "createdAt" or "-createdAt" or "title" or "-title" or "cookTime" or "-cookTime"))
             throw new ValidationException("Invalid sort value.");
 
         var result = await recipes.SearchPublishedAsync(
@@ -49,6 +49,11 @@ public sealed class SearchRecipesQueryHandler(
             items,
             result.TotalCount,
             request.Page,
-            request.PageSize);
+            request.PageSize)
+        {
+            Message = result.TotalCount == 0
+                ? "Không tìm thấy công thức. Hãy thử tên món hoặc nguyên liệu khác."
+                : null
+        };
     }
 }

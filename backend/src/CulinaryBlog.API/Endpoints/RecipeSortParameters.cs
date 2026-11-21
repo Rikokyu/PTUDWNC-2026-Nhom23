@@ -4,7 +4,7 @@ namespace CulinaryBlog.API.Endpoints;
 
 internal static class RecipeSortParameters
 {
-    public static string Read(IQueryCollection query)
+    public static string Read(IQueryCollection query, bool isSearch = false)
     {
         if (query.ContainsKey("sort"))
         {
@@ -20,13 +20,21 @@ internal static class RecipeSortParameters
                 "Sort parameters must occur only once.");
         }
 
-        var sortBy = sortByValues.FirstOrDefault() ?? "createdAt";
+        var sortBy = sortByValues.FirstOrDefault() ?? (isSearch ? "relevance" : "createdAt");
         var sortOrder = sortOrderValues.FirstOrDefault() ?? "desc";
-        if (sortBy is not ("title" or "createdAt" or "cookTime")
+        if ((sortBy is not ("title" or "createdAt" or "cookTime")
+                && !(isSearch && sortBy == "relevance"))
             || sortOrder is not ("asc" or "desc"))
         {
             throw new ValidationException(
-                "sortBy must be title, createdAt or cookTime; sortOrder must be asc or desc.");
+                "Invalid sortBy or sortOrder.");
+        }
+
+        if (sortBy == "relevance")
+        {
+            if (sortOrder == "asc")
+                throw new ValidationException("Relevance can only be sorted descending.");
+            return "relevance";
         }
 
         return (sortOrder == "desc" ? "-" : "") + sortBy;

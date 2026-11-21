@@ -11,8 +11,9 @@ import { authApi } from "@/lib/api/auth";
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/api/error";
 import { saveAuthSession } from "@/lib/api/auth";
 import { safeReturnPath } from "@/lib/auth/session";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
-export function LoginForm() {
+export function LoginForm({ googleEnabled = false }: { googleEnabled?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -20,6 +21,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const googleError = searchParams.get("error");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,8 +41,9 @@ export function LoginForm() {
   }
 
   return (
+    <div>
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <ErrorState title="Không thể đăng nhập" message={error} />}
+      {(error || googleError) && <ErrorState title="Không thể đăng nhập" message={error ?? "Đăng nhập Google chưa hoàn tất. Vui lòng thử lại."} />}
       <Input
         label="Địa chỉ Email"
         type="email"
@@ -87,5 +90,7 @@ export function LoginForm() {
         </Link>
       </p>
     </form>
+    <div className="mt-5"><GoogleSignInButton enabled={googleEnabled} next={safeReturnPath(searchParams.get("next"))} /></div>
+    </div>
   );
 }

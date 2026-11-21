@@ -21,6 +21,7 @@ public sealed class SitemapGenerationJob(
     public const string CronExpression = "0 2 * * *";
     public static TimeZoneInfo ScheduleTimeZone => TimeZoneInfo.Utc;
 
+    [DisableConcurrentExecution(timeoutInSeconds: 300)]
     [AutomaticRetry(
         Attempts = 2,
         OnAttemptsExceeded = AttemptsExceededAction.Fail,
@@ -102,29 +103,38 @@ public sealed class SitemapGenerationJob(
     {
         var entries = staticPaths.Select(path => new SitemapEntry(
                 BuildAbsoluteUrl(siteUri, path),
-                LastModifiedUtc: null))
+                LastModifiedUtc: null,
+                ChangeFrequency: path == "/" ? "daily" : "weekly",
+                Priority: path == "/" ? 1.0m : 0.6m))
             .Concat(categoryPages.Select(page => new SitemapEntry(
                 BuildAbsoluteUrl(
                     siteUri,
                     $"/categories/{Uri.EscapeDataString(page.Slug)}"),
                 page.LastModifiedUtc is { } categoryModified
                     ? NormalizeUtc(categoryModified)
-                    : null)))
+                    : null,
+                "weekly",
+                0.7m)))
             .Concat(recipePages.Select(page => new SitemapEntry(
                 BuildAbsoluteUrl(
                     siteUri,
                     $"/recipes/{Uri.EscapeDataString(page.Slug)}"),
                 page.LastModifiedUtc is { } recipeModified
                     ? NormalizeUtc(recipeModified)
-                    : null)));
+                    : null,
+                "weekly",
+                0.8m)));
 
         return entries
             .GroupBy(entry => entry.Url, StringComparer.Ordinal)
-            .Select(group => new SitemapEntry(
-                group.Key,
-                group.Where(entry => entry.LastModifiedUtc.HasValue)
-                    .Select(entry => entry.LastModifiedUtc)
-                    .Max()))
+            .Select(group =>
+            {
+                var preferred = group.OrderByDescending(entry => entry.Priority).First();
+                return preferred with
+                {
+                    LastModifiedUtc = group.Max(entry => entry.LastModifiedUtc)
+                };
+            })
             .OrderBy(entry => entry.Url, StringComparer.Ordinal)
             .ToArray();
     }
@@ -215,6 +225,12 @@ public sealed class SitemapGenerationJob(
                                 CultureInfo.InvariantCulture));
                     }
 
+                    await writer.WriteElementStringAsync(
+                        null, "changefreq", null, entry.ChangeFrequency);
+                    await writer.WriteElementStringAsync(
+                        null, "priority", null,
+                        entry.Priority.ToString("0.0", CultureInfo.InvariantCulture));
+
                     await writer.WriteEndElementAsync();
                 }
 
@@ -248,6 +264,13 @@ public sealed class SitemapGenerationJob(
                 .ToList()
             : [];
 
+        if (!lines.Any(line => line.TrimStart().StartsWith(
+                "User-agent:", StringComparison.OrdinalIgnoreCase)))
+        {
+            lines.Insert(0, "User-agent: *");
+            lines.Insert(1, "Allow: /");
+        }
+
         lines.Add($"Sitemap: {new Uri(siteUri, "/sitemap.xml").AbsoluteUri}");
 
         var temporaryPath = Path.Combine(
@@ -274,4 +297,8 @@ public sealed class SitemapGenerationJob(
 
 public sealed record SitemapPage(string Slug, DateTime? LastModifiedUtc);
 
-public sealed record SitemapEntry(string Url, DateTime? LastModifiedUtc);
+public sealed record SitemapEntry(
+    string Url,
+    DateTime? LastModifiedUtc,
+    string ChangeFrequency = "weekly",
+    decimal Priority = 0.5m);

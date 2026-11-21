@@ -3,6 +3,7 @@ using CulinaryBlog.Application.DTOs.Categories;
 using CulinaryBlog.Application.Features.Categories.Commands.CreateCategory;
 using CulinaryBlog.Application.Features.Categories.Commands.DeleteCategory;
 using CulinaryBlog.Application.Features.Categories.Commands.UpdateCategory;
+using CulinaryBlog.Application.Features.Categories.Commands.BulkManageRecipes;
 using CulinaryBlog.Application.Features.Categories.Queries.GetCategories;
 using CulinaryBlog.Application.Features.Categories.Queries.GetCategoryBySlug;
 using MediatR;
@@ -63,6 +64,28 @@ public static class CategoryEndpoints
 			.ProducesProblem(StatusCodes.Status401Unauthorized)
 			.ProducesProblem(StatusCodes.Status403Forbidden)
 			.ProducesProblem(StatusCodes.Status404NotFound)
+			.ProducesProblem(StatusCodes.Status409Conflict);
+
+		group.MapPost("/{id:guid}/recipes/move", MoveRecipesAsync)
+			.WithName("MoveCategoryRecipes")
+			.WithSummary("Move selected recipes to another category.")
+			.RequireAuthorization("Admin")
+			.Produces(StatusCodes.Status200OK)
+			.ProducesProblem(StatusCodes.Status401Unauthorized)
+			.ProducesProblem(StatusCodes.Status403Forbidden)
+			.ProducesProblem(StatusCodes.Status404NotFound)
+			.ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+			.ProducesProblem(StatusCodes.Status409Conflict);
+
+		group.MapPost("/{id:guid}/recipes/delete", DeleteRecipesAsync)
+			.WithName("DeleteCategoryRecipes")
+			.WithSummary("Soft-delete selected recipes in a category.")
+			.RequireAuthorization("Admin")
+			.Produces(StatusCodes.Status200OK)
+			.ProducesProblem(StatusCodes.Status401Unauthorized)
+			.ProducesProblem(StatusCodes.Status403Forbidden)
+			.ProducesProblem(StatusCodes.Status404NotFound)
+			.ProducesProblem(StatusCodes.Status422UnprocessableEntity)
 			.ProducesProblem(StatusCodes.Status409Conflict);
 
 		return endpoints;
@@ -192,7 +215,45 @@ public static class CategoryEndpoints
 
 		return Results.NoContent();
 	}
+
+	private static async Task<IResult> MoveRecipesAsync(
+		Guid id,
+		BulkMoveCategoryRecipesRequest request,
+		ISender sender,
+		IOutputCacheStore cache,
+		CancellationToken cancellationToken)
+	{
+		var count = await sender.Send(
+			new BulkManageCategoryRecipesCommand(id, request.RecipeIds,
+				BulkCategoryRecipeAction.Move, request.TargetCategoryId),
+			cancellationToken);
+		await cache.SafeEvictByTagAsync("recipes", cancellationToken);
+		await cache.SafeEvictByTagAsync("categories", cancellationToken);
+		return Results.Ok(new { affectedCount = count });
+	}
+
+	private static async Task<IResult> DeleteRecipesAsync(
+		Guid id,
+		BulkDeleteCategoryRecipesRequest request,
+		ISender sender,
+		IOutputCacheStore cache,
+		CancellationToken cancellationToken)
+	{
+		var count = await sender.Send(
+			new BulkManageCategoryRecipesCommand(id, request.RecipeIds,
+				BulkCategoryRecipeAction.Delete),
+			cancellationToken);
+		await cache.SafeEvictByTagAsync("recipes", cancellationToken);
+		await cache.SafeEvictByTagAsync("categories", cancellationToken);
+		return Results.Ok(new { affectedCount = count });
+	}
 }
+
+public sealed record BulkMoveCategoryRecipesRequest(
+	IReadOnlyList<Guid> RecipeIds,
+	Guid TargetCategoryId);
+
+public sealed record BulkDeleteCategoryRecipesRequest(IReadOnlyList<Guid> RecipeIds);
 
 public sealed record CreateCategoryRequest(
 	string Name,

@@ -23,11 +23,24 @@ export default function DashboardCategoriesPage() {
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const createFormRef = useRef<HTMLDivElement>(null);
   const editFormRef = useRef<HTMLDivElement>(null);
+  const restoredCategoryRef = useRef(false);
   const [updateMessage, setUpdateMessage] = useState("");
   const [createMessage, setCreateMessage] = useState("");
   const [deleteMessage, setDeleteMessage] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (restoredCategoryRef.current || !categoriesQuery.data) return;
+    restoredCategoryRef.current = true;
+    const url = new URL(window.location.href);
+    const editId = url.searchParams.get("edit");
+    if (!editId) return;
+    const category = categoriesQuery.data.find((item) => item.id === editId);
+    if (category) setEditingCategory(category);
+    url.searchParams.delete("edit");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [categoriesQuery.data]);
 
   useEffect(() => {
     if (!showCreateForm) return;
@@ -126,12 +139,12 @@ export default function DashboardCategoriesPage() {
       {editingCategory && (
         <div ref={editFormRef}>
           <CategoryEditForm
-            key={editingCategory.id}
+            key={`${editingCategory.id}-${editingCategory.name}-${editingCategory.description ?? ""}`}
             category={editingCategory}
             onCancel={cancelEdit}
             onUpdated={(category) => {
-              setEditingCategory(null);
-              setUpdateMessage(`Đã cập nhật danh mục “${category.name}”. Slug vẫn là “${category.slug}”.`);
+              setEditingCategory(category);
+              setUpdateMessage(`Đã cập nhật danh mục “${category.name}”.`);
             }}
           />
         </div>
@@ -175,6 +188,7 @@ export default function DashboardCategoriesPage() {
             setDeleteMessage("");
             setEditingCategory(category);
           }}
+          showAdminView
           onDelete={(category) => void handleDelete(category)}
           deletingCategoryId={deletingCategoryId}
         />

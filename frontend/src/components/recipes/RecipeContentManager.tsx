@@ -128,8 +128,9 @@ function toStepRequest(fields: StepFields) {
   };
 }
 
-export function RecipeContentManager({ recipeId }: { recipeId: string }) {
+export function RecipeContentManager({ recipeId, returnHref = "/dashboard/recipes" }: { recipeId: string; returnHref?: string }) {
   const router = useRouter();
+  const fromCategory = returnHref.startsWith("/dashboard/categories");
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
@@ -137,6 +138,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
   const categoriesQuery = useCategories();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [savedInformation, setSavedInformation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [newIngredient, setNewIngredient] = useState<IngredientFields>(
@@ -290,10 +292,11 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
     );
   }
 
-  function updateRecipe(event: FormEvent<HTMLFormElement>) {
+  async function updateRecipe(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const recipe = recipeQuery.data;
-    if (!recipe) return;
+    if (!recipe || !hasInformationChanges) return;
+    setSavedInformation(false);
 
     const prepTimeMinutes = Number(recipeFields.prepTimeMinutes);
     const cookTimeMinutes = Number(recipeFields.cookTimeMinutes);
@@ -319,7 +322,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       return;
     }
 
-    void runMutation(
+    const succeeded = await runMutation(
       () => recipeApi.update(recipeId, {
         title: recipeFields.title.trim(),
         description: recipeFields.description.trim(),
@@ -334,6 +337,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       }),
       "Đã cập nhật thông tin và dinh dưỡng.",
     );
+    if (succeeded) setSavedInformation(true);
   }
 
   async function deleteRecipe() {
@@ -344,7 +348,7 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
       () => recipeApi.deleteRecipe(recipeId),
       "Đã xóa mềm công thức.",
     );
-    if (succeeded) router.push("/dashboard/recipes");
+    if (succeeded) router.push(returnHref);
   }
 
   if (!accessToken) {
@@ -370,74 +374,90 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
     return <ErrorState title="Không tìm thấy công thức" />;
   }
   const canManageRecipe = isAdmin || recipe.author?.id === user?.id;
+  const hasInformationChanges = recipeFields.categoryId !== "" && (
+    recipeFields.title.trim() !== recipe.title
+    || recipeFields.description.trim() !== recipe.description
+    || recipeFields.instructions.trim() !== recipe.instructions
+    || recipeFields.categoryId !== recipe.category.id
+    || recipeFields.prepTimeMinutes !== String(recipe.prepTimeMinutes)
+    || recipeFields.cookTimeMinutes !== String(recipe.cookTimeMinutes)
+    || recipeFields.servings !== String(recipe.servings)
+    || recipeFields.difficulty !== recipe.difficulty
+    || JSON.stringify(nutritionRequest(nutrition)) !== JSON.stringify(nutritionRequest(nutritionFields(recipe)))
+  );
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-200 pb-6">
-        <div className="space-y-1">
-          <Link href="/dashboard/recipes" className="text-sm font-semibold text-brand hover:underline">
-            ← Công thức của tôi
+      <div className="space-y-5 border-b border-stone-200 pb-6">
+        <div className="space-y-2">
+          <Link href={returnHref} className="text-sm font-semibold text-brand hover:underline">
+            ← {fromCategory ? "Quản lý danh mục" : "Công thức của tôi"}
           </Link>
-          <h1 className="font-display text-3xl font-bold text-content-primary">
-            {recipe.title}
-          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-3xl font-bold text-content-primary">{recipe.title}</h1>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-content-secondary">
+              {recipe.status === 0 ? "Bản nháp" : recipe.status === 1 ? "Đã đăng" : "Đã lưu trữ"}
+            </span>
+          </div>
           <p className="text-sm text-content-secondary">
             Quản lý ảnh, nguyên liệu và các bước thực hiện.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-content-secondary">
-            {recipe.status === 0
-              ? "Bản nháp"
-              : recipe.status === 1
-                ? "Đã đăng"
-                : "Đã lưu trữ"}
-          </span>
-          {canManageRecipe && recipe.status === 0 && (
-            <Button
+        <div className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-surface-cream p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {canManageRecipe && hasInformationChanges && <Button
+              type="submit"
+              form="recipe-information-form"
               size="sm"
-              disabled={busy}
-              onClick={() => void changeStatus("publish")}
+              className="min-w-32"
+              disabled={busy || categoriesQuery.isLoading || categoriesQuery.isError}
+              isLoading={busy}
             >
-              Xuất bản
-            </Button>
-          )}
-          {canManageRecipe && recipe.status === 1 && (
+              Lưu thay đổi
+            </Button>}
             <Button
+              type="button"
               variant="outline"
               size="sm"
+              className="min-w-32"
               disabled={busy}
-              onClick={() => void changeStatus("unpublish")}
+              onClick={() => {
+                if (!hasInformationChanges || window.confirm("Hủy chỉnh sửa công thức này? Các thay đổi chưa lưu sẽ bị mất.")) router.push(returnHref);
+              }}
             >
-              Hủy xuất bản
+              Hủy chỉnh sửa
             </Button>
-          )}
-          {canManageRecipe && recipe.status !== 2 && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => void changeStatus("archive")}
-            >
-              Lưu trữ
-            </Button>
-          )}
-          <Link href={`/recipes/${encodeURIComponent(recipe.slug)}`}>
-            <Button variant="outline">Xem công thức</Button>
-          </Link>
-          {canManageRecipe && (
-            <Button variant="danger" size="sm" disabled={busy} onClick={() => void deleteRecipe()}>
-              Xóa công thức
-            </Button>
-          )}
+          </div>
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            {canManageRecipe && recipe.status === 0 && (
+              <Button size="sm" className="min-w-32" disabled={busy} onClick={() => void changeStatus("publish")}>Xuất bản</Button>
+            )}
+            {canManageRecipe && recipe.status === 1 && (
+              <Button variant="outline" size="sm" className="min-w-32" disabled={busy} onClick={() => void changeStatus("unpublish")}>Hủy xuất bản</Button>
+            )}
+            {canManageRecipe && recipe.status !== 2 && (
+              <Button variant="outline" size="sm" className="min-w-32" disabled={busy} onClick={() => void changeStatus("archive")}>Lưu trữ</Button>
+            )}
+            <Link href={`/recipes/${encodeURIComponent(recipe.slug)}`}>
+              <Button variant="outline" size="sm" className="min-w-32">Xem công thức</Button>
+            </Link>
+            {canManageRecipe && (
+              <Button variant="danger" size="sm" className="min-w-32" disabled={busy} onClick={() => void deleteRecipe()}>Xóa công thức</Button>
+            )}
+          </div>
         </div>
       </div>
 
       {error && <ErrorState title="Không thể lưu thay đổi" message={error} />}
       {success && <SuccessNotice title="Đã cập nhật công thức" message={success} />}
+      {savedInformation && !hasInformationChanges && (
+        <Button variant="outline" onClick={() => router.push(returnHref)}>
+          {fromCategory ? "Quay về danh mục" : "Quay về danh sách công thức"}
+        </Button>
+      )}
 
       {canManageRecipe && (
-      <form onSubmit={updateRecipe} className="space-y-5 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle">
+      <form id="recipe-information-form" onSubmit={updateRecipe} className="space-y-5 rounded-2xl border border-stone-200 bg-surface p-5 shadow-subtle">
         <header>
           <h2 className="text-xl font-bold">Thông tin công thức</h2>
         </header>
@@ -560,13 +580,6 @@ export function RecipeContentManager({ recipeId }: { recipeId: string }) {
             ))}
           </div>
         </div>
-        <Button
-          type="submit"
-          disabled={busy || categoriesQuery.isLoading || categoriesQuery.isError}
-          isLoading={busy}
-        >
-          Lưu thông tin
-        </Button>
       </form>
       )}
 

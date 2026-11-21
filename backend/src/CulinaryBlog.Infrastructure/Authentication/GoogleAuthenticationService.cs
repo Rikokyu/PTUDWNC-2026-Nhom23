@@ -54,10 +54,12 @@ public sealed class GoogleAuthenticationService(IConfiguration configuration) : 
             var email = principal.FindFirstValue("email");
             var verified = principal.FindFirstValue("email_verified");
             var authorizedParty = principal.FindFirstValue("azp");
-            if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(email)
-                || !string.Equals(verified, "true", StringComparison.OrdinalIgnoreCase)
+            if (string.IsNullOrWhiteSpace(subject)
                 || (authorizedParty is not null && authorizedParty != clientId))
                 return null;
+            if (string.IsNullOrWhiteSpace(email)
+                || !string.Equals(verified, "true", StringComparison.OrdinalIgnoreCase))
+                throw new GoogleProfileUnavailableException();
 
             return new VerifiedGoogleUser(subject, email.Trim().ToLowerInvariant(),
                 principal.FindFirstValue("name") ?? email, principal.FindFirstValue("picture"));

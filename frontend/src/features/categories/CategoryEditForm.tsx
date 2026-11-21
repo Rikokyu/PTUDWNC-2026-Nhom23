@@ -22,17 +22,22 @@ export function CategoryEditForm({
   const [name, setName] = useState(category.name);
   const [description, setDescription] = useState(category.description ?? "");
   const updateCategory = useUpdateCategory();
+  const nextName = name.trim();
+  const nextDescription = description.trim();
+  const nameChanged = nextName !== category.name;
+  const descriptionChanged = nextDescription !== (category.description ?? "");
+  const hasChanges = nameChanged || descriptionChanged;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!hasChanges) return;
 
     try {
       const updatedCategory = await updateCategory.mutateAsync({
         id: category.id,
         request: {
-          name: name.trim(),
-          // Send an empty string to let the API clear an existing description.
-          description: description.trim(),
+          ...(nameChanged ? { name: nextName } : {}),
+          ...(descriptionChanged ? { description: nextDescription } : {}),
         },
       });
       onUpdated(updatedCategory);
@@ -54,9 +59,6 @@ export function CategoryEditForm({
           >
             Chỉnh sửa danh mục
           </h2>
-          <p className="mt-1 text-sm text-content-secondary">
-            Slug hiện tại <span className="font-medium">{category.slug}</span> sẽ được giữ nguyên.
-          </p>
         </div>
         <button
           type="button"
@@ -83,7 +85,6 @@ export function CategoryEditForm({
           required
           autoComplete="off"
           disabled={updateCategory.isPending}
-          helperText="Từ 2 đến 50 ký tự. Slug sẽ không đổi khi đổi tên."
         />
 
         <div className="w-full space-y-1.5">
@@ -123,7 +124,7 @@ export function CategoryEditForm({
             type="submit"
             leftIcon={<Save className="h-4 w-4" />}
             isLoading={updateCategory.isPending}
-            disabled={name.trim().length < 2 || name.trim().length > 50}
+            disabled={!hasChanges || nextName.length < 2 || nextName.length > 50}
           >
             Lưu thay đổi
           </Button>

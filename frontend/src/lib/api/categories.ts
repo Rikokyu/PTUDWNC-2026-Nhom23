@@ -47,4 +47,18 @@ export const categoryApi = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/api/v1/categories/${encodeURIComponent(id)}`);
   },
+  moveRecipes: async (categoryId: string, recipeIds: string[], targetCategoryId: string): Promise<number> => {
+    const response = await apiClient.post<{ affectedCount: number }>(
+      `/api/v1/categories/${encodeURIComponent(categoryId)}/recipes/move`,
+      { recipeIds, targetCategoryId },
+    );
+    return response.data.affectedCount;
+  },
+  deleteRecipes: async (categoryId: string, recipeIds: string[]): Promise<number> => {
+    const response = await apiClient.post<{ affectedCount: number }>(
+      `/api/v1/categories/${encodeURIComponent(categoryId)}/recipes/delete`,
+      { recipeIds },
+    );
+    return response.data.affectedCount;
+  },
 };

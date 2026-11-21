@@ -61,7 +61,7 @@ public static class RecipeEndpoints
                     var q = request.Query["q"].FirstOrDefault();
                     var page = ReadPagination(request, "page", 1);
                     var pageSize = ReadPagination(request, "pageSize", 12);
-                    var sort = RecipeSortParameters.Read(request.Query);
+                    var sort = RecipeSortParameters.Read(request.Query, isSearch: true);
                     int? ReadFilter(string name, int minimum)
                     {
                         if (!request.Query.ContainsKey(name)) return null;
@@ -231,26 +231,14 @@ public static class RecipeEndpoints
 
         group.MapDelete(
             "/{recipeId:guid}",
-            async (
-                Guid recipeId,
-                ISender sender,
-                IOutputCacheStore outputCacheStore,
-                CancellationToken cancellationToken) =>
-            {
-                var result = await sender.Send(
-                    new DeleteRecipeCommand(recipeId),
-                    cancellationToken);
-
-                await outputCacheStore.SafeEvictByTagAsync(
-                    "recipes",
-                    cancellationToken);
-                await outputCacheStore.SafeEvictByTagAsync(
-                    $"recipe:{result.Slug}",
-                    cancellationToken);
-
-                return Results.NoContent();
-            })
+            DeleteRecipeAsync)
             .RequireAuthorization("AuthorOrAdmin");
+
+        endpoints.MapDelete(
+            "/api/v1/admin/recipes/{recipeId:guid}",
+            DeleteRecipeAsync)
+            .WithTags("Admin - Recipes")
+            .RequireAuthorization("Admin");
 
         endpoints.MapGet(
             "/api/v1/me/recipes",
@@ -299,6 +287,20 @@ public static class RecipeEndpoints
             .RequireAuthorization("Admin");
 
         return endpoints;
+    }
+
+    private static async Task<IResult> DeleteRecipeAsync(
+        Guid recipeId,
+        ISender sender,
+        IOutputCacheStore outputCacheStore,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new DeleteRecipeCommand(recipeId), cancellationToken);
+
+        await outputCacheStore.SafeEvictByTagAsync("recipes", cancellationToken);
+        await outputCacheStore.SafeEvictByTagAsync($"recipe:{result.Slug}", cancellationToken);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> SetStatusAsync(

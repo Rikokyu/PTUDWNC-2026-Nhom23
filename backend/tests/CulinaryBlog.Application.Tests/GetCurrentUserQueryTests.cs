@@ -118,7 +118,7 @@ public sealed class GetCurrentUserQueryTests
             throw new NotSupportedException();
         public Task LogoutAsync(Guid userId, string? refreshToken, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
-        public Task<AuthSessionDto> GoogleLoginAsync(string idToken, CancellationToken cancellationToken) =>
+        public Task<GoogleLoginResult> GoogleLoginAsync(string idToken, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
         public Task<UserDto> PatchProfileAsync(Guid userId, bool hasDisplayName, string? displayName,
             bool hasAvatarUrl, string? avatarUrl, bool hasBio, string? bio, CancellationToken cancellationToken) =>

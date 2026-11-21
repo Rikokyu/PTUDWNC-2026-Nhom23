@@ -43,8 +43,17 @@ public sealed class SitemapPostgresIntegrationTests
             {
                 await job.GenerateAsync(CancellationToken.None);
                 XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
-                return XDocument.Load(Path.Combine(directory, "sitemap.xml"))
-                    .Root!.Elements(ns + "url")
+                var document = XDocument.Load(Path.Combine(directory, "sitemap.xml"));
+                Assert.All(document.Root!.Elements(ns + "url"), element =>
+                {
+                    Assert.NotNull(element.Element(ns + "loc"));
+                    Assert.NotNull(element.Element(ns + "changefreq"));
+                    Assert.NotNull(element.Element(ns + "priority"));
+                });
+                var robots = await File.ReadAllTextAsync(Path.Combine(directory, "robots.txt"));
+                Assert.Contains("User-agent: *", robots);
+                Assert.Contains("Sitemap: https://culinary.test/sitemap.xml", robots);
+                return document.Root.Elements(ns + "url")
                     .Select(element => (string)element.Element(ns + "loc")!).ToArray();
             }
 
@@ -56,6 +65,12 @@ public sealed class SitemapPostgresIntegrationTests
             recipe.Status = RecipeStatus.Published;
             await db.SaveChangesAsync();
             Assert.Contains(recipeUrl, await Locations());
+            XNamespace sitemapNamespace = "http://www.sitemaps.org/schemas/sitemap/0.9";
+            var publishedEntry = XDocument.Load(Path.Combine(directory, "sitemap.xml"))
+                .Descendants(sitemapNamespace + "url")
+                .Single(element => (string)element.Element(sitemapNamespace + "loc")! == recipeUrl);
+            Assert.NotNull(publishedEntry.Element(sitemapNamespace + "lastmod"));
+            Assert.Equal("0.8", (string?)publishedEntry.Element(sitemapNamespace + "priority"));
 
             recipe.Status = RecipeStatus.Draft;
             await db.SaveChangesAsync();

@@ -203,6 +203,9 @@ export const recipeApi = {
   deleteRecipe: async (recipeId: string): Promise<void> => {
     await apiClient.delete(`/api/v1/recipes/${recipeId}`);
   },
+  deleteRecipeAsAdmin: async (recipeId: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/admin/recipes/${recipeId}`);
+  },
   setStatus: async (
     recipeId: string,
     action: "publish" | "unpublish" | "archive",

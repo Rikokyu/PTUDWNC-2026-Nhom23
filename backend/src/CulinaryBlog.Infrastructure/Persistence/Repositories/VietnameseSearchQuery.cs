@@ -15,10 +15,6 @@ public static class VietnameseSearchQuery
         // Only literal alphanumeric lexemes reach tsquery; operators are never accepted.
         var tokens = Regex.Matches(normalized.ToString(), "[a-z0-9]+")
             .Select(m => m.Value).Distinct().ToArray();
-        // Prefixes help while typing one word or an incomplete short word.
-        // For a submitted phrase, exact full words avoid "cha" matching
-        // "chao" and "chat", which made unrelated dishes appear.
-        return string.Join(" & ", tokens.Select(token =>
-            tokens.Length == 1 || token.Length < 3 ? token + ":*" : token));
+        return string.Join(" & ", tokens.Select(token => token + ":*"));
     }
 }

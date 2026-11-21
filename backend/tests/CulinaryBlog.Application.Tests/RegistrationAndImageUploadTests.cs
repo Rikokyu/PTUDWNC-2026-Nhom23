@@ -1028,6 +1028,18 @@ public sealed class RegistrationAndImageUploadTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult(id == recipe.Id ? recipe : null);
 
+        public Task<bool> SoftDeleteWithChildrenAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+        {
+            if (id != recipe.Id || recipe.IsDeleted) return Task.FromResult(false);
+            recipe.SoftDelete();
+            foreach (var ingredient in recipe.Ingredients) ingredient.IsDeleted = true;
+            foreach (var step in recipe.Steps) step.IsDeleted = true;
+            foreach (var image in recipe.Images) image.IsDeleted = true;
+            return Task.FromResult(true);
+        }
+
         public Task<bool> SlugExistsAsync(
             string slug,
             Guid? excludingRecipeId = null,

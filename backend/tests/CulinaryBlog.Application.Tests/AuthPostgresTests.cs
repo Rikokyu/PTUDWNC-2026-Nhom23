@@ -121,11 +121,48 @@ public sealed class AuthPostgresTests
             Assert.NotNull(await Service(db).LoginAsync(email, "SecurePass1!", default));
         }
         var google = new FakeGoogle(new VerifiedGoogleUser("subject-" + Guid.NewGuid(), email, "Google User", null));
-        await using (var db = Db()) Assert.Equal(id, (await Service(db, google).GoogleLoginAsync("test", default)).User.Id);
-        await using (var db = Db()) Assert.Equal(id, (await Service(db, google).GoogleLoginAsync("test", default)).User.Id);
+        await using (var db = Db())
+        {
+            var result = await Service(db, google).GoogleLoginAsync("test", default);
+            Assert.Equal(id, result.Session.User.Id);
+            Assert.False(result.IsNewUser);
+            Assert.NotNull(await Service(db).LoginAsync(email, "SecurePass1!", default));
+        }
+        await using (var db = Db())
+        {
+            var result = await Service(db, google).GoogleLoginAsync("test", default);
+            Assert.Equal(id, result.Session.User.Id);
+            Assert.False(result.IsNewUser);
+        }
         await using (var db = Db())
             await Assert.ThrowsAsync<CulinaryBlog.Application.Common.Exceptions.UnauthorizedException>(() =>
                 Service(db, new FakeGoogle(null)).GoogleLoginAsync("bad", default));
+    }
+
+    [AuthPostgresFact]
+    public async Task Google_New_User_Is_Created_Once_Without_Local_Password()
+    {
+        await using (var db = Db()) await db.Database.MigrateAsync();
+        var email = $"google-{Guid.NewGuid():N}@example.test";
+        var google = new FakeGoogle(new VerifiedGoogleUser(
+            "subject-" + Guid.NewGuid(), email, "Google User", null));
+        Guid userId;
+        await using (var db = Db())
+        {
+            var result = await Service(db, google).GoogleLoginAsync("test", default);
+            Assert.True(result.IsNewUser);
+            Assert.Equal("Author", result.Session.User.Role);
+            userId = result.Session.User.Id;
+            var user = await db.ApplicationUsers.SingleAsync(candidate => candidate.Id == userId);
+            Assert.Empty(user.PasswordHash);
+            Assert.Null(await Service(db).LoginAsync(email, "GooglePassword1!", default));
+        }
+        await using (var db = Db())
+        {
+            var result = await Service(db, google).GoogleLoginAsync("test", default);
+            Assert.False(result.IsNewUser);
+            Assert.Equal(userId, result.Session.User.Id);
+        }
     }
 
     private static string Hash(string token) => Convert.ToHexString(

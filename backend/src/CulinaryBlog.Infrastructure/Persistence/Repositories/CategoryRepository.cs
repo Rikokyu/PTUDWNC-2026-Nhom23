@@ -106,6 +106,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
                 category.Id == categoryId
                 && !category.IsDeleted)
             .SelectMany(category => category.Recipes)
+            .Where(recipe => !recipe.IsDeleted)
             .CountAsync(cancellationToken);
     }
 

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import apiClient from "@/lib/api/axios";
+import { authApi } from "@/lib/api/auth";
 import type { AuthUserDto } from "@/types/api";
 import { AUTH_CHANGED, clearAuthSession } from "@/lib/auth/session";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -89,17 +90,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [revision, accessToken, setSession]);
 
   const logout = async () => {
-    const token = localStorage.getItem("accessToken");
-    clearAuthSession();
-    setState({ user: null, status: "guest" });
-    if (token) {
-      try {
-        await apiClient.post("/api/v1/auth/logout", undefined, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch {
-        // Local logout must still succeed if the server is unavailable.
-      }
+    try {
+      await authApi.logout();
+    } catch {
+      // Clear the browser session even when the API is unavailable.
+    } finally {
+      clearAuthSession();
+      setState({ user: null, status: "guest" });
     }
   };
 

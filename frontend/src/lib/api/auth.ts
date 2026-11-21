@@ -15,6 +15,12 @@ export const authApi = {
     );
     return response.data;
   },
+  google: async (idToken: string): Promise<AuthSessionDto> => {
+    const response = await apiClient.post<AuthSessionDto>(
+      "/api/v1/auth/google", { idToken },
+    );
+    return response.data;
+  },
   register: async (
     displayName: string,
     email: string,

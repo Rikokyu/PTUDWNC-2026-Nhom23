@@ -13,8 +13,8 @@ public class VietnameseSearchPostgresTests
     [Theory]
     [InlineData("M\u00cc", "mi:*")]
     [InlineData("mi\u0300", "mi:*")]
-    [InlineData("PH\u1ede B\u00d2", "pho & bo:*")]
-    [InlineData("bún chả", "bun & cha")]
+    [InlineData("PH\u1ede B\u00d2", "pho:* & bo:*")]
+    [InlineData("bún chả", "bun:* & cha:*")]
     [InlineData("\u0110\u1eacU", "dau:*")]
     [InlineData("'&|!:*%_", "")]
     public void QueryUsesOnlyLiteralPrefixes(string input, string expected)
@@ -60,7 +60,19 @@ public class VietnameseSearchPostgresTests
             Assert.Contains(result.Items, item => item.Id == mi.Id);
             Assert.Contains(result.Items, item => item.Id == desc.Id);
         }
-        Assert.Equal(rice.Id, Assert.Single((await repo.SearchPublishedAsync("com",1,50)).Items).Id);
+        var rankedByRelevance = await repo.SearchPublishedAsync("mi bo", 1, 10);
+        Assert.Equal(2, rankedByRelevance.TotalCount);
+        Assert.Equal(mi.Id, rankedByRelevance.Items[0].Id);
+        Assert.Equal(desc.Id, rankedByRelevance.Items[1].Id);
+        Assert.True(rankedByRelevance.Items[0].SearchRelevanceScore >
+            rankedByRelevance.Items[1].SearchRelevanceScore);
+        var firstRankedPage = await repo.SearchPublishedAsync("mi bo", 1, 1);
+        var secondRankedPage = await repo.SearchPublishedAsync("mi bo", 2, 1);
+        Assert.Equal(mi.Id, Assert.Single(firstRankedPage.Items).Id);
+        Assert.Equal(desc.Id, Assert.Single(secondRankedPage.Items).Id);
+        var riceSearch = await repo.SearchPublishedAsync("com", 1, 50);
+        Assert.Equal(2, riceSearch.TotalCount);
+        Assert.Equal(rice.Id, riceSearch.Items[0].Id);
         foreach(var q in new[] { "pho b", "ph\u1edf b\u00f2", "PHO BO" }) Assert.Equal(pho.Id, Assert.Single((await repo.SearchPublishedAsync(q,1,50)).Items).Id);
         foreach (var q in new[] { "pho bo", "Ph\u1edf b\u00f2" })
         {

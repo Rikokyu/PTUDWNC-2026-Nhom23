@@ -416,7 +416,7 @@ public sealed class RegistrationAndImageUploadTests
     }
 
     [Fact]
-    public async Task DeleteRecipe_AdminSoftDeletesRecipeAndRelatedRecords()
+    public async Task DeleteRecipe_AdminSoftDeletesRecipeAndPreservesRelatedRecords()
     {
         var recipe = CreateRecipe(Guid.NewGuid());
         var ingredient = new RecipeIngredient { Id = Guid.NewGuid(), Name = "Rice" };
@@ -441,9 +441,9 @@ public sealed class RegistrationAndImageUploadTests
             CancellationToken.None);
 
         Assert.True(recipe.IsDeleted);
-        Assert.True(ingredient.IsDeleted);
-        Assert.True(step.IsDeleted);
-        Assert.True(image.IsDeleted);
+        Assert.False(ingredient.IsDeleted);
+        Assert.False(step.IsDeleted);
+        Assert.False(image.IsDeleted);
         Assert.Empty(cleanupJobs.EnqueuedFileUrls);
     }
 
@@ -1028,15 +1028,12 @@ public sealed class RegistrationAndImageUploadTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult(id == recipe.Id ? recipe : null);
 
-        public Task<bool> SoftDeleteWithChildrenAsync(
+        public Task<bool> SoftDeleteAsync(
             Guid id,
             CancellationToken cancellationToken = default)
         {
             if (id != recipe.Id || recipe.IsDeleted) return Task.FromResult(false);
             recipe.SoftDelete();
-            foreach (var ingredient in recipe.Ingredients) ingredient.IsDeleted = true;
-            foreach (var step in recipe.Steps) step.IsDeleted = true;
-            foreach (var image in recipe.Images) image.IsDeleted = true;
             return Task.FromResult(true);
         }
 

@@ -72,7 +72,7 @@ public interface IRecipeRepository : IRepository<Recipe>
         Guid id,
         CancellationToken cancellationToken = default);
 
-    Task<bool> SoftDeleteWithChildrenAsync(
+    Task<bool> SoftDeleteAsync(
         Guid id,
         CancellationToken cancellationToken = default);
 

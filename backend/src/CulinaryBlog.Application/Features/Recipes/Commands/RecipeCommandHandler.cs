@@ -218,7 +218,7 @@ public sealed class RecipeCommandHandler :
 
         await _unitOfWork.ExecuteInTransactionAsync(async token =>
         {
-            if (!await _recipes.SoftDeleteWithChildrenAsync(recipe.Id, token))
+            if (!await _recipes.SoftDeleteAsync(recipe.Id, token))
                 throw new NotFoundException("Recipe was not found.");
         }, cancellationToken);
 

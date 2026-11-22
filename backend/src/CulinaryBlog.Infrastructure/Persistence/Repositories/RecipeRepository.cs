@@ -339,7 +339,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 cancellationToken);
     }
 
-    public async Task<bool> SoftDeleteWithChildrenAsync(
+    public async Task<bool> SoftDeleteAsync(
         Guid id,
         CancellationToken cancellationToken = default)
     {
@@ -350,22 +350,7 @@ public class RecipeRepository : Repository<Recipe>, IRecipeRepository
                 .SetProperty(recipe => recipe.IsDeleted, true)
                 .SetProperty(recipe => recipe.UpdatedAt, now), cancellationToken);
 
-        if (deleted == 0) return false;
-
-        await _context.RecipeIngredients
-            .Where(ingredient => ingredient.RecipeId == id && !ingredient.IsDeleted)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(ingredient => ingredient.IsDeleted, true), cancellationToken);
-        await _context.RecipeSteps
-            .Where(step => step.RecipeId == id && !step.IsDeleted)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(step => step.IsDeleted, true), cancellationToken);
-        await _context.RecipeImages
-            .Where(image => image.RecipeId == id && !image.IsDeleted)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(image => image.IsDeleted, true), cancellationToken);
-
-        return true;
+        return deleted > 0;
     }
 
     public Task<bool> SlugExistsAsync(

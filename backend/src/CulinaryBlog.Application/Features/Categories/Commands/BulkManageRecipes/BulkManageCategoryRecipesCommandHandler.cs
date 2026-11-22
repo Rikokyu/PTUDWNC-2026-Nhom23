@@ -68,9 +68,6 @@ public sealed class BulkManageCategoryRecipesCommandHandler
             else
             {
                 recipe.SoftDelete();
-                foreach (var ingredient in recipe.Ingredients) ingredient.IsDeleted = true;
-                foreach (var step in recipe.Steps) step.IsDeleted = true;
-                foreach (var image in recipe.Images) image.IsDeleted = true;
             }
         }
 

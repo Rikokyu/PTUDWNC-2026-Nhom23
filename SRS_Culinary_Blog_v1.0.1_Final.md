@@ -865,7 +865,7 @@ CONFIDENTIAL  •  Phát triển Ứng dụng Web Nâng cao V4  •  Trang 31 / 
 |**Mức ưu tiên (MoSCoW)**|M – Must Have|
 |**Mô tả**|**Đánh dấu công thức là đã xóa (IsDeleted = true) thay vì xóa vật lý** khỏi database để đảm bảo toàn vẹn dữ liệu và phục vụ mục đích kiểm toán.|
 |**Điều kiện tiên quyết**|1. Recipe tồn tại. 2. Người dùng là owner hoặc Admin.|
-|**Luồng chính (Happy Path)**|1. Author/Admin gửi DELETE `/api/v1/recipes/{id}`. 2. Kiểm tra xác thực và resource-based authorization. 3. Cập nhật cờ `IsDeleted = true` cho Recipe (tự động cascade cập nhật cờ cho Steps, Ingredients, Images). 4. Trả về HTTP 204 No Content. *(Ảnh trên MinIO không bị xóa ngay để hỗ trợ khôi phục).*|
+|**Luồng chính (Happy Path)**|1. Author/Admin gửi DELETE `/api/v1/recipes/{id}`. 2. Kiểm tra xác thực và resource-based authorization. 3. Cập nhật cờ `IsDeleted = true` cho Recipe; các Steps, Ingredients, Images và file trên MinIO được giữ nguyên để hỗ trợ khôi phục. 4. Trả về HTTP 204 No Content.|
 |**Luồng thay thế / Ngoại lệ**|A1 – ID không tồn tại: HTTP 404. A2 – Không phải owner: HTTP 403.|
 |**HTTP Method \& Endpoint**|DELETE `/api/v1/recipes/{id:guid}`|
 |**Kết quả mong đợi**|Recipe bị ẩn khỏi hệ thống (IsDeleted = true), dữ liệu vật lý vẫn được giữ lại trong database.|
